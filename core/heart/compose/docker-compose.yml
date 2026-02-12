@@ -1,0 +1,76 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: nexus-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      TZ: ${TZ}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks: [nexus_net]
+
+  redis:
+    image: redis:7-alpine
+    container_name: nexus-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    networks: [nexus_net]
+
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:latest
+    container_name: nexus-n8n
+    restart: unless-stopped
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      TZ: ${TZ}
+      N8N_HOST: ${N8N_HOST}
+      N8N_PORT: ${N8N_PORT}
+      N8N_PROTOCOL: ${N8N_PROTOCOL}
+      N8N_EDITOR_BASE_URL: ${N8N_EDITOR_BASE_URL}
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY}
+
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: ${POSTGRES_HOST}
+      DB_POSTGRESDB_PORT: ${POSTGRES_PORT}
+      DB_POSTGRESDB_DATABASE: ${POSTGRES_DB}
+      DB_POSTGRESDB_USER: ${POSTGRES_USER}
+      DB_POSTGRESDB_PASSWORD: ${POSTGRES_PASSWORD}
+
+      # optional, only as temporary guard
+      N8N_BASIC_AUTH_ACTIVE: ${N8N_BASIC_AUTH_ACTIVE}
+      N8N_BASIC_AUTH_USER: ${N8N_BASIC_AUTH_USER}
+      N8N_BASIC_AUTH_PASSWORD: ${N8N_BASIC_AUTH_PASSWORD}
+
+      # queue mode later (redis). We'll enable once you want it.
+      # EXECUTIONS_MODE: queue
+      # QUEUE_BULL_REDIS_HOST: ${REDIS_HOST}
+      # QUEUE_BULL_REDIS_PORT: ${REDIS_PORT}
+
+    volumes:
+      - n8n_data:/home/node/.n8n
+    ports:
+      - "127.0.0.1:5678:5678"   # bind to localhost only (secure by default)
+    networks: [nexus_net]
+
+  # OpenClaw placeholder (define later)
+  openclaw:
+    image: alpine:3.20
+    container_name: nexus-openclaw
+    restart: unless-stopped
+    command: ["sh", "-lc", "echo 'OpenClaw placeholder'; sleep infinity"]
+    networks: [nexus_net]
+
+networks:
+  nexus_net:
+
+volumes:
+  postgres_data:
+  redis_data:
+  n8n_data:
