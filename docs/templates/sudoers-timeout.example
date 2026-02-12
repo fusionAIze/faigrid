@@ -1,0 +1,9 @@
+# Example sudoers drop-in (server side)
+# Place as: /etc/sudoers.d/10-nexus-timeout
+# Use visudo -c to validate.
+#
+# 120 minutes sudo timestamp timeout for nexus + nexus-ops.
+
+Defaults    timestamp_timeout=120
+Defaults:nexus     timestamp_timeout=120
+Defaults:nexus-ops  timestamp_timeout=120
