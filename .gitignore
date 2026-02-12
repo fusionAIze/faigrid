@@ -13,5 +13,12 @@ backups/
 *.tar.gz
 *.tgz
 
+# local / operator-specific
+docs/local/
+**/*.local.md
+**/*.local.yml
+**/*.local.yaml
+**/*.local.json
+
 # OS junk
 .DS_Store
