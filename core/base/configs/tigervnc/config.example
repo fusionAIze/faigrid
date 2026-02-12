@@ -1,0 +1,5 @@
+# ~/.config/tigervnc/config
+localhost=yes
+geometry=2560x1600
+depth=24
+SecurityTypes=VncAuth

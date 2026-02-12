@@ -1,0 +1,14 @@
+[Unit]
+Description=TigerVNC server on display :%i
+After=network.target
+
+[Service]
+Type=forking
+ExecStartPre=/bin/bash -lc '/usr/bin/vncserver -kill :%i >/dev/null 2>&1 || true'
+ExecStart=/usr/bin/vncserver :%i
+ExecStop=/usr/bin/vncserver -kill :%i
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=default.target
