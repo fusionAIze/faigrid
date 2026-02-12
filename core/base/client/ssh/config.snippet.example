@@ -1,0 +1,42 @@
+# SSH config snippet (example)
+# Copy relevant blocks into ~/.ssh/config
+# Adjust IPs/keys for your environment. Do NOT commit private keys.
+
+# --- nexus-edge (edge node) ---
+Host nexus-edge
+  HostName 192.168.178.10
+  User nexus
+  IdentitiesOnly yes
+  IdentityFile ~/.ssh/id_ed25519
+  ServerAliveInterval 30
+  ServerAliveCountMax 3
+  Compression yes
+
+# --- nexus-core (admin/bootstrap) ---
+Host nexus-core
+  HostName 192.168.178.20
+  User nexus
+  IdentitiesOnly yes
+  IdentityFile ~/.ssh/id_ed25519
+  ServerAliveInterval 30
+  ServerAliveCountMax 3
+  Compression yes
+
+# --- nexus-core (daily ops) ---
+Host nexus-core-ops
+  HostName 192.168.178.20
+  User nexus-ops
+  IdentitiesOnly yes
+  IdentityFile ~/.ssh/nexus_core_backup_ed25519
+  ServerAliveInterval 30
+  ServerAliveCountMax 3
+  Compression yes
+
+# (future) worker + backup placeholders:
+# Host nexus-worker
+#   HostName 192.168.178.30
+#   User nexus-ops
+#
+# Host nexus-backup
+#   HostName 192.168.178.40
+#   User nexus-ops
