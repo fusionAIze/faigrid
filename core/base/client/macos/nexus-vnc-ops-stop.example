@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+HOST_IP="192.168.178.20"
+SSH_USER="nexus-ops"
+LOCAL_PORT=5901
+REMOTE_PORT=5901
+
+pkill -f "ssh .* -L ${LOCAL_PORT}:localhost:${REMOTE_PORT} .*${SSH_USER}@${HOST_IP}" 2>/dev/null || true
+lsof -tiTCP:${LOCAL_PORT} -sTCP:LISTEN | xargs -r kill 2>/dev/null || true
+
+osascript -e 'display dialog "VNC tunnel stopped." with title "Done" buttons {"OK"} default button "OK"'

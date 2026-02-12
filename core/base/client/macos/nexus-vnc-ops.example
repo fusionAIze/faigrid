@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+HOST_IP="192.168.178.20"
+SSH_USER="nexus-ops"
+SSH_KEY="$HOME/.ssh/nexus_core_backup_ed25519"
+
+LOCAL_PORT=5901
+REMOTE_PORT=5901
+
+# free local port if occupied
+if lsof -nP -iTCP:${LOCAL_PORT} -sTCP:LISTEN >/dev/null 2>&1; then
+  lsof -tiTCP:${LOCAL_PORT} -sTCP:LISTEN | xargs -r kill || true
+  sleep 0.2
+fi
+
+# preflight: no prompts
+if ! ssh -i "${SSH_KEY}" \
+  -o IdentitiesOnly=yes \
+  -o BatchMode=yes \
+  -o ConnectTimeout=5 \
+  -o StrictHostKeyChecking=accept-new \
+  "${SSH_USER}@${HOST_IP}" "true" >/dev/null 2>&1; then
+  osascript <<OSA
+display dialog "SSH preflight failed (non-interactive).\n\nFix:\n1) Run once:\n   ssh -i ${SSH_KEY} ${SSH_USER}@${HOST_IP}\n2) Ensure key is accepted.\n\nThen retry." with title "VNC Tunnel Error" buttons {"OK"} default button "OK"
+OSA
+  exit 1
+fi
+
+# start tunnel in background
+ssh -fN \
+  -i "${SSH_KEY}" \
+  -o IdentitiesOnly=yes \
+  -o ExitOnForwardFailure=yes \
+  -o ServerAliveInterval=30 \
+  -o ServerAliveCountMax=3 \
+  -o StrictHostKeyChecking=accept-new \
+  -L ${LOCAL_PORT}:localhost:${REMOTE_PORT} \
+  "${SSH_USER}@${HOST_IP}"
+
+BTN="$(osascript <<OSA
+display dialog "SSH tunnel is active.\n\nForward: 127.0.0.1:${LOCAL_PORT} → ${HOST_IP}:${REMOTE_PORT}\n\nVNC is ready.\nConnect to: 127.0.0.1:${LOCAL_PORT}" with title "VNC Tunnel Ready" buttons {"Open VNC Viewer", "Close Tunnel"} default button "Open VNC Viewer"
+button returned of result
+OSA
+)"
+
+if [[ "$BTN" == "Open VNC Viewer" ]]; then
+  open -a "VNC Viewer"
+else
+  pkill -f "ssh .* -L ${LOCAL_PORT}:localhost:${REMOTE_PORT} .*${SSH_USER}@${HOST_IP}" 2>/dev/null || true
+  lsof -tiTCP:${LOCAL_PORT} -sTCP:LISTEN | xargs -r kill 2>/dev/null || true
+fi
