@@ -1,11 +1,15 @@
-# secrets / env
-.env
-*.env
+# secrets
 secrets/
 **/secrets/
 *.key
 *.pem
 *.p12
+
+# env (never commit)
+.env
+.env.local
+**/.env
+**/.env.local
 
 # backups
 backups/
