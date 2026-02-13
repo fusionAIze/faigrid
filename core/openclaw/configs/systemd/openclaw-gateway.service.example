@@ -1,0 +1,29 @@
+# Example systemd unit (TEMPLATE)
+# NOTE: final ExecStart depends on what the installer provides on Debian
+# (openclaw CLI + gateway daemon). Keep this as a placeholder until we
+# implement on the actual host.
+
+[Unit]
+Description=OpenClaw Gateway
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=openclaw
+Group=openclaw
+EnvironmentFile=-/etc/openclaw/openclaw.env
+WorkingDirectory=/var/lib/openclaw
+ExecStart=/usr/local/bin/openclaw gateway start
+Restart=on-failure
+RestartSec=2
+
+# Hardening (basic)
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/openclaw /etc/openclaw
+
+[Install]
+WantedBy=multi-user.target

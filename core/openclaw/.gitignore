@@ -1,0 +1,6 @@
+# OpenClaw local runtime (never commit)
+.env
+.env.local
+state/
+data/
+logs/
