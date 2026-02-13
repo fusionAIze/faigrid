@@ -59,14 +59,6 @@ services:
       - "127.0.0.1:5678:5678"   # bind to localhost only (secure by default)
     networks: [nexus_net]
 
-  # OpenClaw placeholder (define later)
-  openclaw:
-    image: alpine:3.20
-    container_name: nexus-openclaw
-    restart: unless-stopped
-    command: ["sh", "-lc", "echo 'OpenClaw placeholder'; sleep infinity"]
-    networks: [nexus_net]
-
 networks:
   nexus_net:
 
