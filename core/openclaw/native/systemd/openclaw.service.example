@@ -1,0 +1,37 @@
+[Unit]
+Description=fusionAIze OpenClaw (native)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+
+# Run as dedicated system user (recommended)
+User=openclaw
+Group=openclaw
+
+# Env file placed on host (NOT in git)
+EnvironmentFile=/etc/openclaw/openclaw.env
+
+# Where OpenClaw is installed
+WorkingDirectory=/opt/openclaw
+
+# Start command (placeholder; will be finalized once installed)
+# If OpenClaw provides a binary, replace accordingly.
+# If it is a Node app, this could be: /usr/bin/npm start
+ExecStart=/usr/bin/npm start
+
+Restart=on-failure
+RestartSec=3
+
+# Hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/openclaw /var/log/openclaw
+LockPersonality=true
+MemoryDenyWriteExecute=true
+
+[Install]
+WantedBy=multi-user.target

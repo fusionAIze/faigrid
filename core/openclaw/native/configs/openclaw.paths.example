@@ -1,0 +1,5 @@
+# Example target paths on nexus-core (adjust if needed)
+
+INSTALL_DIR=/opt/openclaw
+DATA_DIR=/var/lib/openclaw
+LOG_DIR=/var/log/openclaw
