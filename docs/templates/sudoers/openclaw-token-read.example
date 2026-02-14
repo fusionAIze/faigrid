@@ -1,0 +1,12 @@
+# Allow reading the OpenClaw gateway token without prompting for a password.
+#
+# Install (on core):
+#   sudo install -m 0440 docs/templates/sudoers/openclaw-token-read.example /etc/sudoers.d/openclaw-token-read
+#   sudo visudo -c
+#
+# Replace <ssh-user> with the SSH user you connect as (e.g., nexus-ops).
+#
+# Security note:
+# This grants NOPASSWD for exactly one command and one file.
+
+<ssh-user> ALL=(root) NOPASSWD: /bin/cat /etc/openclaw/secret/gateway.token

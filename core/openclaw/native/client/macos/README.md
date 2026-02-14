@@ -30,4 +30,3 @@ To avoid typing a sudo password on every run, allow exactly one command via sudo
 - `/bin/cat /etc/openclaw/secret/gateway.token`
 
 See: `docs/templates/sudoers/openclaw-token-read.example`
-

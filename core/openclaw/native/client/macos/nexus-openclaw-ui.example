@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Example helper to open the OpenClaw Control UI via SSH tunnel.
+# Copy to: ~/bin/nexus-openclaw-ui
+
+HOST_ALIAS="nexus-core-ops"
+LOCAL_PORT="${OPENCLAW_LOCAL_PORT:-18789}"
+REMOTE_PORT="${OPENCLAW_REMOTE_PORT:-18789}"
+
+# Read token securely via sudo on the core host (recommended sudoers rule).
+TOKEN="$(ssh "${HOST_ALIAS}" 'sudo -n /bin/cat /etc/openclaw/secret/gateway.token' 2>/dev/null | tail -n 1 | tr -d '\r')"
+
+if [[ -z "${TOKEN}" ]]; then
+  echo "ERROR: Could not read OpenClaw token from ${HOST_ALIAS}."
+  echo "Fix on core:"
+  echo "  1) Ensure /etc/openclaw/secret/gateway.token exists"
+  echo "  2) Ensure sudoers allows: <ssh-user> ALL=(root) NOPASSWD: /bin/cat /etc/openclaw/secret/gateway.token"
+  exit 1
+fi
+
+# Start/refresh tunnel (background). '-fN' backgrounds after auth.
+ssh -fN -o ExitOnForwardFailure=yes -L "${LOCAL_PORT}:127.0.0.1:${REMOTE_PORT}" "${HOST_ALIAS}" 2>/dev/null || true
+
+URL="http://127.0.0.1:${LOCAL_PORT}/#token=${TOKEN}"
+echo "OpenClaw UI: ${URL}"
+
+# macOS: open browser
+if command -v open >/dev/null 2>&1; then
+  open "${URL}" >/dev/null 2>&1 || true
+fi

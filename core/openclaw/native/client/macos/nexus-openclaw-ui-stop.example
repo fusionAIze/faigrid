@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Example helper to stop the SSH tunnel started by nexus-openclaw-ui.
+# Copy to: ~/bin/nexus-openclaw-ui-stop
+
+LOCAL_PORT="${OPENCLAW_LOCAL_PORT:-18789}"
+
+# Best-effort kill any ssh process holding the local forward for that port.
+pids="$(lsof -n -iTCP:${LOCAL_PORT} -sTCP:LISTEN -t 2>/dev/null || true)"
+if [[ -z "${pids}" ]]; then
+  echo "No process listening on localhost:${LOCAL_PORT}."
+  exit 0
+fi
+
+echo "Killing tunnel process(es): ${pids}"
+kill ${pids} 2>/dev/null || true
