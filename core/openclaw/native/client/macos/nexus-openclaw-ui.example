@@ -1,86 +1,53 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# macOS client helper — OpenClaw UI via SSH tunnel + token retrieval
-# Copy to ~/bin/nexus-openclaw-ui and chmod +x
-#
-# Defaults:
-#   HOST_ALIAS=nexus-core-ops
-#   LOCAL_PORT=19089
-#   REMOTE_HOST=127.0.0.1
-#   REMOTE_PORT=18789
-#
-# Requirements:
-# - SSH host alias exists (e.g. "nexus-core-ops")
-# - On core: sudoers allows NOPASSWD for exactly:
-#     /bin/cat /etc/openclaw/secret/gateway.token
-
 HOST_ALIAS="${HOST_ALIAS:-nexus-core-ops}"
+
 LOCAL_PORT="${LOCAL_PORT:-19089}"
 REMOTE_HOST="${REMOTE_HOST:-127.0.0.1}"
 REMOTE_PORT="${REMOTE_PORT:-18789}"
-TOKEN_CMD="${TOKEN_CMD:-sudo -n /bin/cat /etc/openclaw/secret/gateway.token}"
 
-OPEN_URL="http://127.0.0.1:${LOCAL_PORT}/__openclaw__/canvas/"
-PIDFILE_DIR="${PIDFILE_DIR:-$HOME/.openclaw}"
-PIDFILE="${PIDFILE_DIR}/tunnel-${HOST_ALIAS}-${LOCAL_PORT}.pid"
-LOGFILE="${PIDFILE_DIR}/tunnel-${HOST_ALIAS}-${LOCAL_PORT}.log"
+TOKEN_CMD_PRIMARY="${TOKEN_CMD_PRIMARY:-/bin/cat /etc/openclaw/secret/gateway.token}"
+TOKEN_CMD_FALLBACK="${TOKEN_CMD_FALLBACK:-sudo -n /bin/cat /etc/openclaw/secret/gateway.token}"
 
-mkdir -p "$PIDFILE_DIR"
+UI_PATH="${UI_PATH:-/__openclaw__/canvas/}"
 
-say_dialog() {
-  local title="$1" msg="$2"
-  /usr/bin/osascript -e 'display dialog '"$(printf '%q' "$msg")"' with title '"$(printf '%q' "$title")"' buttons {"OK"} default button "OK"' >/dev/null
+DIALOG_TITLE="${DIALOG_TITLE:-OpenClaw UI}"
+SSH_OPTS=(-o BatchMode=yes -o ExitOnForwardFailure=yes)
+
+osasay() {
+  /usr/bin/osascript -e "display dialog \"$1\" with title \"${DIALOG_TITLE}\" buttons {\"OK\"} default button \"OK\"" >/dev/null
 }
 
-# 1) Read token (non-interactive)
-TOKEN="$(ssh -o BatchMode=yes "$HOST_ALIAS" "$TOKEN_CMD" 2>/dev/null | tr -d '\r\n' || true)"
+have() { command -v "$1" >/dev/null 2>&1; }
+
+if ! have ssh; then
+  echo "ERROR: ssh missing" >&2
+  exit 1
+fi
+
+TOKEN="$(ssh "${SSH_OPTS[@]}" "${HOST_ALIAS}" "${TOKEN_CMD_PRIMARY}" 2>/dev/null | tr -d '\r\n' || true)"
 if [[ -z "${TOKEN}" ]]; then
-  say_dialog "OpenClaw" "Could not read token via SSH.\n\nCheck:\n- SSH alias: ${HOST_ALIAS}\n- sudoers NOPASSWD for: ${TOKEN_CMD}\n- token exists: /etc/openclaw/secret/gateway.token"
-  exit 2
+  TOKEN="$(ssh "${SSH_OPTS[@]}" "${HOST_ALIAS}" "${TOKEN_CMD_FALLBACK}" 2>/dev/null | tr -d '\r\n' || true)"
+fi
+if [[ -z "${TOKEN}" ]]; then
+  osasay "Could not read a valid OpenClaw token from ${HOST_ALIAS}.\n\nTest:\n  ssh ${HOST_ALIAS} '${TOKEN_CMD_FALLBACK}'"
+  exit 1
 fi
 
-# 2) Ensure tunnel running
-if [[ -f "$PIDFILE" ]]; then
-  oldpid="$(cat "$PIDFILE" 2>/dev/null || true)"
-  if [[ -n "$oldpid" ]] && kill -0 "$oldpid" 2>/dev/null; then
-    : # already running
-  else
-    rm -f "$PIDFILE"
+if have lsof; then
+  PIDS="$(lsof -nP -iTCP:"${LOCAL_PORT}" -sTCP:LISTEN -t 2>/dev/null | tr '\n' ' ' || true)"
+  if [[ -n "${PIDS// }" ]]; then
+    kill ${PIDS} >/dev/null 2>&1 || true
+    sleep 0.2
   fi
 fi
 
-if [[ ! -f "$PIDFILE" ]]; then
-  ( 
-    exec ssh -N \
-      -o ExitOnForwardFailure=yes \
-      -o ServerAliveInterval=15 \
-      -o ServerAliveCountMax=3 \
-      -L "${LOCAL_PORT}:${REMOTE_HOST}:${REMOTE_PORT}" \
-      "$HOST_ALIAS" \
-      >>"$LOGFILE" 2>&1
-  ) &
+ssh "${SSH_OPTS[@]}" -fN \
+  -L "${LOCAL_PORT}:${REMOTE_HOST}:${REMOTE_PORT}" \
+  "${HOST_ALIAS}"
 
-  tunnel_pid=$!
-  echo "$tunnel_pid" > "$PIDFILE"
+URL="http://127.0.0.1:${LOCAL_PORT}${UI_PATH}?token=${TOKEN}"
+/usr/bin/open "${URL}" >/dev/null 2>&1 || true
 
-  for _ in 1 2 3 4 5 6 7 8 9 10; do
-    if /usr/sbin/lsof -nP -iTCP:"$LOCAL_PORT" -sTCP:LISTEN >/dev/null 2>&1; then
-      break
-    fi
-    sleep 0.1
-  done
-
-  if ! /usr/sbin/lsof -nP -iTCP:"$LOCAL_PORT" -sTCP:LISTEN >/dev/null 2>&1; then
-    say_dialog "OpenClaw" "Tunnel failed to start on localhost:${LOCAL_PORT}.\n\nLog: ${LOGFILE}"
-    exit 3
-  fi
-fi
-
-# 3) Open UI in default browser
-/usr/bin/open "$OPEN_URL" >/dev/null 2>&1 || true
-
-# 4) Copy token to clipboard
-printf "%s" "$TOKEN" | /usr/bin/pbcopy
-
-say_dialog "OpenClaw" "Tunnel ready.\n\nUI: ${OPEN_URL}\n\nToken copied to clipboard."
+osasay "Tunnel up.\n\n${URL}\n\nTo stop:\n  nexus-openclaw-ui-stop"

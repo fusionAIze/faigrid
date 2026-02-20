@@ -2,35 +2,21 @@
 set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=_lib.sh
-source "$HERE/_lib.sh"
+source "${HERE}/_lib.sh"
 
-need_root
+is_linux || die "run on core linux host."
+require_root
 
-cmd="${1:-help}"
+need systemctl
+need journalctl
 
-case "$cmd" in
-  status) systemctl --no-pager status openclaw.service;;
-  restart) systemctl restart openclaw.service; systemctl --no-pager status openclaw.service;;
-  stop) systemctl stop openclaw.service;;
-  start) systemctl start openclaw.service;;
-  logs) journalctl -u openclaw.service -n 200 --no-pager;;
-  tail) journalctl -u openclaw.service -f;;
-  verify) "$HERE/verify.sh";;
-  rotate-token)
-    ensure_dirs
-    ensure_token_file 1
-    systemctl restart openclaw.service
-    log "Rotated token + restarted service"
-    ;;
-  help|*)
-    cat <<EOF
-Usage: sudo ./control-center.sh <command>
-
-Commands:
-  status | start | stop | restart
-  logs   | tail
-  verify
-  rotate-token
-EOF
-    ;;
+cmd="${1:-status}"
+case "${cmd}" in
+  status) systemctl --no-pager -l status openclaw.service ;;
+  restart) systemctl restart openclaw.service ;;
+  stop) systemctl stop openclaw.service ;;
+  start) systemctl start openclaw.service ;;
+  logs) journalctl -u openclaw.service -n 200 --no-pager ;;
+  follow) journalctl -u openclaw.service -f ;;
+  *) die "usage: $0 {status|restart|stop|start|logs|follow}" ;;
 esac

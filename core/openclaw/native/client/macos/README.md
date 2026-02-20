@@ -1,18 +1,23 @@
-# macOS client helpers
+# OpenClaw UI (macOS helper)
 
-- `nexus-openclaw-ui.example` — opens OpenClaw UI via SSH tunnel and copies token to clipboard.
-- `nexus-openclaw-ui-stop.example` — stops tunnels (default port range 19089..19108).
-
-Install locally:
-
+## Install
 ```bash
-cp nexus-openclaw-ui.example ~/bin/nexus-openclaw-ui
-cp nexus-openclaw-ui-stop.example ~/bin/nexus-openclaw-ui-stop
+cp core/openclaw/native/client/macos/nexus-openclaw-ui.example ~/bin/nexus-openclaw-ui
+cp core/openclaw/native/client/macos/nexus-openclaw-ui-stop.example ~/bin/nexus-openclaw-ui-stop
 chmod +x ~/bin/nexus-openclaw-ui ~/bin/nexus-openclaw-ui-stop
 ```
 
-Run:
-
+## Run
 ```bash
 nexus-openclaw-ui
 ```
+
+## Stop
+```bash
+nexus-openclaw-ui-stop
+```
+
+## Requirements
+- SSH host alias exists on the Mac (e.g. `nexus-core-ops`)
+- On core: `/etc/openclaw/secret/gateway.token` readable either directly or via sudo allowlist
+- OpenClaw gateway bound to loopback on core port `18789`

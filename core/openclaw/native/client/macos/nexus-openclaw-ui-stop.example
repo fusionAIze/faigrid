@@ -1,44 +1,34 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Stops OpenClaw SSH tunnels created by nexus-openclaw-ui.
-# Default scans ports 19089..19108 (20 ports).
+START_PORT="${START_PORT:-19089}"
+COUNT="${COUNT:-20}"
 
-HOST_ALIAS="${HOST_ALIAS:-nexus-core-ops}"
-PORT_FROM="${PORT_FROM:-19089}"
-PORT_COUNT="${PORT_COUNT:-20}"
+DIALOG_TITLE="${DIALOG_TITLE:-OpenClaw UI}"
 
-PIDFILE_DIR="${PIDFILE_DIR:-$HOME/.openclaw}"
-
-say_dialog() {
-  local title="$1" msg="$2"
-  /usr/bin/osascript -e 'display dialog '"$(printf '%q' "$msg")"' with title '"$(printf '%q' "$title")"' buttons {"OK"} default button "OK"' >/dev/null
+osasay() {
+  /usr/bin/osascript -e "display dialog \"$1\" with title \"${DIALOG_TITLE}\" buttons {\"OK\"} default button \"OK\"" >/dev/null
 }
 
-stopped=0
-for ((i=0; i<PORT_COUNT; i++)); do
-  port=$((PORT_FROM+i))
-  pidfile="${PIDFILE_DIR}/tunnel-${HOST_ALIAS}-${port}.pid"
-  if [[ -f "$pidfile" ]]; then
-    pid="$(cat "$pidfile" 2>/dev/null || true)"
-    if [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null; then
-      kill "$pid" 2>/dev/null || true
-      stopped=$((stopped+1))
-    fi
-    rm -f "$pidfile"
+have() { command -v "$1" >/dev/null 2>&1; }
+
+if ! have lsof; then
+  echo "ERROR: lsof missing" >&2
+  exit 1
+fi
+
+killed=0
+for ((i=0;i<COUNT;i++)); do
+  port=$((START_PORT+i))
+  PIDS="$(lsof -nP -iTCP:"${port}" -sTCP:LISTEN -t 2>/dev/null | tr '\n' ' ' || true)"
+  if [[ -n "${PIDS// }" ]]; then
+    kill ${PIDS} >/dev/null 2>&1 || true
+    killed=1
   fi
-
-  while true; do
-    sshpid="$(ps ax -o pid=,command= | awk -v p=":${port}" '$0 ~ /ssh/ && $0 ~ /-L/ && $0 ~ p {print $1; exit}')"
-    [[ -n "$sshpid" ]] || break
-    kill "$sshpid" 2>/dev/null || true
-    stopped=$((stopped+1))
-  done
-
 done
 
-if [[ "$stopped" -eq 0 ]]; then
-  say_dialog "OpenClaw" "No OpenClaw tunnel found."
+if [[ "${killed}" -eq 1 ]]; then
+  osasay "Stopped OpenClaw tunnel listeners on ports ${START_PORT}..$((START_PORT+COUNT-1))."
 else
-  say_dialog "OpenClaw" "Stopped ${stopped} tunnel process(es)."
+  osasay "No OpenClaw tunnel listener found on ports ${START_PORT}..$((START_PORT+COUNT-1))."
 fi

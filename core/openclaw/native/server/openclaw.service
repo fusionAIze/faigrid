@@ -1,5 +1,5 @@
 [Unit]
-Description=fusionAIze OpenClaw (native gateway)
+Description=fusionAIze OpenClaw (native)
 After=network-online.target
 Wants=network-online.target
 
@@ -7,42 +7,24 @@ Wants=network-online.target
 Type=simple
 User=openclaw
 Group=openclaw
-
-# Use prod profile dir => /var/lib/openclaw/.openclaw-prod
-Environment=OPENCLAW_PROFILE=prod
 Environment=HOME=/var/lib/openclaw
 WorkingDirectory=/var/lib/openclaw
+Environment=OPENCLAW_PROFILE=prod
 
-# Env files (owned root:openclaw, 0640)
 EnvironmentFile=/etc/openclaw/openclaw.env
 EnvironmentFile=/etc/openclaw/openclaw.token.env
 
-ExecStart=/usr/local/bin/openclaw gateway run --profile prod --force --verbose --ws-log compact --bind ${OPENCLAW_GATEWAY_BIND} --port ${OPENCLAW_GATEWAY_PORT} --auth ${OPENCLAW_GATEWAY_AUTH} --token ${OPENCLAW_GATEWAY_TOKEN}
+ExecStart=/usr/local/bin/openclaw gateway run \
+  --profile prod \
+  --allow-unconfigured \
+  --force --verbose --ws-log compact \
+  --bind ${OPENCLAW_GATEWAY_BIND} \
+  --port ${OPENCLAW_GATEWAY_PORT} \
+  --auth ${OPENCLAW_GATEWAY_AUTH} \
+  --token ${OPENCLAW_GATEWAY_TOKEN}
 
 Restart=on-failure
 RestartSec=2
-TimeoutStartSec=60
-TimeoutStopSec=20
-
-# Hardening (safe defaults)
-NoNewPrivileges=true
-PrivateTmp=true
-ProtectSystem=strict
-ProtectHome=true
-ProtectKernelTunables=true
-ProtectKernelModules=true
-ProtectControlGroups=true
-LockPersonality=true
-MemoryDenyWriteExecute=true
-RestrictRealtime=true
-RestrictSUIDSGID=true
-RemoveIPC=true
-UMask=0077
-
-# Allow writing only where state/tmp is expected
-ReadWritePaths=/var/lib/openclaw /tmp
-
-RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
 
 [Install]
 WantedBy=multi-user.target

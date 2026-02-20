@@ -2,25 +2,32 @@
 set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=_lib.sh
-source "$HERE/_lib.sh"
+source "${HERE}/_lib.sh"
 
-need_root
+is_linux || die "run on core linux host."
+require_root
 
-log "openclaw version"
-if have openclaw; then
-  openclaw --version || true
-else
-  warn "openclaw CLI not found"
-fi
+need systemctl
+need ss
+need openclaw
 
-log "service status"
-systemctl --no-pager status openclaw.service || true
+echo "== openclaw version"
+openclaw --version || true
+echo
 
-log "listening sockets (18789)"
-ss -lntp | egrep ':(18789)\b' || true
+echo "== service status"
+systemctl --no-pager -l status openclaw.service || true
+echo
 
-log "token + perms"
-ls -la /etc/openclaw/secret/gateway.token /etc/openclaw/openclaw.env /etc/openclaw/openclaw.token.env 2>/dev/null || true
-
-log "ExecStart"
+echo "== ExecStart"
 systemctl show openclaw.service -p ExecStart --no-pager || true
+echo
+
+echo "== listening sockets (18789)"
+ss -lntp | egrep ':(18789)\b' || true
+echo
+
+echo "== token file perms"
+stat -c '%A %U:%G %n' /etc/openclaw/secret/gateway.token || true
+stat -c '%A %U:%G %n' /etc/openclaw/openclaw.env || true
+stat -c '%A %U:%G %n' /etc/openclaw/openclaw.token.env || true
