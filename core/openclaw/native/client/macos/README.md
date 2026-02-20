@@ -1,32 +1,18 @@
-# macOS client helpers (OpenClaw UI)
+# macOS client helpers
 
-These scripts are **examples**. Copy them to `~/bin/` on your Mac.
+- `nexus-openclaw-ui.example` — opens OpenClaw UI via SSH tunnel and copies token to clipboard.
+- `nexus-openclaw-ui-stop.example` — stops tunnels (default port range 19089..19108).
 
-## Install
+Install locally:
 
 ```bash
-mkdir -p ~/bin
-cp core/openclaw/native/client/macos/nexus-openclaw-ui.example ~/bin/nexus-openclaw-ui
-cp core/openclaw/native/client/macos/nexus-openclaw-ui-stop.example ~/bin/nexus-openclaw-ui-stop
+cp nexus-openclaw-ui.example ~/bin/nexus-openclaw-ui
+cp nexus-openclaw-ui-stop.example ~/bin/nexus-openclaw-ui-stop
 chmod +x ~/bin/nexus-openclaw-ui ~/bin/nexus-openclaw-ui-stop
 ```
 
-Ensure your `PATH` contains `~/bin`.
+Run:
 
-## SSH host alias
-
-Your `~/.ssh/config` should contain a host entry like:
-
-```sshconfig
-Host nexus-core-ops
-  HostName <core-ip-or-dns>
-  User <ssh-user>
+```bash
+nexus-openclaw-ui
 ```
-
-## Token retrieval (recommended)
-
-To avoid typing a sudo password on every run, allow exactly one command via sudoers on core:
-
-- `/bin/cat /etc/openclaw/secret/gateway.token`
-
-See: `docs/templates/sudoers/openclaw-token-read.example`

@@ -2,7 +2,7 @@
 
 This document is a **generic reference** for the FusionAIze Nexus Labs architecture.
 
-**Rules**
+## Rules (public-safe)
 - Do **not** put real public domains, IPs, or secret endpoints here.
 - Services on `nexus-core` should be **localhost-only** or **docker-internal** by default.
 - Expose public services **only via `nexus-edge`** (reverse proxy + SSO/2FA).
@@ -27,18 +27,23 @@ This document is a **generic reference** for the FusionAIze Nexus Labs architect
 
 ---
 
-## Admin-only tunnel examples (high ports on your laptop)
+## Admin-only tunnels (recommended pattern)
 
-These are **examples** for your local machine (macOS/Linux).  
+These examples are for your **local machine** (macOS/Linux).  
 They do **not** change the actual service ports on `nexus-core`.
 
-### OpenClaw UI via SSH tunnel
+### Pattern
+- Keep services on core bound to `127.0.0.1` (or docker-internal).
+- Use **high / non-standard local ports** on the laptop if you want “obscure” ports.
+- Prefer per-service tunnels (easy to audit + shut down).
+
+### OpenClaw UI via SSH tunnel (example)
 - Local (laptop): `localhost:19089` -> Core: `127.0.0.1:18789`
 - Example:
   - `ssh -N -L 19089:127.0.0.1:18789 nexus-core-ops`
   - Open: `http://127.0.0.1:19089/#token=...`
 
-### n8n UI via SSH tunnel
+### n8n UI via SSH tunnel (example)
 - Local (laptop): `localhost:15678` -> Core: `127.0.0.1:5678`
 - Example:
   - `ssh -N -L 15678:127.0.0.1:5678 nexus-core-ops`

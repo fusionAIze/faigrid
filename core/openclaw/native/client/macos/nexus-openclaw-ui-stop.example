@@ -1,17 +1,44 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Example helper to stop the SSH tunnel started by nexus-openclaw-ui.
-# Copy to: ~/bin/nexus-openclaw-ui-stop
+# Stops OpenClaw SSH tunnels created by nexus-openclaw-ui.
+# Default scans ports 19089..19108 (20 ports).
 
-LOCAL_PORT="${OPENCLAW_LOCAL_PORT:-18789}"
+HOST_ALIAS="${HOST_ALIAS:-nexus-core-ops}"
+PORT_FROM="${PORT_FROM:-19089}"
+PORT_COUNT="${PORT_COUNT:-20}"
 
-# Best-effort kill any ssh process holding the local forward for that port.
-pids="$(lsof -n -iTCP:${LOCAL_PORT} -sTCP:LISTEN -t 2>/dev/null || true)"
-if [[ -z "${pids}" ]]; then
-  echo "No process listening on localhost:${LOCAL_PORT}."
-  exit 0
+PIDFILE_DIR="${PIDFILE_DIR:-$HOME/.openclaw}"
+
+say_dialog() {
+  local title="$1" msg="$2"
+  /usr/bin/osascript -e 'display dialog '"$(printf '%q' "$msg")"' with title '"$(printf '%q' "$title")"' buttons {"OK"} default button "OK"' >/dev/null
+}
+
+stopped=0
+for ((i=0; i<PORT_COUNT; i++)); do
+  port=$((PORT_FROM+i))
+  pidfile="${PIDFILE_DIR}/tunnel-${HOST_ALIAS}-${port}.pid"
+  if [[ -f "$pidfile" ]]; then
+    pid="$(cat "$pidfile" 2>/dev/null || true)"
+    if [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null; then
+      kill "$pid" 2>/dev/null || true
+      stopped=$((stopped+1))
+    fi
+    rm -f "$pidfile"
+  fi
+
+  while true; do
+    sshpid="$(ps ax -o pid=,command= | awk -v p=":${port}" '$0 ~ /ssh/ && $0 ~ /-L/ && $0 ~ p {print $1; exit}')"
+    [[ -n "$sshpid" ]] || break
+    kill "$sshpid" 2>/dev/null || true
+    stopped=$((stopped+1))
+  done
+
+done
+
+if [[ "$stopped" -eq 0 ]]; then
+  say_dialog "OpenClaw" "No OpenClaw tunnel found."
+else
+  say_dialog "OpenClaw" "Stopped ${stopped} tunnel process(es)."
 fi
-
-echo "Killing tunnel process(es): ${pids}"
-kill ${pids} 2>/dev/null || true
