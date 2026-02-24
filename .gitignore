@@ -26,3 +26,10 @@ docs/local/
 
 # OS junk
 .DS_Store
+
+# OpenClaw secrets
+**/openclaw.providers.env
+**/openclaw.channels.env
+**/openclaw.token.env
+**/.env
+**/.env.local

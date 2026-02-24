@@ -1,0 +1,97 @@
+{
+  "agents": {
+    "defaults": {
+      "compaction": {
+        "reserveTokensFloor": 4000
+      },
+      "contextPruning": {
+        "keepLastAssistants": 3,
+        "mode": "cache-ttl",
+        "ttl": "30m"
+      },
+      "contextTokens": 60000,
+      "heartbeat": {
+        "every": "12h",
+        "model": "openai/gpt-5-nano",
+        "suppressToolErrorWarnings": true
+      },
+      "imageModel": {
+        "fallbacks": [],
+        "primary": "google/gemini-1.5-flash"
+      },
+      "memorySearch": {
+        "chunking": {
+          "overlap": 80,
+          "tokens": 700
+        },
+        "enabled": true,
+        "fallback": "none",
+        "provider": "gemini",
+        "sources": [
+          "memory",
+          "sessions"
+        ],
+        "sync": {
+          "onSearch": true,
+          "onSessionStart": false,
+          "sessions": {
+            "deltaBytes": 200000,
+            "deltaMessages": 30
+          },
+          "watch": false,
+          "watchDebounceMs": 1500
+        }
+      },
+      "model": {
+        "fallbacks": [
+          "deepseek/deepseek-reasoner",
+          "google/gemini-1.5-flash",
+          "openai/codex-mini-latest"
+        ],
+        "primary": "deepseek/deepseek-chat"
+      }
+    }
+  },
+  "channels": {
+    "discord": {
+      "configWrites": true,
+      "dmPolicy": "pairing",
+      "enabled": true,
+      "groupPolicy": "allowlist",
+      "guilds": {
+        "902237365110722580": {
+          "channels": {
+            "1474586051225059369": {}
+          }
+        }
+      },
+      "streaming": "off"
+    },
+    "telegram": {
+      "allowFrom": [
+        1354811177
+      ],
+      "dmPolicy": "allowlist",
+      "enabled": true,
+      "groupPolicy": "allowlist",
+      "streaming": "partial"
+    }
+  },
+  "gateway": {
+    "bind": "loopback",
+    "mode": "local",
+    "port": 18789
+  },
+  "meta": {
+    "lastTouchedAt": "2026-02-24T17:55:59.952Z",
+    "lastTouchedVersion": "2026.2.22-2"
+  },
+  "models": {
+    "mode": "merge",
+    "providers": [
+      "deepseek",
+      "google",
+      "openai"
+    ]
+  }
+}
