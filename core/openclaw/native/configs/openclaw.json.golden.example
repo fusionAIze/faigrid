@@ -1,0 +1,107 @@
+{
+  "meta": {
+    "notes": "GOLDEN CONFIG (example) - no secrets. Uses ${ENV_VARS}.",
+    "lastTouchedVersion": "2026.2.22-2"
+  },
+  "gateway": { "port": 18789, "mode": "local", "bind": "loopback" },
+
+  "models": {
+    "mode": "merge",
+    "providers": {
+      "deepseek": {
+        "baseUrl": "https://api.deepseek.com/v1",
+        "apiKey": "${DEEPSEEK_API_KEY}",
+        "auth": "api-key",
+        "api": "openai-completions",
+        "models": [
+          { "id": "deepseek-chat", "name": "DeepSeek Chat", "contextWindow": 128000, "maxTokens": 2000 },
+          { "id": "deepseek-reasoner", "name": "DeepSeek Reasoner", "contextWindow": 128000, "maxTokens": 2000 }
+        ]
+      },
+      "google": {
+        "baseUrl": "https://generativelanguage.googleapis.com/v1beta",
+        "apiKey": "${GEMINI_API_KEY}",
+        "auth": "api-key",
+        "api": "google-generative-ai",
+        "models": [
+          { "id": "gemini-1.5-flash", "name": "Gemini 1.5 Flash", "contextWindow": 1000000, "maxTokens": 2000 },
+          { "id": "gemini-1.5-pro", "name": "Gemini 1.5 Pro", "contextWindow": 2000000, "maxTokens": 2000 }
+        ]
+      },
+      "openai": {
+        "baseUrl": "https://api.openai.com/v1",
+        "apiKey": "${OPENAI_API_KEY}",
+        "auth": "api-key",
+        "api": "openai-responses",
+        "models": [
+          { "id": "codex-mini-latest", "name": "Codex Mini (latest)", "contextWindow": 200000, "maxTokens": 2000 }
+        ]
+      },
+      "openrouter": {
+        "apiKey": "${OPENROUTER_API_KEY}"
+      }
+    }
+  },
+
+  "agents": {
+    "defaults": {
+      "model": {
+        "primary": "deepseek/deepseek-chat",
+        "fallbacks": [
+          "deepseek/deepseek-reasoner",
+          "google/gemini-1.5-flash",
+          "openai/codex-mini-latest"
+        ]
+      },
+      "imageModel": { "primary": "google/gemini-1.5-flash", "fallbacks": [] },
+      "contextTokens": 60000,
+
+      "memorySearch": {
+        "enabled": true,
+        "sources": ["memory", "sessions"],
+        "provider": "gemini",
+        "fallback": "none",
+        "chunking": { "tokens": 700, "overlap": 80 },
+        "sync": {
+          "onSessionStart": false,
+          "onSearch": true,
+          "watch": false,
+          "watchDebounceMs": 1500,
+          "sessions": { "deltaBytes": 200000, "deltaMessages": 30 }
+        }
+      },
+
+      "contextPruning": { "mode": "cache-ttl", "ttl": "30m", "keepLastAssistants": 3 },
+      "compaction": { "reserveTokensFloor": 4000 },
+
+      "heartbeat": { "every": "12h", "model": "openai/gpt-5-nano", "suppressToolErrorWarnings": true }
+    }
+  },
+
+  "messages": { "queue": { "mode": "collect" } },
+  "commands": { "native": "auto", "nativeSkills": "auto", "restart": true, "ownerDisplay": "raw" },
+
+  "channels": {
+    "telegram": {
+      "enabled": true,
+      "dmPolicy": "allowlist",
+      "botToken": "${TELEGRAM_BOT_TOKEN}",
+      "allowFrom": [1354811177],
+      "groupPolicy": "allowlist",
+      "streaming": "partial"
+    },
+    "discord": {
+      "enabled": true,
+      "configWrites": true,
+      "token": "${DISCORD_BOT_TOKEN}",
+      "groupPolicy": "allowlist",
+      "streaming": "off",
+      "dmPolicy": "pairing",
+      "guilds": {
+        "902237365110722580": { "channels": { "1474586051225059369": {} } }
+      }
+    }
+  },
+
+  "plugins": { "entries": { "telegram": { "enabled": true }, "discord": { "enabled": true } } }
+}
