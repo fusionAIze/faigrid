@@ -32,7 +32,7 @@ echo "[nexus-core-heart] Copy compose + env template"
 mkdir -p "${COMPOSE_DIR}"
 cp -a core/heart/compose/docker-compose.yml "${COMPOSE_DIR}/docker-compose.yml"
 if [[ ! -f "${ENV_FILE}" ]]; then
-  cp -a core/heart/env/.env.example "${ENV_FILE}"
+  cp -a core/heart/compose/.env.example "${ENV_FILE}"
   echo ">> IMPORTANT: edit ${ENV_FILE} and set real secrets (N8N_ENCRYPTION_KEY, POSTGRES_PASSWORD, WEBHOOK_SHARED_SECRET)"
 fi
 

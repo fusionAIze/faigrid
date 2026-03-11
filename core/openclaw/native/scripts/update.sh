@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
-echo "[openclaw-native] update (skeleton)"
-echo "TODO: implement update path (pull new version, restart service)."
+echo "[openclaw-native] this wrapper is deprecated"
+echo "Use the canonical host-side workflow instead:"
+echo "  cd core/openclaw/native/server"
+echo "  sudo ./update.sh --version 2026.2.19-2"
+exit 1

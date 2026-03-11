@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
 set -euo pipefail
-echo "This is a repo skeleton for OpenClaw native deployment."
-echo "Do not run on macOS. Run templates later on the Debian host (nexus-core)."
+echo "This legacy scaffold is deprecated."
+echo "Use core/openclaw/native/server/*.sh and docs/reference/openclaw-native.md instead."
+exit 1

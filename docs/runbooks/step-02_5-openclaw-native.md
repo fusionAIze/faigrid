@@ -2,27 +2,37 @@
 
 ## Target outcome
 - OpenClaw runs as a **native systemd service** on `nexus-core`
-- bound to `127.0.0.1:3000`
+- bound to `127.0.0.1:18789`
 - later exposed via `nexus-edge` (reverse proxy + SSO/2FA)
 
 ## Repo locations
 - Module: `core/openclaw/native/`
-- Example env: `core/openclaw/native/configs/openclaw.env.example`
-- Example systemd: `core/openclaw/native/systemd/openclaw.service.example`
-- Control-center: `core/openclaw/native/scripts/control-center.sh`
+- Reference doc: `docs/reference/openclaw-native.md`
+- Example env: `core/openclaw/native/server/openclaw.env.example`
+- Example systemd: `core/openclaw/native/server/openclaw.service`
+- Control-center: `core/openclaw/native/server/control-center.sh`
 
 ## Host-side planned paths (nexus-core)
-- Install dir: `/opt/openclaw`
+- CLI: `/usr/local/bin/openclaw`
 - Env dir: `/etc/openclaw/openclaw.env`  (not in git)
-- Data dir: `/var/lib/openclaw`
-- Logs dir: `/var/log/openclaw`
+- Token env: `/etc/openclaw/openclaw.token.env`  (not in git)
+- Token secret: `/etc/openclaw/secret/gateway.token`
+- State dir: `/var/lib/openclaw/.openclaw`
 
 ## Install plan (to execute later on nexus-core)
 1) Ensure Node 22+ + npm present
 2) Create service user `openclaw`
-3) Create dirs and permissions
-4) Install OpenClaw (official installer / release)
-5) Place `/etc/openclaw/openclaw.env` based on the example
-6) Install systemd unit and enable
+3) Install `openclaw@<version>` globally via npm
+4) Generate `/etc/openclaw/openclaw.env` + token files
+5) Install systemd unit and enable it
+6) Verify service status and loopback listener
 
-> NOTE: The exact ExecStart will be finalized once the install method is confirmed on the host.
+## Execution
+- Install:
+  - `cd core/openclaw/native/server`
+  - `sudo ./install.sh --version 2026.2.19-2`
+- Verify:
+  - `sudo ./verify.sh`
+- Operate:
+  - `sudo ./control-center.sh status`
+  - `sudo ./control-center.sh logs`

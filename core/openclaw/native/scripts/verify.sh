@@ -6,10 +6,10 @@ echo "- node: $(node -v 2>/dev/null || echo 'missing')"
 echo "- npm : $(npm -v 2>/dev/null || echo 'missing')"
 echo
 
-if systemctl is-active --quiet openclaw 2>/dev/null; then
+if systemctl is-active --quiet openclaw.service 2>/dev/null; then
   echo "[ok] openclaw service active"
 else
   echo "[info] openclaw service not active (yet)"
 fi
 
-ss -tulpn | egrep ':3000' || true
+ss -tulpn | egrep ':(18789)\b' || true

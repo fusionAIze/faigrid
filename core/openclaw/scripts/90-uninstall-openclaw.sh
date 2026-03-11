@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Placeholder: docs mention uninstall.
-# We'll implement once we confirm how the installer deploys on Debian host.
-echo "[openclaw] uninstall placeholder - implement after first host install"
+echo "[openclaw] legacy scaffold path is deprecated"
+echo "Use:"
+echo "  cd core/openclaw/native/server"
+echo "  sudo ./uninstall.sh --wipe-state"
+exit 1

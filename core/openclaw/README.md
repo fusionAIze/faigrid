@@ -1,19 +1,10 @@
-# OpenClaw (native on core)
+# OpenClaw (legacy scaffold)
 
-Goal: run OpenClaw **natively** on `nexus-core` (Debian) as a system service, while the "core heart"
-(n8n + postgres + redis) runs in Docker.
+This directory is retained as historical scaffolding only.
+Do not use it for new installs.
 
-This folder is a **repo skeleton**:
-- scripts are templates to run on the Debian host
-- configs are examples (systemd unit placeholder)
-- env examples contain no secrets
+Use the canonical native workflow instead:
 
-## Install (on Debian host)
-Reference from docs:
-- `curl -fsSL https://openclaw.ai/install.sh | bash`
-- `openclaw onboard --install-daemon`
-- `openclaw gateway status`
-- `openclaw dashboard`
-
-## Security posture
-- keep OpenClaw internal (localhost / LAN) and expose only via edge reverse proxy if needed.
+- `core/openclaw/native/server/` for host-side install and service lifecycle
+- `docs/runbooks/step-02_5-openclaw-native.md`
+- `docs/reference/openclaw-native.md`

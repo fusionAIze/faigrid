@@ -10,7 +10,6 @@ echo "[scaffold] Creating Step 03 (core heart) repo skeleton..."
 
 mkdir -p \
   core/heart/compose \
-  core/heart/env \
   core/heart/scripts \
   core/heart/configs/caddy \
   core/heart/configs/n8n \
@@ -25,8 +24,8 @@ mkdir -p \
 touch \
   core/heart/README.md \
   core/heart/compose/docker-compose.yml \
-  core/heart/env/.env.example \
-  core/heart/env/.env.local.example \
+  core/heart/compose/.env.example \
+  core/heart/compose/.env.local.example \
   core/heart/configs/caddy/Caddyfile.example \
   core/heart/scripts/control-center.sh \
   core/heart/scripts/install.sh \

@@ -38,7 +38,6 @@ touch \
   core/base/client/macos/nexus-vnc-ops.example \
   core/base/client/macos/nexus-vnc-ops-stop.example \
   core/base/client/macos/README.md \
-  core/base/scripts/core-baseline.sh \
   core/base/scripts/ssh-hardening-apply.sh \
   core/base/scripts/ufw-apply.sh \
   core/base/scripts/vnc-install.sh \

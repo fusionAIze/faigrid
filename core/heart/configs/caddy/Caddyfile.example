@@ -1,0 +1,5 @@
+# Example edge-side reverse proxy for a localhost-bound n8n instance on `nexus-core`.
+
+n8n.example.com {
+  reverse_proxy http://127.0.0.1:5678
+}
