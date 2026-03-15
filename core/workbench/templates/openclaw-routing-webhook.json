@@ -1,0 +1,62 @@
+{
+  "name": "Nexus Labs - Generic Agent Dispatcher",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "openclaw-dispatch",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "name": "Webhook Ingress",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        250,
+        300
+      ],
+      "webhookId": "agent-grid-dispatcher"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:8000/v1/agents/chat",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "agent_role",
+              "value": "={{$json[\"body\"][\"target_role\"]}}"
+            },
+            {
+              "name": "prompt",
+              "value": "={{$json[\"body\"][\"payload\"]}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "OpenClaw Local Dispatch",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        500,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook Ingress": {
+      "main": [
+        [
+          {
+            "node": "OpenClaw Local Dispatch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {}
+}
