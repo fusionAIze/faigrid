@@ -34,10 +34,12 @@ To do this, you do not need to edit the core application code. Instead, use the 
 ## Commit Messages & Releases
 
 This repository uses [Release Please](https://github.com/googleapis/release-please) to automatically generate changelogs and version bumps. 
+**Important Baseline**: `v0.0.1` is our foundational release. All work builds upon this. Until `v1.0.0`, features and fixes will strictly increment the minor/patch versions. 
+
 Therefore, **all commit messages and PR titles must follow [Conventional Commits](https://www.conventionalcommits.org/) format.**
 
 Examples:
-- `feat: add deepseek cli plugin to workbench` (Creates a feature bump in the next release)
-- `fix: correct typo in openclaw restart script` (Creates a bugfix bump in the next release)
+- `feat: add deepseek cli plugin to workbench` (Creates a feature bump, e.g. `v0.1.0` or `v0.0.2` depending on pre-1.0 rules in the next release)
+- `fix: correct typo in openclaw restart script` (Creates a bugfix patch bump, e.g. `v0.0.3` in the next release)
 - `docs: update architecture documentation` (Does not trigger a new release, just updates the repo)
 - `chore: update github action runners` (Does not trigger a new release)

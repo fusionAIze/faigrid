@@ -6,6 +6,13 @@ The goal is to maintain the **"AI Workbench"** as an easily deployable, modular 
 
 ---
 
+## 📈 Versioning Strategy
+- **Baseline**: `v0.0.1` is the foundational release. All subsequent development builds upon this baseline.
+- **Semantic Versioning**: We use [Release Please](https://github.com/googleapis/release-please) to automatically generate releases from Conventional Commits.
+- **Pre-1.0.0 Rule**: Until we reach `v1.0.0`, all new features (`feat:`) and fixes (`fix:`) will increment the **patch** or **minor** version (e.g., `v0.0.2`, `v0.1.0`). No major version bumps will occur until `v1.0.0` is explicitly released according to this roadmap. See `CONTRIBUTING.md` for commit guidelines.
+
+---
+
 ## 🎯 v0.0.1 (Current Horizon)
 *The Repository Reboot & Standardization*
 - **Done:** Restructuring into the **4+1 Node Architecture** (Edge, Core, Worker, Backup, External).
