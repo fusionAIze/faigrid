@@ -49,6 +49,7 @@ ROLE_NAME=""
 ROLE_DIR=""
 AUTO_YES="false"
 VNC_CHOICE=""
+ROLE_CHOICE=""
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -58,7 +59,7 @@ while [[ $# -gt 0 ]]; do
     --role) ROLE_NAME="$2"; shift 2 ;;
     --vnc) VNC_CHOICE="y"; shift ;;
     --yes) AUTO_YES="true"; shift ;;
-    *) error "Unknown parameter passed: $1"; exit 1 ;;
+    *) error "Unknown parameter passed: $1" ;;
   esac
 done
 
