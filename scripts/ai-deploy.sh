@@ -77,10 +77,7 @@ for (( i=0; i<NODE_COUNT; i++ )); do
     
     # Execute
     log "Running: ${INSTALL_CMD[*]}"
-    "${INSTALL_CMD[@]}"
-    
-    # Check Result
-    if [[ $? -eq 0 ]]; then
+    if "${INSTALL_CMD[@]}"; then
         success "Node [${ROLE}] deployed successfully."
     else
         error "Node [${ROLE}] deployment failed. Agent: please evaluate the stdout/stderr."
