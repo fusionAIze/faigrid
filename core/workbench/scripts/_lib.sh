@@ -22,3 +22,21 @@ die() { error "$@"; exit 1; }
 print_header() {
   echo -e "\n${C_BOLD}${C_MAGENTA}=== $1 ===${C_RESET}\n"
 }
+
+# Centralized Logging Aggregator
+log_event() {
+  local COMPONENT=$1
+  local SEVERITY=$2
+  local MESSAGE=$3
+  local LOG_DIR="/var/log/nexus"
+  local LOG_FILE="${LOG_DIR}/nexus-system.log"
+  
+  if [[ ! -d "$LOG_DIR" ]]; then
+    sudo mkdir -p "$LOG_DIR" 2>/dev/null || true
+    sudo chmod 777 "$LOG_DIR" 2>/dev/null || true
+  fi
+  
+  if [[ -w "$LOG_DIR" ]] || [[ -f "$LOG_FILE" && -w "$LOG_FILE" ]]; then
+    echo "$(date -u +"%Y-%m-%dT%H:%M:%SZ") | ${COMPONENT} | [${SEVERITY}] | ${MESSAGE}" >> "$LOG_FILE"
+  fi
+}
