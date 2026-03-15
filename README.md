@@ -21,17 +21,17 @@ Open-source, modular reference stack for a **secure agent + automation** setup.
 
 ## Modules (high-level)
 
-- **nexus-edge**: secure ingress + DNS (Pi-hole), reverse proxy (Caddy), optional SSO/2FA + abuse protection (runs on Raspberry Pi)
-- **nexus-core**: AI Hub / Workbench with internal n8n + OpenClaw + Routing (FoundryGate, RTK) + CLI agents (kilo, codex, etc.) (runs on Mini-PC)
-- **nexus-worker**: local LAN LLM serving for isolated, cost-optimized coding/review tasks (runs on older MacBook)
-- **nexus-backup**: offline backups and restore target (runs on Synology NAS)
-- **nexus-external** *(optional)*: Public cloud extension (e.g. Hetzner) running Agency-PM (Plane) + External n8n communicating with internal core
+- **nexus-edge**: secure ingress + DNS (Pi-hole), reverse proxy (Caddy), optional SSO/2FA + abuse protection (runs on any edge/gateway node)
+- **nexus-core**: AI Hub / Workbench with internal n8n + OpenClaw + Routing (FoundryGate, RTK) + CLI agents (kilo, codex, etc.) (runs on any primary compute node)
+- **nexus-worker**: local LAN LLM serving for isolated, cost-optimized coding/review tasks (runs on any inference-capable node)
+- **nexus-backup**: offline backups and restore target (runs on any storage target/NAS)
+- **nexus-external** *(optional)*: Public cloud extension running Agency-PM (Plane) + External n8n communicating with internal core (runs on any public VPS)
 
 ## Repository layout
 
 - `core/` — docker compose stacks, systemd servers, and core orchestration logic
-- `docs/` — runbooks, architecture, extensions
-- `edge/pi/` — scripts + configs for the Pi (nexus-edge)
+- `docs/` — runbooks, architecture, example setups, and extensions
+- `edge/pi/` — scripts + configs for the Edge node
 - `scripts/` — global scaffolding and repository utilities
 
 ## License

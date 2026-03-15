@@ -88,10 +88,9 @@ Typical exposure:
 - RAG per project (Qdrant/pgvector)
 - GitOps deployment workflows
 
-This is one possible mapping, functioning as a distributed 4+1 node system:
+## Architectural Scale & Examples
 
-- **Raspberry Pi**: runs `nexus-edge` (Pi-hole + Caddy) at fixed IP (e.g. 192.168.178.10)
-- **Mini PC**: runs `nexus-core` (Internal n8n, OpenClaw, FoundryGate routing, CLIs)
-- **Older MacBook Pro**: runs `nexus-worker` (LM Studio, private development models)
-- **Synology NAS**: runs `nexus-backup` 
-- **Hetzner Cloud Server**: runs `nexus-external` (Plane PM, External n8n)
+Because this architecture separates functional **roles** from underlying **hardware**, it ranges from a simple DIY homelab to a multi-region cloud deployment.
+
+For concrete infrastructure mapping examples (e.g., *Local Agency Lab* vs. *Full Cloud Deployment*), refer to:
+- [`docs/example_setups.md`](example_setups.md)
