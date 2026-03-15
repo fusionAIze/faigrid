@@ -24,6 +24,16 @@ sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plug
 echo "[nexus-core-heart] Enabling docker..."
 sudo systemctl enable --now docker
 
+echo "[nexus-core-heart] Applying base security hardening..."
+# Calculate relative path to base scripts
+BASE_SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../base/scripts" &> /dev/null && pwd)"
+if [[ -d "${BASE_SCRIPTS_DIR}" ]]; then
+    bash "${BASE_SCRIPTS_DIR}/ufw-apply.sh"
+    bash "${BASE_SCRIPTS_DIR}/ssh-hardening-apply.sh"
+else
+    echo "[WARN] Base security scripts not found at ${BASE_SCRIPTS_DIR}"
+fi
+
 echo "[nexus-core-heart] Creating stack dir: ${STACK_DIR}"
 sudo mkdir -p "${STACK_DIR}"
 if ! id -u nexus > /dev/null 2>&1; then
