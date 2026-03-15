@@ -43,4 +43,9 @@ else
     log_event "watchdog" "WARN" "Service 'Caddy' proxy not detected on port 2019. (Ignored if not an Edge node)."
 fi
 
+# 4. Generate Static HTML Dashboard Component
+if [[ -x "${SCRIPT_DIR}/dashboard.sh" ]]; then
+    "${SCRIPT_DIR}/dashboard.sh" --html
+fi
+
 log_event "watchdog" "INFO" "Watchdog health cycle complete."
