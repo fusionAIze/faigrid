@@ -20,6 +20,21 @@ else
     }
 fi
 
+# --- Alerting Hook ---
+send_alert() {
+    local MESSAGE=$1
+    if [[ -f "${SCRIPT_DIR}/../.env.topology" ]]; then
+        # shellcheck disable=SC1090
+        source "${SCRIPT_DIR}/../.env.topology"
+    fi
+    
+    if [[ -n "${ALERT_WEBHOOK_URL:-}" ]]; then
+        curl -X POST -H "Content-Type: application/json" \
+             -d "{\"text\": \"🚨 Nexus Alert: ${MESSAGE}\"}" \
+             "${ALERT_WEBHOOK_URL}" &> /dev/null || true
+    fi
+}
+
 log_event "watchdog" "INFO" "Watchdog health cycle initiated."
 
 # 1. Check n8n Core
@@ -27,6 +42,7 @@ if curl -sSf -m 3 "http://127.0.0.1:5678/healthz" > /dev/null 2>&1; then
     log_event "watchdog" "INFO" "Service 'n8n' (Nexus Core) is healthy."
 else
     log_event "watchdog" "ERROR" "Service 'n8n' failed healthcheck on port 5678."
+    send_alert "n8n Core is down on $(hostname)"
 fi
 
 # 2. Check PostgreSQL Database
@@ -46,6 +62,11 @@ fi
 # 4. Generate Static HTML Dashboard Component
 if [[ -x "${SCRIPT_DIR}/dashboard.sh" ]]; then
     "${SCRIPT_DIR}/dashboard.sh" --html
+fi
+
+# 5. Maintenance: Rotate Logs
+if command -v rotate_logs > /dev/null; then
+    rotate_logs
 fi
 
 log_event "watchdog" "INFO" "Watchdog health cycle complete."

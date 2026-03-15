@@ -10,11 +10,46 @@
 ### Navigation
 [Core Idea](#core-idea) • 
 [Architecture](#architecture) • 
+[Quick Start](#quick-start) • 
+[Troubleshooting](#troubleshooting) • 
 [Modules](#modules) • 
 [Repository Layout](#repository-layout) • 
 [License](#license)
 
 ---
+
+## Quick Start
+
+Get your Nexus infrastructure live in 2 steps:
+
+```bash
+# 1. Clone & Provision (Detects macOS/Linux automatically)
+git clone https://github.com/typelicious/fusionaize-nexus-labs.git nexus
+cd nexus && bash install.sh
+
+# 2. Deploy your first node (e.g. Core Workbench)
+./install.sh --mode local --role core --strategy 1 --yes
+```
+
+Done. Your AI Workbench is now accessible via the **Terminal Dashboard**:
+```bash
+./scripts/dashboard.sh
+```
+
+---
+
+## Troubleshooting
+
+If something feels off, run the **Nexus Doctor**. It performs comprehensive sanity checks on resources, connectivity, and local state:
+
+```bash
+./scripts/nexus-doctor.sh
+```
+
+To view live system telemetry and consolidated logs:
+```bash
+tail -f /var/log/nexus/nexus-system.log
+```
 
 ## Core Idea
 

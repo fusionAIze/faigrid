@@ -40,3 +40,20 @@ log_event() {
     echo "$(date -u +"%Y-%m-%dT%H:%M:%SZ") | ${COMPONENT} | [${SEVERITY}] | ${MESSAGE}" >> "$LOG_FILE"
   fi
 }
+
+# Simple Log Rotation
+rotate_logs() {
+  local LOG_FILE="/var/log/nexus/nexus-system.log"
+  local MAX_SIZE_KB=5120 # 5MB limit
+  
+  if [[ -f "$LOG_FILE" ]]; then
+    local SIZE_KB
+    SIZE_KB=$(du -k "$LOG_FILE" | cut -f1)
+    if [[ "$SIZE_KB" -gt "$MAX_SIZE_KB" ]]; then
+      log_event "system" "INFO" "Rotating logs (Size: ${SIZE_KB}KB)"
+      mv "$LOG_FILE" "${LOG_FILE}.old"
+      touch "$LOG_FILE"
+      chmod 666 "$LOG_FILE" 2>/dev/null || true
+    fi
+  fi
+}
