@@ -52,3 +52,4 @@ The goal is to maintain the **"AI Workbench"** as an easily deployable, modular 
 - **GitOps Support:** Capability to deploy updates to the infrastructure directly by merging to a configuration repository (Infrastructure as Code).
 - **Backup Automation:** Direct integration with Restic/Synology APIs for verified, encrypted, immutable offsite backups.
 - **Telemetry Dashboards:** Extremely lightweight integration of Prometheus + Grafana for visualizing Token Consumption (from FoundryGate/ICM) and Workflow Metrics (from n8n). 
+- **Pre-baked Machine Images (Post-1.0.0):** Native `.img` files for Raspberry Pi Edge nodes and Cloud-Init deployment templates for VPS instances for extreme plug-and-play onboarding. 
