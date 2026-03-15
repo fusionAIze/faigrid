@@ -29,19 +29,19 @@ Typical exposure:
 - 53 (DNS, LAN-only if enabled)
 - 22 (SSH, LAN-only)
 
-### 2) nexus-core (orchestrator + state)
+### 2) nexus-core (orchestrator + AI Workbench)
 
 Responsibilities:
-- n8n (automation backbone)
-- Moltbot (agent orchestrator / dispatcher)
-- Postgres (state)
-- Redis (queue between webhooks and actions)
-- credentials management
+- Internal n8n (automation backbone, not exposed externally)
+- OpenClaw (agent orchestrator / dispatcher)
+- Routing Layer (FoundryGate, RTK, ICM) for model token-consumption and memory routing
+- Workbench Tooling (CLIs like kilo, gemini, claude, codex, paperclip, ship-faster)
+- State & Queue (Postgres + Redis)
 
 Typical exposure:
-- ideally **not** exposed directly; accessed via `nexus-edge` reverse proxy
+- ideally **not** exposed directly; accessed via `nexus-edge` reverse proxy Layer or VPN
 
-### 3) nexus-llm-worker (LLM execution backend)
+### 3) nexus-worker (LLM execution backend)
 
 Responsibilities:
 - local model serving (LM Studio / Ollama / vLLM) and/or routing to cloud LLMs
@@ -61,12 +61,22 @@ Responsibilities:
 Targets can be:
 - NAS, external disk, S3-compatible object storage, rsync target, etc.
 
+### 5) nexus-external (public cloud extension)
+
+Responsibilities:
+- Hosting external-facing collaboration tools (e.g. Agency-PM / Plane)
+- External Workflow Automation (external-n8n)
+- Securely communicating inward with the internal `nexus-core` n8n
+
+Typical exposure:
+- Publicly accessible via internet (Standard web ports 80/443)
+
 ## Execution model (recommended)
 
-- Webhooks enter via **nexus-edge**
+- Webhooks enter via **nexus-edge** or **nexus-external**
 - Workflows run in **n8n** on **nexus-core**
-- Actions execute via isolated runners (future): shell/browser/CI tasks
-- Moltbot enforces project policies: budgets, allowed tools/repos, approval gates
+- Routing and model dispatching runs via **FoundryGate/RTK**
+- Actions execute via isolated runner CLIs (codex, paperclip) or **OpenClaw** agents
 - Everything is logged and backed up
 
 ## Roadmap modules (extensions)
@@ -78,11 +88,10 @@ Targets can be:
 - RAG per project (Qdrant/pgvector)
 - GitOps deployment workflows
 
-## Example deployment (home lab)
+This is one possible mapping, functioning as a distributed 4+1 node system:
 
-This is one possible mapping (your current setup), not a requirement:
-
-- Raspberry Pi: runs `nexus-edge` (Pi-hole + Caddy)
-- Mini PC / Apple Silicon / VM: runs `nexus-core` (n8n + Moltbot + Postgres + Redis)
-- Laptop/Server: runs `nexus-llm-worker` (LM Studio)
-- NAS/Object Storage: runs `nexus-backup` (Synology / S3)
+- **Raspberry Pi**: runs `nexus-edge` (Pi-hole + Caddy) at fixed IP (e.g. 192.168.178.10)
+- **Mini PC**: runs `nexus-core` (Internal n8n, OpenClaw, FoundryGate routing, CLIs)
+- **Older MacBook Pro**: runs `nexus-worker` (LM Studio, private development models)
+- **Synology NAS**: runs `nexus-backup` 
+- **Hetzner Cloud Server**: runs `nexus-external` (Plane PM, External n8n)
