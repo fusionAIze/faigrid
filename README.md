@@ -4,36 +4,90 @@
 [![Test](https://github.com/typelicious/fusionaize-nexus-labs/actions/workflows/test.yml/badge.svg)](https://github.com/typelicious/fusionaize-nexus-labs/actions/workflows/test.yml)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Bash](https://img.shields.io/badge/Language-Bash-4EAA25.svg)](https://www.gnu.org/software/bash/)
-Open-source, modular reference stack for a **secure agent + automation** setup.
 
-**Core idea:** Edge (secure ingress) → Core (n8n + OpenClaw) → Workers (LLM/runner) → Backups/Observability.
+---
 
-## Start here
+### Navigation
+[Core Idea](#core-idea) • 
+[Architecture](#architecture) • 
+[Modules](#modules) • 
+[Repository Layout](#repository-layout) • 
+[License](#license)
 
-- [Step 01 — Pi Edge (Headless)](docs/runbooks/step-01-pi-edge.md)
+---
 
-> Security note: This repository is a template. **Never commit secrets**. Use `.env.example` files only.
+## Core Idea
 
-## Table of Contents
-- [Modules (high-level)](#modules-high-level)
-- [Repository layout](#repository-layout)
-- [License](#license)
+**fusionAIze Nexus Labs** is an open-source, modular reference stack designed for building self-hosted, sovereign **Agent & Automation** environments. It embraces a strict "deny-by-default" security philosophy, decoupling untrusted ingress (Edge) from critical orchestration (Core) and heavy LLM inference (Workers).
 
-## Modules (high-level)
+Rather than relying on heavy, black-box frameworks, Nexus Labs utilizes pure Bash orchestration, robust Systemd services, and well-understood Docker topologies to provide a transparent and resilient AI workbench.
 
-- **nexus-edge**: secure ingress + DNS (Pi-hole), reverse proxy (Caddy), optional SSO/2FA + abuse protection (runs on any edge/gateway node)
-- **nexus-core**: AI Hub / Workbench with internal n8n + OpenClaw + Routing (FoundryGate, RTK) + CLI agents (kilo, codex, etc.) (runs on any primary compute node)
-- **nexus-worker**: local LAN LLM serving for isolated, cost-optimized coding/review tasks (runs on any inference-capable node)
-- **nexus-backup**: offline backups and restore target (runs on any storage target/NAS)
-- **nexus-external** *(optional)*: Public cloud extension running Agency-PM (Plane) + External n8n communicating with internal core (runs on any public VPS)
+---
 
-## Repository layout
+## Architecture
 
-- `core/` — docker compose stacks, systemd servers, and core orchestration logic
-- `docs/` — runbooks, architecture, example setups, and extensions
-- `edge/pi/` — scripts + configs for the Edge node
-- `scripts/` — global scaffolding and repository utilities
+The infrastructure relies on a decoupled, secure **4+1 Node Architecture**:
+
+```text
+                     Public Internet
+                            │ (HTTPS)
+      ┌─────────────────────▼─────────────────────┐
+      │               NEXUS EDGE                  │ (1) Ingress / Proxy
+      │     (Caddy Reverse Proxy, SSO, Auth)      │
+      └─────────────────────┬─────────────────────┘
+                            │ (Internal TLS)
+      ┌─────────────────────▼─────────────────────┐
+      │               NEXUS CORE                  │ (2) Orchestrator 
+      │    (n8n, OpenClaw, RTK, Postgres, Redis)  │
+      └──────┬─────────────────────────────┬──────┘
+             │ (Local API)                 │ (Encrypted Tunnels)
+  ┌──────────▼──────────┐       ┌──────────▼──────────┐
+  │    NEXUS WORKER     │       │   NEXUS EXTERNAL    │ (5) Global Extension
+  │  (Local LLM Nodes)  │       │  (Cloud VPS Node)   │
+  └─────────────────────┘       └─────────────────────┘
+             │
+  ┌──────────▼──────────┐
+  │    NEXUS BACKUP     │ (4) Offsite Storage
+  │ (Synology / Restic) │
+  └─────────────────────┘
+```
+
+---
+
+## Modules
+
+The Nexus framework is logically segmented into specialized operational roles:
+
+- **nexus-edge**: The gatekeeper. Handles TLS termination (Caddy), CrowdSec bouncers, and identity providers (Authelia/Authentik). Exposed to the internet.
+- **nexus-core**: The orchestrator. Contains the AI Workbench including n8n, further AI routing logic natively managed by OpenClaw, Redis distributed queues, and system telemetry watchdogs. Strictly internal.
+- **nexus-worker**: The execution engine. Dedicated hardware running local LLMs (e.g., LM Studio/Ollama) routed securely to the Core via Tailscale or reverse SSH tunnels.
+- **nexus-backup**: The safety net. Automated, immutable offline backup pipelines targeting dedicated local network attached storage.
+- **nexus-external** *(optional)*: The global bridge. Distributed extension nodes syncing back to the primary local grid.
+
+> **Security Note:** This repository is intrinsically designed for autonomous deployments. It utilizes dynamic state and `.env.topology` generation. **Never commit secrets**.
+
+---
+
+## Repository Layout
+
+- `core/` — Docker compose stacks, systemd servers, and core orchestration scripts.
+- `docs/` — Core architecture design, example deployment grids, AI schemas, and tunneling runbooks.
+- `edge/` — Firewall configs, advanced proxy templates, and SSO structures for Edge nodes.
+- `scripts/` — The master orchestration utilities (`install.sh`, `ai-deploy.sh`, `dashboard.sh`, `nexus-watchdog.sh`).
+- `tests/` — Automated syntactical checks and integration pipelines natively hooked into CI/CD.
+
+---
+
+### Support
+
+If you find this engineering blueprint valuable or you're using it to bootstrap your own sovereign AI networks, please consider giving it a ⭐️ to help the community grow!
+
+---
 
 ## License
 
-Apache 2.0 — see [LICENSE](LICENSE).
+Apache 2.0 — see [LICENSE](LICENSE) for details.
+
+---
+
+> Made with ❤️ in Berlin
