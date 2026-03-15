@@ -16,7 +16,7 @@ if [[ -f "$LIB_PATH" ]]; then
 else
     # Fallback local definition if standalone
     log_event() { 
-       echo "$(date -u +"%Y-%m-%dT%H:%M:%SZ") | ${1} | [${2}] | ${3}" 
+       echo "$(date -u +"%Y-%m-%dT%H:%M:%SZ") | ${1:-} | [${2:-}] | ${3:-}" 
     }
 fi
 

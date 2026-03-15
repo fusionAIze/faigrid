@@ -57,9 +57,9 @@ if [[ "$MODE" == "shell" ]]; then
     echo " RAM    : $RAM"
     echo " DISK   : $DISK"
     echo "------------------------------------------------------------"
-    echo -e " n8n Core         : \t$N8N_STATUS"
-    echo -e " PostgreSQL       : \t$PG_STATUS"
-    echo -e " Caddy Edge       : \t$CADDY_STATUS"
+    echo -e " n8n Core         : \t${N8N_STATUS}"
+    echo -e " PostgreSQL       : \t${PG_STATUS}"
+    echo -e " Caddy Edge       : \t${CADDY_STATUS}"
     echo "============================================================"
     if [[ -f "$LOG_FILE" ]]; then
         echo " Recent System Events:"
@@ -113,9 +113,9 @@ elif [[ "$MODE" == "html" ]]; then
     
     <div class="card">
         <h2>Service Endpoints</h2>
-        <div class="metric"><strong>n8n Core:</strong> <span class="${N8N_STATUS,,}">$N8N_STATUS</span></div>
-        <div class="metric"><strong>PostgreSQL:</strong> <span class="${PG_STATUS,,}">$PG_STATUS</span></div>
-        <div class="metric"><strong>Caddy Edge:</strong> <span class="${CADDY_STATUS,,}">$CADDY_STATUS</span></div>
+        <div class="metric"><strong>n8n Core:</strong> <span class="${N8N_STATUS,,}">${N8N_STATUS}</span></div>
+        <div class="metric"><strong>PostgreSQL:</strong> <span class="${PG_STATUS,,}">${PG_STATUS}</span></div>
+        <div class="metric"><strong>Caddy Edge:</strong> <span class="${CADDY_STATUS,,}">${CADDY_STATUS}</span></div>
     </div>
     
     <div class="card">

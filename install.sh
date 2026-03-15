@@ -317,7 +317,7 @@ elif [[ "$EXEC_MODE" == "remote" ]]; then
     
     # 4. Trigger remote script & generate state file
     info "Executing remote install payload..."
-    ssh -t "$SSH_TARGET" "cd /tmp/nexus-install && bash $ROLE_DIR/scripts/install.sh; echo \"NEXUS_ROLE=$ROLE_NAME\" > ~/.nexus-state; echo \"NEXUS_VERSION=latest\" >> ~/.nexus-state"
+    ssh -t "$SSH_TARGET" "cd /tmp/nexus-install && bash \"$ROLE_DIR/scripts/install.sh\"; echo \"NEXUS_ROLE=$ROLE_NAME\" > \"\$HOME/.nexus-state\"; echo \"NEXUS_VERSION=latest\" >> \"\$HOME/.nexus-state\""
     
     success "Remote deployment complete. View ~/.nexus-state on target."
 fi
