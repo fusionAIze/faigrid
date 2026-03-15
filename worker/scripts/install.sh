@@ -19,16 +19,25 @@ if [[ "$OS_TYPE" == "Darwin" ]]; then
 
     # 2. Inference engine (Ollama)
     if ! command -v ollama &> /dev/null; then
-        echo "[INFO] Ollama not found. It is recommended for local LLM serving on MacBook."
-        echo "       Download it from https://ollama.com/download/mac"
+        echo "[INFO] Ollama not found. Recommended for local LLM serving on MacBook."
+        echo "       Download: https://ollama.com/download/mac"
     else
-        echo "[SUCCESS] Ollama detected. Ensuring it is running..."
+        echo "[SUCCESS] Ollama detected."
     fi
 
-    # 3. Secure Tunneling (Tailscale)
+    # 3. LM Studio CLI (lms) - User Preference
+    if ! command -v lms &> /dev/null; then
+        echo "[INFO] LM Studio CLI (lms) not found."
+        echo "       Install via: https://lmstudio.ai/download"
+        echo "       Then run: lms bootstrap"
+    else
+        echo "[SUCCESS] LM Studio CLI (lms) detected."
+    fi
+
+    # 4. Secure Tunneling (Tailscale)
     if ! command -v tailscale &> /dev/null; then
-        echo "[INFO] Tailscale not detected. Highly recommended for secure 'nexus-worker' -> 'nexus-core' tunneling."
-        echo "       Install via: brew install tailscale"
+        echo "[INFO] Tailscale not detected. Highly recommended for 'nexus-worker' -> 'nexus-core' tunnels."
+        echo "       Install: brew install tailscale"
     fi
 
 else
@@ -42,8 +51,17 @@ else
 fi
 
 echo ""
+echo "============================================================"
+echo "Qwen 3.5-9B Optimization Hints (MacBook):"
+echo "  - Format: GGUF (e.g. Q4_K_M or Q5_K_M recommended)"
+echo "  - Memory: 9B fits easily in 16GB+ RAM (Unified Memory)"
+echo "  - lms: lms load Qwen/Qwen3.5-9B-Instruct-GGUF"
+echo "  - Port: LM Studio defaults to http://127.0.0.1:1234"
+echo "============================================================"
+echo ""
 echo "[nexus-worker] Configuration Note:"
 echo "  To bridge this MacBook to Nexus Core, please consult docs/runbooks/tunneling.md"
-echo "  Recommended: tailscale funnel or ssh -R 11434:localhost:11434 user@nexus-core-ip"
+echo "  For LM Studio: ssh -R 1234:localhost:1234 user@nexus-core-ip"
+echo "  For Ollama:    ssh -R 11434:localhost:11434 user@nexus-core-ip"
 echo ""
 echo "[nexus-worker] Worker node provisioning complete."

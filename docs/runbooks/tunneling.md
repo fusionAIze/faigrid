@@ -6,17 +6,22 @@ Exposing local LLM endpoints publicly to the internet is dangerous. Instead, we 
 
 ## Method 1: SSH Reverse Tunnels
 
-If you have SSH access to your `nexus-core` server, you can map your local `LM Studio` port (default `1234`) backwards to a port on the Core server.
+If you have SSH access to your `nexus-core` server, you can map your local `LM Studio` port (default `1234`) or `Ollama` port (default `11434`) backwards to a port on the Core server.
 
 ### On your Worker (MacBook):
 ```bash
-# This binds the Core's remote port 1234 to your local port 1234.
+# For LM Studio (port 1234)
 ssh -N -R 127.0.0.1:1234:127.0.0.1:1234 user@nexus-core.example.com
+
+# For Ollama (port 11434)
+ssh -N -R 127.0.0.1:11434:127.0.0.1:11434 user@nexus-core.example.com
 ```
 *Tip: Use `autossh` in a background daemon to keep this tunnel persistently alive across network drops.*
 
 ### On your Core (n8n/OpenClaw):
-You can now instruct AI agents to route API calls to `http://127.0.0.1:1234/v1`. The traffic securely routes back through the SSH tunnel to your MacBook.
+You can now instruct AI agents to route API calls to local loopback addresses. 
+- **LM Studio**: `http://127.0.0.1:1234/v1`
+- **Ollama**: `http://127.0.0.1:11434/v1`
 
 ---
 
@@ -26,7 +31,10 @@ For true production deployments involving multiple Workers, a VPN mesh is superi
 
 1. Install Tailscale on the **Core Node**.
 2. Install Tailscale on your **Worker Node(s)**.
-3. Configure `LM Studio` to bind to the Tailscale IP (`100.x.x.x`) rather than `localhost:1234`.
+3. Configure `LM Studio` or `Ollama` to bind to the Tailscale IP (`100.x.x.x`).
+   - For LM Studio, this is managed in the **Server** tab.
+   - For Ollama, set `OLLAMA_HOST=0.0.0.0`.
 4. In `n8n` or `OpenClaw`, address the worker targets via their static Tailscale IPs.
 
-> This completely bypasses the need for the `nexus-edge` reverse proxy for inter-node model serving, saving bandwidth and latency.
+> [!TIP]
+> **Qwen 3.5-9B Optimization**: When using LM Studio, prefer **GGUF** formats (Q4_K_M or Q5_K_M) for the best balance between speed and quality on MacBook hardware. 
