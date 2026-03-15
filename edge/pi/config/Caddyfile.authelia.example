@@ -1,0 +1,32 @@
+# ==============================================================================
+# Nexus Labs - Edge SSO Configuration (Authelia / Authentik Example)
+# ==============================================================================
+# This is a snippet demonstrating how to place your Nexus Core (n8n, OpenClaw) 
+# behind a centralized identity provider using Caddy's forward_auth directive.
+
+# 1. Define the auth snippet
+(authelia) {
+    forward_auth http://authelia:9091 {
+        uri /api/verify?rd=https://auth.example.com
+        copy_headers Remote-User Remote-Groups Remote-Name Remote-Email
+    }
+}
+
+# 2. Apply to public routing
+n8n.example.com {
+    # Import the SSO middleware BEFORE the proxy
+    import authelia
+
+    # Proxy authenticated traffic to internal Nexus Core
+    reverse_proxy 10.0.0.100:5678 {
+        header_up X-Real-IP {remote}
+        header_up X-Forwarded-For {remote}
+        # Pass the extracted user context into n8n headers if needed
+        header_up X-Remote-User {header.Remote-User}
+    }
+}
+
+# 3. The Auth Portal itself
+auth.example.com {
+    reverse_proxy 127.0.0.1:9091
+}

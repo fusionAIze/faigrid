@@ -1,0 +1,28 @@
+# ==============================================================================
+# Nexus Labs - Edge Abuse Protection (CrowdSec Example)
+# ==============================================================================
+# Requires the Caddy Crowdsec module (caddy add-package github.com/hslatman/caddy-crowdsec-bouncer/http)
+# This intercepts malicious IPs before they hit your internal Core.
+
+{
+    crowdsec {
+        # The Crowdsec LAPI URL
+        api_url "http://127.0.0.1:8080"
+        
+        # Generated via `cscli bouncers add caddy-bouncer`
+        api_key "YOUR_BOUNCER_KEY_HERE"
+        
+        # Defines how blocked traffic is handled
+        ticker_interval 15s
+        disable_streaming false
+    }
+}
+
+# Apply to your public ingress
+n8n.example.com {
+    # Intercept bad actors
+    crowdsec
+
+    # Standard proxy to core
+    reverse_proxy 10.0.0.100:5678
+}
