@@ -12,7 +12,7 @@ sudo apt-get install -y ca-certificates curl gnupg git jq unzip ufw
 echo "[nexus-core-heart] Installing Docker (Debian official packages)..."
 # Debian repo docker is fine, but many prefer Docker CE. We'll use Docker CE.
 sudo install -m 0755 -d /etc/apt/keyrings
-curl -fsSL https://download.docker.com/linux/debian/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+curl -fsSL https://download.docker.com/linux/debian/gpg | sudo gpg --dearmor --yes -o /etc/apt/keyrings/docker.gpg
 sudo chmod a+r /etc/apt/keyrings/docker.gpg
 echo \
   "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian \
@@ -26,6 +26,10 @@ sudo systemctl enable --now docker
 
 echo "[nexus-core-heart] Creating stack dir: ${STACK_DIR}"
 sudo mkdir -p "${STACK_DIR}"
+if ! id -u nexus > /dev/null 2>&1; then
+  echo "[nexus-core-heart] Creating system user 'nexus'..."
+  sudo useradd -m -s /bin/bash nexus
+fi
 sudo chown -R nexus:nexus "${STACK_DIR}"
 
 echo "[nexus-core-heart] Copy compose + env template"
