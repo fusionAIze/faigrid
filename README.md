@@ -1,18 +1,56 @@
-# [![repo-safety](https://github.com/typelicious/fusionaize-nexus-labs/actions/workflows/repo-safety.yml/badge.svg)](https://github.com/typelicious/fusionaize-nexus-labs/actions/workflows/repo-safety.yml) [![Lint](https://github.com/typelicious/fusionaize-nexus-labs/actions/workflows/lint.yml/badge.svg)](https://github.com/typelicious/fusionaize-nexus-labs/actions/workflows/lint.yml) [![Test](https://github.com/typelicious/fusionaize-nexus-labs/actions/workflows/test.yml/badge.svg)](https://github.com/typelicious/fusionaize-nexus-labs/actions/workflows/test.yml) [![Release](https://img.shields.io/github/v/release/typelicious/fusionaize-nexus-labs?display_name=tag)](https://github.com/typelicious/fusionaize-nexus-labs/releases) [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-# [![OpenClaw-friendly](https://img.shields.io/badge/OpenClaw-friendly-111827.svg)](https://openclaw.ai/) [![n8n-automated](https://img.shields.io/badge/n8n-automated-ea4b71.svg?logo=n8n&logoColor=white)](https://n8n.io/) [![Docker-ready](https://img.shields.io/badge/docker-ready-2496ED?logo=docker&logoColor=white)](https://www.docker.com/) [![Bash-powered](https://img.shields.io/badge/Language-Bash-4EAA25.svg)](https://www.gnu.org/software/bash/)
+# fusionAIze Nexus Labs
 
-## fusionAIze Nexus Labs
+[![repo-safety](https://github.com/typelicious/fusionaize-nexus-labs/actions/workflows/repo-safety.yml/badge.svg)](https://github.com/typelicious/fusionaize-nexus-labs/actions/workflows/repo-safety.yml) [![Lint](https://github.com/typelicious/fusionaize-nexus-labs/actions/workflows/lint.yml/badge.svg)](https://github.com/typelicious/fusionaize-nexus-labs/actions/workflows/lint.yml) [![Test](https://github.com/typelicious/fusionaize-nexus-labs/actions/workflows/test.yml/badge.svg)](https://github.com/typelicious/fusionaize-nexus-labs/actions/workflows/test.yml) [![Release](https://img.shields.io/github/v/release/typelicious/fusionaize-nexus-labs?display_name=tag)](https://github.com/typelicious/fusionaize-nexus-labs/releases) [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![OpenClaw-friendly](https://img.shields.io/badge/OpenClaw-friendly-111827.svg)](https://openclaw.ai/) [![n8n-automated](https://img.shields.io/badge/n8n-automated-ea4b71.svg?logo=n8n&logoColor=white)](https://n8n.io/) [![Docker-ready](https://img.shields.io/badge/docker-ready-2496ED?logo=docker&logoColor=white)](https://www.docker.com/) [![Bash-powered](https://img.shields.io/badge/Language-Bash-4EAA25.svg)](https://www.gnu.org/software/bash/)
+
+**fusionAIze Nexus Labs** is a secure, modular reference stack for building a sovereign, self-hosted **Agent & Automation** environment. It embraces a strict "deny-by-default" security philosophy, decoupling untrusted ingress (Edge) from critical orchestration (Core) and heavy LLM inference (Workers).
 
 ---
 
 ### Navigation
-[Core Idea](#core-idea) • 
+[Why Nexus Labs?](#why-nexus-labs) • 
 [Architecture](#architecture) • 
 [Quick Start](#quick-start) • 
 [Troubleshooting](#troubleshooting) • 
 [Modules](#modules) • 
 [Repository Layout](#repository-layout) • 
 [License](#license)
+
+---
+
+## Why Nexus Labs?
+
+Rather than relying on heavy, black-box frameworks, Nexus Labs utilizes pure Bash orchestration, robust Systemd services, and well-understood Docker topologies to provide a transparent and resilient AI workbench. It decouples orchestration from execution to ensure that your private data and models stay under your control.
+
+---
+
+## Architecture
+
+The infrastructure relies on a decoupled, secure **4+1 Node Architecture**:
+
+```text
+                     Public Internet
+                            │ (HTTPS)
+      ┌─────────────────────▼─────────────────────┐
+      │               NEXUS EDGE                  │ (1) Ingress / Proxy
+      │     (Caddy Reverse Proxy, SSO, Auth)      │
+      └─────────────────────┬─────────────────────┘
+                            │ (Internal TLS)
+      ┌─────────────────────▼─────────────────────┐
+      │               NEXUS CORE                  │ (2) Orchestrator 
+      │    (n8n, OpenClaw, RTK, Postgres, Redis)  │
+      └──────┬─────────────────────────────┬──────┘
+             │ (Local API)                 │ (Encrypted Tunnels)
+  ┌──────────▼──────────┐       ┌──────────▼──────────┐
+  │    NEXUS WORKER     │       │   NEXUS EXTERNAL    │ (5) Global Extension
+  │  (Local LLM Nodes)  │       │  (Cloud VPS Node)   │
+  └─────────────────────┘       └─────────────────────┘
+             │
+  ┌──────────▼──────────┐
+  │    NEXUS BACKUP     │ (4) Offsite Storage
+  │ (Synology / Restic) │
+  └─────────────────────┘
+```
 
 ---
 
@@ -47,42 +85,6 @@ If something feels off, run the **Nexus Doctor**. It performs comprehensive sani
 To view live system telemetry and consolidated logs:
 ```bash
 tail -f /var/log/nexus/nexus-system.log
-```
-
-## Core Idea
-
-**fusionAIze Nexus Labs** is an open-source, modular reference stack designed for building self-hosted, sovereign **Agent & Automation** environments. It embraces a strict "deny-by-default" security philosophy, decoupling untrusted ingress (Edge) from critical orchestration (Core) and heavy LLM inference (Workers).
-
-Rather than relying on heavy, black-box frameworks, Nexus Labs utilizes pure Bash orchestration, robust Systemd services, and well-understood Docker topologies to provide a transparent and resilient AI workbench.
-
----
-
-## Architecture
-
-The infrastructure relies on a decoupled, secure **4+1 Node Architecture**:
-
-```text
-                     Public Internet
-                            │ (HTTPS)
-      ┌─────────────────────▼─────────────────────┐
-      │               NEXUS EDGE                  │ (1) Ingress / Proxy
-      │     (Caddy Reverse Proxy, SSO, Auth)      │
-      └─────────────────────┬─────────────────────┘
-                            │ (Internal TLS)
-      ┌─────────────────────▼─────────────────────┐
-      │               NEXUS CORE                  │ (2) Orchestrator 
-      │    (n8n, OpenClaw, RTK, Postgres, Redis)  │
-      └──────┬─────────────────────────────┬──────┘
-             │ (Local API)                 │ (Encrypted Tunnels)
-  ┌──────────▼──────────┐       ┌──────────▼──────────┐
-  │    NEXUS WORKER     │       │   NEXUS EXTERNAL    │ (5) Global Extension
-  │  (Local LLM Nodes)  │       │  (Cloud VPS Node)   │
-  └─────────────────────┘       └─────────────────────┘
-             │
-  ┌──────────▼──────────┐
-  │    NEXUS BACKUP     │ (4) Offsite Storage
-  │ (Synology / Restic) │
-  └─────────────────────┘
 ```
 
 ---
