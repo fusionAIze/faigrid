@@ -16,9 +16,9 @@ test_workbench_lib() {
     fi
 }
 
-test_control_center_syntax() {
-    echo "Checking control-center syntax..."
-    if bash -n "core/workbench/scripts/control-center.sh"; then
+test_control_syntax() {
+    echo "Checking control syntax..."
+    if bash -n "core/workbench/scripts/control.sh"; then
         echo "PASS: Syntax is ok"
     else
         echo "FAIL: Syntax errors found"
@@ -26,7 +26,18 @@ test_control_center_syntax() {
     fi
 }
 
+test_security_audit() {
+    echo "Running security audit..."
+    if bash "tests/security_audit.sh"; then
+        echo "PASS: Security audit ok"
+    else
+        echo "FAIL: Security audit found issues"
+        exit 1
+    fi
+}
+
 echo "Starting tests..."
 test_workbench_lib
-test_control_center_syntax
+test_control_syntax
+test_security_audit
 echo "All tests passed!"

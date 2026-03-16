@@ -1,9 +1,7 @@
-# fusionAIze Nexus Labs
+# [![repo-safety](https://github.com/typelicious/fusionaize-nexus-labs/actions/workflows/repo-safety.yml/badge.svg)](https://github.com/typelicious/fusionaize-nexus-labs/actions/workflows/repo-safety.yml) [![Lint](https://github.com/typelicious/fusionaize-nexus-labs/actions/workflows/lint.yml/badge.svg)](https://github.com/typelicious/fusionaize-nexus-labs/actions/workflows/lint.yml) [![Test](https://github.com/typelicious/fusionaize-nexus-labs/actions/workflows/test.yml/badge.svg)](https://github.com/typelicious/fusionaize-nexus-labs/actions/workflows/test.yml) [![Release](https://img.shields.io/github/v/release/typelicious/fusionaize-nexus-labs?display_name=tag)](https://github.com/typelicious/fusionaize-nexus-labs/releases) [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+# [![OpenClaw-friendly](https://img.shields.io/badge/OpenClaw-friendly-111827.svg)](https://openclaw.ai/) [![n8n-automated](https://img.shields.io/badge/n8n-automated-ea4b71.svg?logo=n8n&logoColor=white)](https://n8n.io/) [![Docker-ready](https://img.shields.io/badge/docker-ready-2496ED?logo=docker&logoColor=white)](https://www.docker.com/) [![Bash-powered](https://img.shields.io/badge/Language-Bash-4EAA25.svg)](https://www.gnu.org/software/bash/)
 
-[![Lint](https://github.com/typelicious/fusionaize-nexus-labs/actions/workflows/lint.yml/badge.svg)](https://github.com/typelicious/fusionaize-nexus-labs/actions/workflows/lint.yml)
-[![Test](https://github.com/typelicious/fusionaize-nexus-labs/actions/workflows/test.yml/badge.svg)](https://github.com/typelicious/fusionaize-nexus-labs/actions/workflows/test.yml)
-[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Bash](https://img.shields.io/badge/Language-Bash-4EAA25.svg)](https://www.gnu.org/software/bash/)
+## fusionAIze Nexus Labs
 
 ---
 

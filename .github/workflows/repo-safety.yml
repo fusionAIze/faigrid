@@ -1,0 +1,20 @@
+name: Repo Safety
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '0 0 * * *' # Daily check
+
+jobs:
+  safety:
+    name: Security & Integrity Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Make executable
+        run: chmod +x tests/security_audit.sh
+      - name: Run Security Audit
+        run: ./tests/security_audit.sh
