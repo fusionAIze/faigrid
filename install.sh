@@ -58,6 +58,7 @@ while [[ $# -gt 0 ]]; do
     --strategy) STRATEGY_CHOICE="$2"; shift 2 ;;
     --role) ROLE_NAME="$2"; shift 2 ;;
     --action) ACTION_NAME="$2"; shift 2 ;;
+    --component) COMPONENT_NAME="$2"; shift 2 ;;
     --vnc) VNC_CHOICE="y"; shift ;;
     --yes) AUTO_YES="true"; shift ;;
     *) error "Unknown parameter passed: $1" ;;
@@ -321,7 +322,7 @@ if [[ "$EXEC_MODE" == "local" ]]; then
     else
         TARGET_SCRIPT="${ROLE_DIR}/scripts/${ACTION_NAME}.sh"
         if [[ -f "$TARGET_SCRIPT" ]]; then
-            bash "$TARGET_SCRIPT"
+            bash "$TARGET_SCRIPT" "${COMPONENT_NAME:-all}"
         else
             error "Management script not found: ${TARGET_SCRIPT}"
         fi
@@ -352,7 +353,7 @@ elif [[ "$EXEC_MODE" == "remote" ]]; then
     info "Executing remote [${ACTION_NAME}] payload..."
     TARGET_SCRIPT="${ROLE_DIR}/scripts/${ACTION_NAME}.sh"
     
-    ssh -t "$SSH_TARGET" "cd /tmp/nexus-install && bash \"$TARGET_SCRIPT\"; \
+    ssh -t "$SSH_TARGET" "cd /tmp/nexus-install && bash \"$TARGET_SCRIPT\" \"${COMPONENT_NAME:-all}\"; \
         if [[ \"$ACTION_NAME\" == \"install\" ]]; then \
             echo \"NEXUS_ROLE=$ROLE_NAME\" > \"\$HOME/.nexus-state\"; \
             echo \"NEXUS_VERSION=latest\" >> \"\$HOME/.nexus-state\"; \

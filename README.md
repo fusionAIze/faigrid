@@ -97,7 +97,7 @@ The Nexus framework is logically segmented into specialized operational roles:
 - **nexus-core**: The orchestrator. Contains the AI Workbench including n8n, further AI routing logic natively managed by OpenClaw, Redis distributed queues, and system telemetry watchdogs. Strictly internal.
 - **nexus-worker**: The execution engine. Dedicated hardware running local LLMs (e.g., LM Studio/Ollama) routed securely to the Core via Tailscale or reverse SSH tunnels.
 - **nexus-backup**: The safety net. Automated, immutable offline backup pipelines targeting dedicated local network attached storage.
-- **nexus-external** *(optional)*: The global bridge. Distributed extension nodes syncing back to the primary local grid.
+- **nexus-external** *(optional)*: The global bridge. Distributed extension nodes for public-facing automated workflows (n8n) and project management (Plane.so), syncing back to the primary local grid.
 
 > **Security Note:** This repository is intrinsically designed for autonomous deployments. It utilizes dynamic state and `.env.topology` generation. **Never commit secrets**.
 

@@ -1,0 +1,54 @@
+# Plane.so Self-Hosted - Minimal Docker Compose
+# References: https://developers.plane.so/self-hosting/overview
+services:
+  plane-web:
+    image: makeplane/plane-app:latest
+    container_name: nexus-plane-web
+    restart: unless-stopped
+    environment:
+      - NEXT_PUBLIC_API_BASE_URL=https://${PLANE_HOST}/api
+    networks:
+      - nexus_external_net
+
+  plane-api:
+    image: makeplane/plane-api:latest
+    container_name: nexus-plane-api
+    restart: unless-stopped
+    environment:
+      - DB_HOST=plane-db
+      - DB_NAME=plane
+      - DB_USER=plane
+      - DB_PASSWORD=${PLANE_DB_PASSWORD}
+      - REDIS_HOST=plane-redis
+    depends_on:
+      - plane-db
+      - plane-redis
+    networks:
+      - nexus_external_net
+
+  plane-db:
+    image: postgres:15-alpine
+    container_name: nexus-plane-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=plane
+      - POSTGRES_USER=plane
+      - POSTGRES_PASSWORD=${PLANE_DB_PASSWORD}
+    volumes:
+      - plane_db_data:/var/lib/postgresql/data
+    networks:
+      - nexus_external_net
+
+  plane-redis:
+    image: redis:7-alpine
+    container_name: nexus-plane-redis
+    restart: unless-stopped
+    networks:
+      - nexus_external_net
+
+networks:
+  nexus_external_net:
+    external: true
+
+volumes:
+  plane_db_data:

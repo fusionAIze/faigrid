@@ -1,0 +1,19 @@
+{
+    email ${ACME_EMAIL}
+}
+
+# n8n External Node
+${N8N_HOST} {
+    reverse_proxy nexus-external-n8n:5678
+}
+
+# Plane.so External Node
+${PLANE_HOST} {
+    # Web Frontend
+    reverse_proxy nexus-plane-web:3000
+
+    # API handles /api
+    handle /api/* {
+        reverse_proxy nexus-plane-api:8000
+    }
+}
