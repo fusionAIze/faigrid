@@ -64,7 +64,12 @@ if [[ -x "${SCRIPT_DIR}/nexus-dashboard.sh" ]]; then
     "${SCRIPT_DIR}/nexus-dashboard.sh" --html
 fi
 
-# 5. Maintenance: Rotate Logs
+# 5. Sync Status to External Node (Dashboard)
+if [[ -x "${SCRIPT_DIR}/nexus-sync-status.sh" ]]; then
+    "${SCRIPT_DIR}/nexus-sync-status.sh"
+fi
+
+# 6. Maintenance: Rotate Logs
 if command -v rotate_logs > /dev/null; then
     rotate_logs
 fi

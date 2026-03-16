@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# fusionAIze Nexus Labs - Troubleshooting Gateway (Messenger Bridge)
+# ==============================================================================
+# This template defines how OpenClaw agents can interact with external gateways
+# (Telegram, Discord) to report issues and receive remote commands.
+
+GATEWAY_TYPE="${1:-telegram}" # or discord
+COMMAND="${2:-status}"
+
+# 1. Load configuration
+if [[ -f "../.env" ]]; then
+    source "../.env"
+fi
+
+# 2. Command fulfillment
+case "$COMMAND" in
+    "status")
+        msg="🛰️ *Nexus Status Check*\nGrid: OK\nDashboard: https://${N8N_HOST}/stats"
+        # Send via Telegram API or Discord Webhook
+        ;;
+    "reboot-service")
+        service_name="${3:-n8n}"
+        msg="⚙️ *System Action*\nRestarting ${service_name}..."
+        # Execution logic: ssh core-ip "bash install.sh --action control --component ${service_name} --action restart"
+        ;;
+    *)
+        msg="❓ Unknown Nexus command."
+        ;;
+esac
+
+echo "[nexus-gateway] Command '${COMMAND}' via ${GATEWAY_TYPE} queued."

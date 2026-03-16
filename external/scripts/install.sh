@@ -10,11 +10,15 @@ STACK_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 echo "[nexus-external] Initializing cloud stack (Component: ${COMPONENT})..."
 
-# 1. Ensure global external network exists
+# 1. Ensure global external network and web root exists
 if ! docker network ls | grep -q "nexus_external_net"; then
     echo "[nexus-external] Creating global external network..."
     docker network create nexus_external_net
 fi
+
+echo "[nexus-external] Ensuring dashboard web root exists..."
+sudo mkdir -p /var/www/nexus
+sudo chown -R "$(id -u):$(id -g)" /var/www/nexus
 
 # 2. Component Installation
 install_n8n() {
@@ -42,5 +46,10 @@ case "${COMPONENT}" in
     all)   install_n8n; install_plane ;;
     *)     echo "Unknown component: ${COMPONENT}"; exit 1 ;;
 esac
+
+# 3. Finalize Dashboard
+if [[ -f "${SCRIPT_DIR}/nexus-external-dashboard.sh" ]]; then
+    bash "${SCRIPT_DIR}/nexus-external-dashboard.sh"
+fi
 
 echo "[nexus-external] Installation phase complete."

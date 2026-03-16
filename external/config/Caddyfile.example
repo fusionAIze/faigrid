@@ -16,4 +16,14 @@ ${PLANE_HOST} {
     handle /api/* {
         reverse_proxy nexus-plane-api:8000
     }
+
+    # SECURE DASHBOARD (Basic Auth)
+    handle /stats/* {
+        basicauth {
+            # User: nexus, Password: generate via 'caddy hash-password'
+            nexus ${CADDY_STATS_PWD_HASH}
+        }
+        root * /var/www/nexus
+        file_server browse
+    }
 }
