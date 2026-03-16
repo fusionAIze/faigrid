@@ -19,17 +19,28 @@ else
     echo "[SUCCESS] Restic already installed."
 fi
 
-# 2. Scaffold local vault directory
+# 2. Setup Config
+CONFIG_FILE="${SCRIPT_DIR}/_backup_config.sh"
+if [[ ! -f "$CONFIG_FILE" ]]; then
+    echo "[nexus-backup] Specialized configuration not found. Creating from template..."
+    cp "${SCRIPT_DIR}/_backup_config.sh.template" "$CONFIG_FILE"
+    chmod 600 "$CONFIG_FILE"
+fi
+
+# 3. Scaffold local vault directory (Default target)
 VAULT_DIR="/opt/nexus-vault"
-echo "[nexus-backup] Scaffolding vault at ${VAULT_DIR}..."
+echo "[nexus-backup] Scaffolding local vault area..."
 sudo mkdir -p "${VAULT_DIR}"
 sudo chmod 700 "${VAULT_DIR}"
 
 echo ""
-echo "[nexus-backup] Manual Step Required for Synology:"
-echo "  1. Ensure SSH is enabled on your Synology NAS."
-echo "  2. Create a shared folder named 'nexus-backups'."
-echo "  3. Initialize your restic repository: "
-echo "     restic -r sftp:user@synology-ip:/volume1/nexus-backups init"
+echo "============================================================"
+echo "          Nexus Labs - Backup Node Provisioning             "
+echo "============================================================"
+echo "Next Steps:"
+echo "  1. Edit ${CONFIG_FILE} to set your Repo and Password."
+echo "  2. Initialize the repository: restic init"
+echo "  3. For Synology/SFTP, ensure SSH keys are exchanged."
+echo "============================================================"
 echo ""
 echo "[nexus-backup] Backup target provisioning complete."

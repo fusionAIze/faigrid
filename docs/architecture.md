@@ -10,8 +10,8 @@ Any role can run on many types of hosts (Raspberry Pi, mini PC, VM, VPS, cloud).
 - **Least privilege**: split ingress, orchestration, execution, and storage.
 - **Deny-by-default**: only the edge is exposed; core stays private.
 - **Secrets never in Git**: use env templates + a secret store.
-- **Modular**: supports on-prem, private cloud, public cloud, and hybrid deployments.
-- **Observable & recoverable**: metrics/logs + backups + restore runbooks.
+- **Modular & Versatile**: optimized for on-prem (LAN), private cloud (VPS), and public cloud (Hybrid) through role-based orchestration and configurable bind IPs.
+- **Observable & recoverable**: real-time metrics/logs + Restic-based "Time Machine" backups + interactive restore runbooks.
 - **Universal Lifecycle API**: every module (Core, Edge, Worker, Backup) follows a standardized script pattern (`install`, `update`, `uninstall`, `verify`, `control`).
 
 ## Roles (hardware-agnostic)

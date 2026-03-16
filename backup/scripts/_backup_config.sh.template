@@ -1,0 +1,15 @@
+# Nexus Backup Configuration
+# DO NOT COMMIT THIS FILE WITH SECRETS
+
+# The restic repository location. 
+# Examples:
+#   Local: /opt/nexus-vault
+#   SFTP:  sftp:user@synology-ip:/volume1/nexus-backups
+#   S3:    s3:s3.amazonaws.com/bucket-name
+export RESTIC_REPOSITORY="${RESTIC_REPOSITORY:-/opt/nexus-vault}"
+
+# Repository Password
+export RESTIC_PASSWORD="${RESTIC_PASSWORD:-CHANGE_ME}"
+
+# SFTP specific (if used)
+# export SSH_AUTH_SOCK=...
