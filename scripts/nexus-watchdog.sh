@@ -60,8 +60,8 @@ else
 fi
 
 # 4. Generate Static HTML Dashboard Component
-if [[ -x "${SCRIPT_DIR}/dashboard.sh" ]]; then
-    "${SCRIPT_DIR}/dashboard.sh" --html
+if [[ -x "${SCRIPT_DIR}/nexus-dashboard.sh" ]]; then
+    "${SCRIPT_DIR}/nexus-dashboard.sh" --html
 fi
 
 # 5. Maintenance: Rotate Logs

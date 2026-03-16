@@ -42,14 +42,14 @@ CURRENT_ROLE="none"
 CURRENT_VERSION="none"
 
 # --- CLI Arguments ---
+AUTO_YES="false"
+VNC_CHOICE=""
+ROLE_CHOICE=""
+ACTION_NAME="install" # Default action
 MODE_CHOICE=""
 SSH_TARGET=""
 STRATEGY_CHOICE=""
 ROLE_NAME=""
-ROLE_DIR=""
-AUTO_YES="false"
-VNC_CHOICE=""
-ROLE_CHOICE=""
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -57,6 +57,7 @@ while [[ $# -gt 0 ]]; do
     --target) SSH_TARGET="$2"; shift 2 ;;
     --strategy) STRATEGY_CHOICE="$2"; shift 2 ;;
     --role) ROLE_NAME="$2"; shift 2 ;;
+    --action) ACTION_NAME="$2"; shift 2 ;;
     --vnc) VNC_CHOICE="y"; shift ;;
     --yes) AUTO_YES="true"; shift ;;
     *) error "Unknown parameter passed: $1" ;;
@@ -212,6 +213,7 @@ if [[ "$STRATEGY_CHOICE" == "1" ]]; then
      case "$ROLE_NAME" in
         "edge") ROLE_DIR="edge/pi" ;;
         "core") ROLE_DIR="core/heart" ;;
+        "openclaw") ROLE_DIR="core/openclaw" ;;
         "worker") ROLE_DIR="worker" ;;
         "backup") ROLE_DIR="backup" ;;
         "external") ROLE_DIR="external" ;;
@@ -222,18 +224,20 @@ else
          echo ""
          echo "Select the architectural role to provision:"
          echo "  1) Edge (Ingress)"
-         echo "  2) Core (AI Workbench)"
-         echo "  3) Worker (Local LLM)"
-         echo "  4) Backup (Synology NAS)"
-         echo "  5) External (Cloud)"
-         prompt "Enter role (1-5): " ROLE_CHOICE
+         echo "  2) Core (AI Workbench / n8n)"
+         echo "  3) OpenClaw (Agent Server)"
+         echo "  4) Worker (Local LLM)"
+         echo "  5) Backup (Synology NAS)"
+         echo "  6) External (Cloud)"
+         prompt "Enter role (1-6): " ROLE_CHOICE
 
          case "$ROLE_CHOICE" in
              1) ROLE_NAME="edge" ;;
              2) ROLE_NAME="core" ;;
-             3) ROLE_NAME="worker" ;;
-             4) ROLE_NAME="backup" ;;
-             5) ROLE_NAME="external" ;;
+             3) ROLE_NAME="openclaw" ;;
+             4) ROLE_NAME="worker" ;;
+             5) ROLE_NAME="backup" ;;
+             6) ROLE_NAME="external" ;;
              *) error "Invalid choice. Exiting." ;;
          esac
      fi
@@ -241,11 +245,32 @@ else
      case "$ROLE_NAME" in
          "edge") ROLE_DIR="edge/pi" ;;
          "core") ROLE_DIR="core/heart" ;;
+         "openclaw") ROLE_DIR="core/openclaw" ;;
          "worker") ROLE_DIR="worker" ;;
          "backup") ROLE_DIR="backup" ;;
          "external") ROLE_DIR="external" ;;
          *) error "Invalid role: ${ROLE_NAME}" ;;
      esac
+fi
+
+# --- Action Selection ---
+if [[ -z "${ACTION_NAME:-}" ]]; then
+    echo ""
+    echo -e "${BOLD}Step 3: Action Selection${NC}"
+    echo "  1) Install (Provisioning)"
+    echo "  2) Update (Configuration/Payload)"
+    echo "  3) Verify (Health Check)"
+    echo "  4) Uninstall (Removal)"
+    echo "  5) Control (Start/Stop/Restart)"
+    prompt "Enter action (1-5): " ACTION_CHOICE
+    case "$ACTION_CHOICE" in
+        1) ACTION_NAME="install" ;;
+        2) ACTION_NAME="update" ;;
+        3) ACTION_NAME="verify" ;;
+        4) ACTION_NAME="uninstall" ;;
+        5) ACTION_NAME="control" ;;
+        *) error "Invalid choice. Exiting." ;;
+    esac
 fi
 
 # Safety Warning for Fresh installs
@@ -289,22 +314,29 @@ success "Topology configuration staged for deployment."
 
 # --- Deployment Phase ---
 if [[ "$EXEC_MODE" == "local" ]]; then
-    info "Initiating Local Pipeline for $ROLE_NAME..."
+    info "Initiating Local Pipeline [${ACTION_NAME}] for ${ROLE_NAME}..."
     
     if [[ ! -d "$ROLE_DIR" ]]; then
         warning "Directory $ROLE_DIR not populated in repo. Skipping module execution."
     else
-        bash "$ROLE_DIR/scripts/install.sh"
+        TARGET_SCRIPT="${ROLE_DIR}/scripts/${ACTION_NAME}.sh"
+        if [[ -f "$TARGET_SCRIPT" ]]; then
+            bash "$TARGET_SCRIPT"
+        else
+            error "Management script not found: ${TARGET_SCRIPT}"
+        fi
     fi
     
-    # Write State
-    echo "NEXUS_ROLE=$ROLE_NAME" > "$STATE_FILE"
-    echo "NEXUS_VERSION=latest" >> "$STATE_FILE"
-    echo "INSTALL_DATE=$(date)" >> "$STATE_FILE"
-    success "Saved state to $STATE_FILE"
+    # Write State (Only on install)
+    if [[ "$ACTION_NAME" == "install" ]]; then
+        echo "NEXUS_ROLE=$ROLE_NAME" > "$STATE_FILE"
+        echo "NEXUS_VERSION=latest" >> "$STATE_FILE"
+        echo "INSTALL_DATE=$(date)" >> "$STATE_FILE"
+        success "Saved state to $STATE_FILE"
+    fi
     
 elif [[ "$EXEC_MODE" == "remote" ]]; then
-    info "Initiating Remote Pipeline to $SSH_TARGET..."
+    info "Initiating Remote Pipeline [${ACTION_NAME}] to ${SSH_TARGET}..."
     
     # 1. Create a remote temp directory
     ssh -q "$SSH_TARGET" "mkdir -p /tmp/nexus-install"
@@ -317,10 +349,16 @@ elif [[ "$EXEC_MODE" == "remote" ]]; then
     scp "$TOPOLOGY_FILE" "${SSH_TARGET}:/tmp/nexus-install/" > /dev/null
     
     # 4. Trigger remote script & generate state file
-    info "Executing remote install payload..."
-    ssh -t "$SSH_TARGET" "cd /tmp/nexus-install && bash \"$ROLE_DIR/scripts/install.sh\"; echo \"NEXUS_ROLE=$ROLE_NAME\" > \"\$HOME/.nexus-state\"; echo \"NEXUS_VERSION=latest\" >> \"\$HOME/.nexus-state\""
+    info "Executing remote [${ACTION_NAME}] payload..."
+    TARGET_SCRIPT="${ROLE_DIR}/scripts/${ACTION_NAME}.sh"
     
-    success "Remote deployment complete. View ~/.nexus-state on target."
+    ssh -t "$SSH_TARGET" "cd /tmp/nexus-install && bash \"$TARGET_SCRIPT\"; \
+        if [[ \"$ACTION_NAME\" == \"install\" ]]; then \
+            echo \"NEXUS_ROLE=$ROLE_NAME\" > \"\$HOME/.nexus-state\"; \
+            echo \"NEXUS_VERSION=latest\" >> \"\$HOME/.nexus-state\"; \
+        fi"
+    
+    success "Remote [${ACTION_NAME}] complete."
 fi
 
 echo ""

@@ -33,7 +33,7 @@ cd nexus && bash install.sh
 
 Done. Your AI Workbench is now accessible via the **Terminal Dashboard**:
 ```bash
-./scripts/dashboard.sh
+./scripts/nexus-dashboard.sh
 ```
 
 ---
@@ -108,7 +108,7 @@ The Nexus framework is logically segmented into specialized operational roles:
 - `core/` — Docker compose stacks, systemd servers, and core orchestration scripts.
 - `docs/` — Core architecture design, example deployment grids, AI schemas, and tunneling runbooks.
 - `edge/` — Firewall configs, advanced proxy templates, and SSO structures for Edge nodes.
-- `scripts/` — The master orchestration utilities (`install.sh`, `ai-deploy.sh`, `dashboard.sh`, `nexus-watchdog.sh`).
+- `scripts/` — The master orchestration utilities (`install.sh`, `nexus-deploy.sh`, `nexus-dashboard.sh`, `nexus-watchdog.sh`, `nexus-doctor.sh`).
 - `tests/` — Automated syntactical checks and integration pipelines natively hooked into CI/CD.
 
 ---

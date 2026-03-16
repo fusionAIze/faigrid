@@ -110,8 +110,9 @@ if [[ $# -eq 0 ]]; then
   show_menu
 else
   case "$1" in
-    status) cmd_status ;;
+    status)    cmd_status ;;
     update-all) cmd_update_all ;;
+    install)   cmd_install ;;
     *) die "Unknown command: $1" ;;
   esac
 fi

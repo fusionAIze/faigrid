@@ -12,6 +12,7 @@ Any role can run on many types of hosts (Raspberry Pi, mini PC, VM, VPS, cloud).
 - **Secrets never in Git**: use env templates + a secret store.
 - **Modular**: supports on-prem, private cloud, public cloud, and hybrid deployments.
 - **Observable & recoverable**: metrics/logs + backups + restore runbooks.
+- **Universal Lifecycle API**: every module (Core, Edge, Worker, Backup) follows a standardized script pattern (`install`, `update`, `uninstall`, `verify`, `control`).
 
 ## Roles (hardware-agnostic)
 

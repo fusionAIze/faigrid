@@ -7,7 +7,7 @@ set -euo pipefail
 #
 # Defaults are tailored for typical FRITZ!Box home LANs.
 # Override via env vars:
-#   IPV4_LAN_CIDR="192.168.178.0/24" IPV6_ULA_CIDR="fdaf:a57b:d3e6:0::/64" ./firewall-apply.sh
+#   IPV4_LAN_CIDR="192.168.178.0/24" IPV6_ULA_CIDR="fdaf:a57b:d3e6:0::/64" ./ufw-apply.sh
 
 IPV4_LAN_CIDR="${IPV4_LAN_CIDR:-192.168.178.0/24}"
 IPV6_ULA_CIDR="${IPV6_ULA_CIDR:-}"

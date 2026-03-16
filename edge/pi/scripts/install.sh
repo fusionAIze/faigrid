@@ -11,10 +11,10 @@ sudo apt-get install -y ufw curl ca-certificates
 echo "[nexus-edge] Applying security baseline..."
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
 
-if [[ -f "${SCRIPT_DIR}/firewall-apply.sh" ]]; then
-    bash "${SCRIPT_DIR}/firewall-apply.sh"
+if [[ -f "${SCRIPT_DIR}/ufw-apply.sh" ]]; then
+    bash "${SCRIPT_DIR}/ufw-apply.sh"
 else
-    echo "[WARN] firewall-apply.sh not found in ${SCRIPT_DIR}"
+    echo "[WARN] ufw-apply.sh not found in ${SCRIPT_DIR}"
 fi
 
 # Optional: Add Caddy installation here if not already present

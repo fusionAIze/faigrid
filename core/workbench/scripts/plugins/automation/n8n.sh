@@ -7,11 +7,18 @@ TOOL_TYPE="docker"
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)"
 
 tool_install() {
-    echo "Install via docs/runbooks/step-03-core-heart-stack.md"
+    if [[ -f "$PROJECT_DIR/core/heart/scripts/install.sh" ]]; then
+        bash "$PROJECT_DIR/core/heart/scripts/install.sh"
+    fi
 }
 tool_update() {
     if [[ -f "$PROJECT_DIR/core/heart/scripts/update.sh" ]]; then
         bash "$PROJECT_DIR/core/heart/scripts/update.sh"
+    fi
+}
+tool_uninstall() {
+    if [[ -f "$PROJECT_DIR/core/heart/scripts/uninstall.sh" ]]; then
+        bash "$PROJECT_DIR/core/heart/scripts/uninstall.sh"
     fi
 }
 tool_status() {
