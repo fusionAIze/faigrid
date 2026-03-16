@@ -12,15 +12,15 @@ export C_CYAN='\033[0;36m'
 export C_BOLD='\033[1m'
 
 # Logging
-info() { echo -e "${C_CYAN}[INFO]${C_RESET} $*"; }
-success() { echo -e "${C_GREEN}[SUCCESS]${C_RESET} $*"; }
-warn() { echo -e "${C_YELLOW}[WARN]${C_RESET} $*"; }
-error() { echo -e "${C_RED}[ERROR]${C_RESET} $*" >&2; }
+info() { printf "%b[INFO]%b %s\n" "${C_CYAN}" "${C_RESET}" "$*"; }
+success() { printf "%b[SUCCESS]%b %s\n" "${C_GREEN}" "${C_RESET}" "$*"; }
+warn() { printf "%b[WARN]%b %s\n" "${C_YELLOW}" "${C_RESET}" "$*"; }
+error() { printf "%b[ERROR]%b %s\n" "${C_RED}" "${C_RESET}" "$*" >&2; }
 die() { error "$@"; exit 1; }
 
 # UI Helpers
 print_header() {
-  echo -e "\n${C_BOLD}${C_MAGENTA}=== $1 ===${C_RESET}\n"
+  printf "\n%b%b=== %s ===%b\n\n" "${C_BOLD}" "${C_MAGENTA}" "$1" "${C_RESET}"
 }
 
 # Centralized Logging Aggregator

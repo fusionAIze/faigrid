@@ -64,8 +64,8 @@ else
 fi
 
 # 4. State Verification
-if [[ -f ~/.nexus-state ]]; then
-    CURRENT_ROLE=$(grep "ROLE=" ~/.nexus-state | cut -d= -f2 || echo "unknown")
+if [[ -f "$HOME/.nexus-state" ]]; then
+    CURRENT_ROLE=$(grep "ROLE=" "$HOME/.nexus-state" | cut -d= -f2 || echo "unknown")
     success "Node identity verified: Role is [${CURRENT_ROLE}]."
 else
     warn "No state file (~/.nexus-state) found. This node may be unprovisioned."
