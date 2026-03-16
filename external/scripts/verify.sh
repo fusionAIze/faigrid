@@ -11,6 +11,10 @@ check_container() {
     fi
 }
 
+COMPONENT="${1:-all}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd || exit 1)"
+STACK_DIR="$(cd "${SCRIPT_DIR}/.." && pwd || exit 1)"
+
 check_container "nexus-external-n8n"
 check_container "nexus-plane-web"
 

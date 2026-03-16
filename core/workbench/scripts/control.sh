@@ -23,28 +23,33 @@ cmd_status() {
   printf "%-15s | %-15s | %-30s | %s\n" "CATEGORY" "TOOL" "DESCRIPTION" "STATUS"
   echo "--------------------------------------------------------------------------------"
   
-  for p in $(get_plugins); do
-    local cat=$(get_plugin_meta "$p" "TOOL_CATEGORY")
-    local name=$(get_plugin_meta "$p" "TOOL_NAME")
-    local desc=$(get_plugin_meta "$p" "TOOL_DESC")
+  while read -r p; do
+    local category_name
+    category_name=$(get_plugin_meta "$p" "TOOL_CATEGORY")
+    local name
+    name=$(get_plugin_meta "$p" "TOOL_NAME")
+    local desc
+    desc=$(get_plugin_meta "$p" "TOOL_DESC")
     
     local stat
     stat=$( (source "$p" >/dev/null 2>&1 && tool_status) || echo "Error" )
     
     if [[ "$stat" == *"Not installed"* ]]; then
-      printf "%-15s | ${C_BOLD}%-15s${C_RESET} | %-30s | ${C_YELLOW}%s${C_RESET}\n" "$cat" "$name" "$desc" "$stat"
+      printf "%-15s | ${C_BOLD}%-15s${C_RESET} | %-30s | ${C_YELLOW}%s${C_RESET}\n" "$category_name" "$name" "$desc" "$stat"
     else
-      printf "%-15s | ${C_BOLD}%-15s${C_RESET} | %-30s | ${C_GREEN}%s${C_RESET}\n" "$cat" "$name" "$desc" "$stat"
+      printf "%-15s | ${C_BOLD}%-15s${C_RESET} | %-30s | ${C_GREEN}%s${C_RESET}\n" "$category_name" "$name" "$desc" "$stat"
     fi
-  done
+  done < <(get_plugins)
   echo ""
 }
 
 cmd_update_all() {
   print_header "Updating All Installed Tools"
-  for p in $(get_plugins); do
-    local name=$(get_plugin_meta "$p" "TOOL_NAME")
-    local stat=$( (source "$p" >/dev/null 2>&1 && tool_status) || echo "Error" )
+  while read -r p; do
+    local name
+    name=$(get_plugin_meta "$p" "TOOL_NAME")
+    local stat
+    stat=$( (source "$p" >/dev/null 2>&1 && tool_status) || echo "Error" )
     
     if [[ "$stat" != *"Not installed"* && "$stat" != "Error" ]]; then
       info "Updating $name..."
@@ -52,7 +57,7 @@ cmd_update_all() {
       success "$name updated."
       echo ""
     fi
-  done
+  done < <(get_plugins)
 }
 
 cmd_install() {

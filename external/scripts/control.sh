@@ -3,8 +3,8 @@ set -euo pipefail
 
 ACTION="${1:-status}"
 COMPONENT="${2:-all}"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-STACK_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd || exit 1)"
+STACK_DIR="$(cd "${SCRIPT_DIR}/.." && pwd || exit 1)"
 
 manage_component() {
     local name=$1

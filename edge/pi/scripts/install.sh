@@ -9,7 +9,7 @@ sudo apt-get update -y
 sudo apt-get install -y ufw curl ca-certificates
 
 echo "[nexus-edge] Applying security baseline..."
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd || exit 1)"
 
 if [[ -f "${SCRIPT_DIR}/ufw-apply.sh" ]]; then
     bash "${SCRIPT_DIR}/ufw-apply.sh"

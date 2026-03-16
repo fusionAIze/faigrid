@@ -8,8 +8,11 @@ PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)"
 
 tool_status() {
     # Check if we have an external target in .env.topology
-    local ext_target
-    ext_target=$(grep "ROLE=external" .env.topology -B 5 | grep "SSH_TARGET" | cut -d'=' -f2 || echo "")
+    info "Syncing status to cloud..."
+    local ext_target=""
+    if [[ -f ".env.topology" ]]; then
+        ext_target=$(grep "ROLE=external" .env.topology -B 5 | grep "SSH_TARGET" | cut -d'=' -f2 || echo "")
+    fi
     
     if [[ -n "$ext_target" ]]; then
         echo "Configured (${ext_target})"

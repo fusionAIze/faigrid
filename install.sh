@@ -133,9 +133,9 @@ inspect_state() {
         fi
     else
         # Verify remotely
-         if ssh -q "$ssh_target" "[ -f $STATE_FILE ]"; then
+         if ssh -q "$ssh_target" "[ -f \"$STATE_FILE\" ]"; then
              local remote_state
-             remote_state=$(ssh -q "$ssh_target" "cat $STATE_FILE")
+             remote_state=$(ssh -q "$ssh_target" "cat \"$STATE_FILE\"")
              CURRENT_ROLE=$(echo "$remote_state" | grep "NEXUS_ROLE" | cut -d'=' -f2 || echo "none")
              CURRENT_VERSION=$(echo "$remote_state" | grep "NEXUS_VERSION" | cut -d'=' -f2 || echo "none")
          else
@@ -353,7 +353,7 @@ elif [[ "$EXEC_MODE" == "remote" ]]; then
     info "Executing remote [${ACTION_NAME}] payload..."
     TARGET_SCRIPT="${ROLE_DIR}/scripts/${ACTION_NAME}.sh"
     
-    ssh -t "$SSH_TARGET" "cd /tmp/nexus-install && bash \"$TARGET_SCRIPT\" \"${COMPONENT_NAME:-all}\"; \
+    ssh -t "$SSH_TARGET" "cd /tmp/nexus-install || exit 1; bash \"$TARGET_SCRIPT\" \"${COMPONENT_NAME:-all}\"; \
         if [[ \"$ACTION_NAME\" == \"install\" ]]; then \
             echo \"NEXUS_ROLE=$ROLE_NAME\" > \"\$HOME/.nexus-state\"; \
             echo \"NEXUS_VERSION=latest\" >> \"\$HOME/.nexus-state\"; \

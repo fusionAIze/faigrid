@@ -10,6 +10,10 @@ set -euo pipefail
 LOCAL_STATUS="/var/www/nexus/grid-status.json"
 REMOTE_TARGET="$(grep "ROLE=external" .env.topology -B 5 | grep "SSH_TARGET" | cut -d'=' -f2 || echo "")"
 
+# Ensure we are in the project root
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd || exit 1)"
+cd "${SCRIPT_DIR}/.." || exit 1
+
 if [[ -z "$REMOTE_TARGET" ]]; then
     echo "[nexus-sync] No external target configured in .env.topology. Skipping sync."
     exit 0

@@ -4,6 +4,8 @@
 # ==============================================================================
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd || exit 1)"
+
 WWW_ROOT="/var/www/nexus"
 OUTPUT_FILE="${WWW_ROOT}/index.html"
 JSON_DATA="${WWW_ROOT}/grid-status.json"

@@ -7,7 +7,7 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd || exit 1)"
 LIB_PATH="${SCRIPT_DIR}/../core/workbench/scripts/_lib.sh"
 
 if [[ -f "$LIB_PATH" ]]; then

@@ -5,8 +5,8 @@
 set -euo pipefail
 
 COMPONENT="${1:-all}" # n8n, plane, or all
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-STACK_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd || exit 1)"
+STACK_DIR="$(cd "${SCRIPT_DIR}/.." && pwd || exit 1)"
 
 echo "[nexus-external] Initializing cloud stack (Component: ${COMPONENT})..."
 
