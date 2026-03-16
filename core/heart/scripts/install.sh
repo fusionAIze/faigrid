@@ -54,7 +54,7 @@ echo "[nexus-core-heart] Add nexus user to docker group (logout/login required)"
 sudo usermod -aG docker nexus
 
 echo "[nexus-core-heart] Starting stack..."
-cd "${COMPOSE_DIR}" || exit
+cd "${COMPOSE_DIR}" || exit 1 || exit
 docker compose --env-file "${ENV_FILE}" up -d
 
 echo "[nexus-core-heart] Done."

@@ -12,7 +12,7 @@ tool_install() {
     fi
 }
 tool_update() {
-    if [[ -d "$INSTALL_DIR" ]]; then cd "$INSTALL_DIR" && sudo git pull; fi
+    if [[ -d "$INSTALL_DIR" ]]; then cd "$INSTALL_DIR" || exit 1; sudo git pull; fi
 }
 tool_status() {
     if [[ -d "$INSTALL_DIR" ]]; then echo "Installed"; else echo "Not installed"; fi

@@ -10,13 +10,13 @@ ACTION="${1:-}"
 
 case "$ACTION" in
   start)
-    cd "${COMPOSE_DIR}" && docker compose --env-file "${ENV_FILE}" start
+    cd "${COMPOSE_DIR}" || exit 1 && docker compose --env-file "${ENV_FILE}" start
     ;;
   stop)
-    cd "${COMPOSE_DIR}" && docker compose --env-file "${ENV_FILE}" stop
+    cd "${COMPOSE_DIR}" || exit 1 && docker compose --env-file "${ENV_FILE}" stop
     ;;
   restart)
-    cd "${COMPOSE_DIR}" && docker compose --env-file "${ENV_FILE}" restart
+    cd "${COMPOSE_DIR}" || exit 1 && docker compose --env-file "${ENV_FILE}" restart
     ;;
   install)  bash "${SCRIPT_DIR}/install.sh" ;;
   update)   bash "${SCRIPT_DIR}/update.sh" ;;

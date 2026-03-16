@@ -18,7 +18,7 @@ tool_install() {
 
 tool_update() {
     if [[ -d "$INSTALL_DIR" ]]; then
-        cd "$INSTALL_DIR" && sudo git pull
+        cd "$INSTALL_DIR" || exit 1; sudo git pull
     else
         echo "FoundryGate not found in $INSTALL_DIR."
     fi
