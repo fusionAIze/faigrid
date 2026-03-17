@@ -522,6 +522,7 @@ if [[ -z "$ACTION_NAME" ]]; then
         echo ""
         echo -e "    ${BOLD}4)${NC}  ${YELLOW}Reinstall${NC}   ${DIM}⚠ Wipe and re-provision from scratch${NC}"
         echo -e "    ${BOLD}5)${NC}  ${YELLOW}Uninstall${NC}   ${DIM}⚠ Remove this node role entirely${NC}"
+        echo ""
         echo -e "    ${BOLD}s)${NC}  Switch node  ${DIM}Go back to node selection (Step 2)${NC}"
         echo -e "    ${BOLD}q)${NC}  Quit"
         echo ""
@@ -542,6 +543,7 @@ if [[ -z "$ACTION_NAME" ]]; then
         # Fresh target — install is the natural first action
         echo -e "    ${BOLD}1)${NC}  Install     ${DIM}Set up this node with the ${ROLE_NAME} role${NC}"
         echo -e "    ${BOLD}2)${NC}  Verify      ${DIM}Check connectivity and environment (read-only)${NC}"
+        echo ""
         echo -e "    ${BOLD}s)${NC}  Switch node  ${DIM}Go back to node selection (Step 2)${NC}"
         echo -e "    ${BOLD}q)${NC}  Quit"
         echo ""
