@@ -41,6 +41,14 @@ Prefer:
 - output colorful, readable logs (use `_lib.sh` helpers where possible)
 - modular bash scripts over monolithic files
 - handle errors gracefully with explicit messages
+- **Bash 3.2 compatibility is mandatory** — all scripts must run on macOS (Bash 3.2) and Linux (any distro).
+  Forbidden Bash 4+ features:
+  - `declare -A` / `declare -gA` — associative arrays → use individual variables or `case` statements
+  - `declare -g` — global declaration inside functions → declare at script scope instead
+  - `mapfile` / `readarray` → use `while read` loops
+  - `${!varname}` indirect expansion with `set -u` — use `case` statements or `eval` carefully
+  - `local -A` — local associative arrays → not available
+
 
 ## Workflow rules
 
