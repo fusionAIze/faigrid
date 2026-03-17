@@ -181,6 +181,53 @@ resolve_role_dir() {
     esac
 }
 
+# --- Service Discovery ---
+DISCOVERED_SERVICES=()
+
+discover_services() {
+    local mode=$1
+    local ssh_target=$2
+    local run_cmd
+
+    if [[ "$mode" == "local" ]]; then
+        run_cmd="bash -c"
+    else
+        run_cmd="ssh -q $ssh_target"
+    fi
+
+    info "Scanning target for existing services..."
+    echo ""
+
+    # Service probe list: name, check command
+    local -a probes=(
+        "Caddy:command -v caddy || pgrep -x caddy"
+        "Pi-hole:command -v pihole || [ -d /etc/pihole ]"
+        "Docker:command -v docker"
+        "Ollama:command -v ollama || pgrep -x ollama"
+        "LM Studio:command -v lms"
+        "n8n:docker ps --format '{{.Names}}' 2>/dev/null | grep -q n8n"
+        "PostgreSQL:command -v psql || docker ps --format '{{.Names}}' 2>/dev/null | grep -q postgres"
+        "Redis:command -v redis-cli || docker ps --format '{{.Names}}' 2>/dev/null | grep -q redis"
+        "Restic:command -v restic"
+        "Tailscale:command -v tailscale"
+        "Nginx:command -v nginx || pgrep -x nginx"
+    )
+
+    for probe in "${probes[@]}"; do
+        local svc_name="${probe%%:*}"
+        local svc_cmd="${probe#*:}"
+        if $run_cmd "$svc_cmd" &>/dev/null; then
+            DISCOVERED_SERVICES+=("$svc_name")
+            echo -e "    ${GREEN}●${NC}  ${svc_name} detected"
+        fi
+    done
+
+    if [[ ${#DISCOVERED_SERVICES[@]} -eq 0 ]]; then
+        echo -e "    ${DIM}No known services detected (bare system).${NC}"
+    fi
+    echo ""
+}
+
 # ==============================================================================
 # STEP 1: GRID OVERVIEW
 # ==============================================================================
@@ -288,7 +335,26 @@ echo ""
 if [[ "$CURRENT_ROLE" != "none" ]]; then
     success "Detected existing node: Role [${BOLD}${CURRENT_ROLE}${NC}], Version [${CURRENT_VERSION}]"
 else
-    info "No prior Nexus state detected on this target."
+    info "No .nexus-state file found. Scanning target for existing services..."
+    echo ""
+    discover_services "$EXEC_MODE" "$SSH_TARGET"
+
+    # If services were discovered, suggest bootstrapping
+    if [[ ${#DISCOVERED_SERVICES[@]} -gt 0 ]]; then
+        echo -e "  ${CYAN}💡${NC}  Services are already running, but this node is ${BOLD}not registered${NC}"
+        echo -e "     with Nexus Labs. You can:"
+        echo ""
+        echo -e "    ${BOLD}a)${NC}  ${GREEN}Adopt${NC}     ${DIM}— Register this node as ${BOLD}${ROLE_NAME}${NC}${DIM} (keeps everything as-is)${NC}"
+        echo -e "    ${BOLD}b)${NC}  Continue  ${DIM}— Proceed to action selection without registering${NC}"
+        echo ""
+        prompt "Adopt or continue? (a/b): " ADOPT_CHOICE
+        if [[ "${ADOPT_CHOICE:-a}" =~ ^[Aa]$ ]]; then
+            write_state "$EXEC_MODE" "$SSH_TARGET" "$ROLE_NAME"
+            CURRENT_ROLE="$ROLE_NAME"
+            echo ""
+            success "Node adopted as ${BOLD}${ROLE_NAME}${NC}. Future runs will recognize this node."
+        fi
+    fi
 fi
 
 # ==============================================================================
@@ -326,26 +392,41 @@ divider
 if [[ -z "$ACTION_NAME" ]]; then
     echo ""
     if [[ "$CURRENT_ROLE" != "none" ]]; then
-        echo "  What do you want to do with this ${BOLD}${ROLE_NAME}${NC} node?"
+        echo -e "  What do you want to do with this ${BOLD}${ROLE_NAME}${NC} node?"
     else
-        echo "  What do you want to do?"
+        echo -e "  What do you want to do with ${BOLD}${ROLE_NAME}${NC}?"
     fi
     echo ""
-    echo -e "    ${BOLD}1)${NC}  Install     ${DIM}Fresh provisioning of the node${NC}"
-    echo -e "    ${BOLD}2)${NC}  Update      ${DIM}Push latest configuration / payload${NC}"
-    echo -e "    ${BOLD}3)${NC}  Verify      ${DIM}Run health checks${NC}"
-    echo -e "    ${BOLD}4)${NC}  Uninstall   ${DIM}Clean removal of the node role${NC}"
-    echo -e "    ${BOLD}5)${NC}  Control     ${DIM}Start / Stop / Restart services${NC}"
-    echo ""
-    prompt "Select action (1-5): " ACTION_CHOICE
-    case "$ACTION_CHOICE" in
-        1) ACTION_NAME="install" ;;
-        2) ACTION_NAME="update" ;;
-        3) ACTION_NAME="verify" ;;
-        4) ACTION_NAME="uninstall" ;;
-        5) ACTION_NAME="control" ;;
-        *) error "Invalid choice. Exiting." ;;
-    esac
+
+    if [[ "$CURRENT_ROLE" != "none" ]]; then
+        # Existing registered node — update/verify are the sensible defaults
+        echo -e "    ${BOLD}1)${NC}  Update      ${DIM}Push latest configuration / payload${NC}"
+        echo -e "    ${BOLD}2)${NC}  Verify      ${DIM}Run health checks on this node${NC}"
+        echo -e "    ${BOLD}3)${NC}  Control     ${DIM}Start / Stop / Restart services${NC}"
+        echo -e "    ${BOLD}4)${NC}  Reinstall   ${DIM}⚠ Fresh provisioning (destructive)${NC}"
+        echo -e "    ${BOLD}5)${NC}  Uninstall   ${DIM}⚠ Clean removal of the node role${NC}"
+        echo ""
+        prompt "Select action (1-5): " ACTION_CHOICE
+        case "$ACTION_CHOICE" in
+            1) ACTION_NAME="update" ;;
+            2) ACTION_NAME="verify" ;;
+            3) ACTION_NAME="control" ;;
+            4) ACTION_NAME="install" ;;
+            5) ACTION_NAME="uninstall" ;;
+            *) error "Invalid choice. Exiting." ;;
+        esac
+    else
+        # Fresh target — install is the natural first action
+        echo -e "    ${BOLD}1)${NC}  Install     ${DIM}Fresh provisioning of the node${NC}"
+        echo -e "    ${BOLD}2)${NC}  Verify      ${DIM}Run connectivity / environment checks${NC}"
+        echo ""
+        prompt "Select action (1/2): " ACTION_CHOICE
+        case "$ACTION_CHOICE" in
+            1) ACTION_NAME="install" ;;
+            2) ACTION_NAME="verify" ;;
+            *) error "Invalid choice. Exiting." ;;
+        esac
+    fi
 fi
 
 # ==============================================================================
