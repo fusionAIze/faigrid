@@ -519,10 +519,10 @@ if [[ -z "$ACTION_NAME" ]]; then
         echo ""
         echo -e "    ${BOLD}4)${NC}  ${YELLOW}Reinstall${NC}   ${DIM}⚠ Wipe and re-provision from scratch${NC}"
         echo -e "    ${BOLD}5)${NC}  ${YELLOW}Uninstall${NC}   ${DIM}⚠ Remove this node role entirely${NC}"
-        echo ""
-        echo -e "  ${DIM}Tip: Start with Verify to see the current state of this node.${NC}"
         echo -e "    ${BOLD}s)${NC}  Switch node  ${DIM}Go back to node selection (Step 2)${NC}"
         echo -e "    ${BOLD}q)${NC}  Quit"
+        echo ""
+        echo -e "  ${DIM}Tip: Start with Verify to see the current state of this node.${NC}"
         echo ""
         prompt "Select action (1-5 / s / q): " ACTION_CHOICE
         case "$ACTION_CHOICE" in
@@ -541,6 +541,8 @@ if [[ -z "$ACTION_NAME" ]]; then
         echo -e "    ${BOLD}2)${NC}  Verify      ${DIM}Check connectivity and environment (read-only)${NC}"
         echo -e "    ${BOLD}s)${NC}  Switch node  ${DIM}Go back to node selection (Step 2)${NC}"
         echo -e "    ${BOLD}q)${NC}  Quit"
+        echo ""
+        echo -e "  ${DIM}Tip: Start with Verify to check connectivity first.${NC}"
         echo ""
         prompt "Select action (1-2 / s / q): " ACTION_CHOICE
         case "$ACTION_CHOICE" in
