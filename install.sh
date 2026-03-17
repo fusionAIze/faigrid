@@ -182,18 +182,83 @@ resolve_role_dir() {
 }
 
 # ==============================================================================
-# STEP 1: TARGET DEFINITION
+# STEP 1: GRID OVERVIEW
 # ==============================================================================
 divider
-echo -e "  ${BOLD}Step 1 │ Target Definition${NC}"
+echo -e "  ${BOLD}Step 1 │ Your Nexus Grid${NC}"
+divider
+echo ""
+echo -e "  The Nexus ${BOLD}4+1 Architecture${NC} consists of these roles:"
+echo ""
+echo -e "    ${GREEN}●${NC}  ${BOLD}nexus-core${NC}       ${DIM}AI Workbench — n8n, OpenClaw, Postgres, Redis${NC}    ${YELLOW}[required]${NC}"
+echo -e "    ${DIM}○${NC}  ${BOLD}nexus-edge${NC}       ${DIM}TLS ingress, reverse proxy, firewall, DNS${NC}      ${DIM}[optional]${NC}"
+echo -e "    ${DIM}○${NC}  ${BOLD}nexus-worker${NC}     ${DIM}Local LLM inference — Ollama, LM Studio${NC}        ${DIM}[optional]${NC}"
+echo -e "    ${DIM}○${NC}  ${BOLD}nexus-backup${NC}     ${DIM}Offsite storage vault — Synology, S3, USB${NC}      ${DIM}[optional]${NC}"
+echo -e "    ${DIM}○${NC}  ${BOLD}nexus-external${NC}   ${DIM}Cloud extension — ext. n8n, Plane PM${NC}           ${DIM}[optional]${NC}"
+echo ""
+echo -e "  ${DIM}Tip: Start with nexus-core. Add other nodes as your grid grows.${NC}"
+
+# ==============================================================================
+# STEP 2: WHICH NODE TO PROVISION NOW
+# ==============================================================================
+echo ""
+divider
+echo -e "  ${BOLD}Step 2 │ Select Node to Provision${NC}"
+divider
+
+if [[ -z "$ROLE_NAME" ]]; then
+    echo ""
+    echo "  Which node do you want to work on right now?"
+    echo ""
+    echo -e "    ${BOLD}1)${NC}  nexus-core       ${DIM}The brain — always provision this first${NC}"
+    echo -e "    ${BOLD}2)${NC}  nexus-edge       ${DIM}Secure ingress gateway (Caddy, DNS)${NC}"
+    echo -e "    ${BOLD}3)${NC}  nexus-worker     ${DIM}Local LLM execution (MacBook, GPU server)${NC}"
+    echo -e "    ${BOLD}4)${NC}  nexus-backup     ${DIM}Restic vault (NAS, USB disk, S3 bucket)${NC}"
+    echo -e "    ${BOLD}5)${NC}  nexus-external   ${DIM}Public cloud node (VPS, agency server)${NC}"
+    echo ""
+    prompt "Enter role (1-5): " ROLE_CHOICE
+
+    case "$ROLE_CHOICE" in
+        1) ROLE_NAME="core" ;;
+        2) ROLE_NAME="edge" ;;
+        3) ROLE_NAME="worker" ;;
+        4) ROLE_NAME="backup" ;;
+        5) ROLE_NAME="external" ;;
+        *) error "Invalid choice. Exiting." ;;
+    esac
+
+    # Smart suggestion for backup co-location
+    if [[ "$ROLE_NAME" == "backup" ]]; then
+        echo ""
+        echo -e "  ${CYAN}💡 Tip:${NC} You don't need a dedicated backup node."
+        echo -e "     Restic can run directly on ${BOLD}nexus-core${NC} or ${BOLD}nexus-external${NC},"
+        echo -e "     backing up to a Synology NAS, S3 bucket, or USB drive."
+        echo ""
+        prompt "Continue with a dedicated backup node anyway? (Y/n): " BACKUP_CONFIRM
+        if [[ "${BACKUP_CONFIRM:-Y}" =~ ^[Nn]$ ]]; then
+            info "Returning to node selection..."
+            exec bash "$0"
+        fi
+    fi
+fi
+
+ROLE_DIR="$(resolve_role_dir "$ROLE_NAME")"
+success "Selected: ${BOLD}${ROLE_NAME}${NC}"
+
+# ==============================================================================
+# STEP 3: DEPLOY MODE
+# ==============================================================================
+echo ""
+divider
+echo -e "  ${BOLD}Step 3 │ Deploy Mode${NC}"
 divider
 
 if [[ -z "$MODE_CHOICE" ]]; then
     echo ""
-    echo "  How are you deploying?"
+    echo -e "  How are you deploying ${BOLD}${ROLE_NAME}${NC}?"
     echo ""
-    echo -e "    ${BOLD}1)${NC}  On-Node     ${DIM}— I am logged into the target node right now${NC}"
-    echo -e "    ${BOLD}2)${NC}  Remote Push  ${DIM}— Push to a remote node via SSH from this workstation${NC}"
+    echo -e "    ${BOLD}1)${NC}  On-Node      ${DIM}— I am logged into the target node right now${NC}"
+    echo -e "    ${BOLD}2)${NC}  Remote Push   ${DIM}— Push to a remote node via SSH from this workstation${NC}"
     echo ""
     prompt "Select mode (1/2): " MODE_CHOICE
 fi
@@ -231,88 +296,31 @@ fi
 # ==============================================================================
 if [[ "$BOOTSTRAP_MODE" == "true" ]]; then
     echo ""
-    divider
-    echo -e "  ${BOLD}Bootstrap Mode${NC}"
-    divider
-    echo ""
-    info "Registering an existing node without executing install scripts."
-
-    if [[ -z "$ROLE_NAME" ]]; then
-        echo ""
-        echo -e "    ${BOLD}1)${NC}  nexus-edge       TLS ingress, reverse proxy, DNS"
-        echo -e "    ${BOLD}2)${NC}  nexus-core       AI Workbench (n8n, OpenClaw, PG)"
-        echo -e "    ${BOLD}3)${NC}  nexus-worker     Local LLM inference (Ollama/LMS)"
-        echo -e "    ${BOLD}4)${NC}  nexus-backup     Offsite vault (Synology, S3, etc.)"
-        echo -e "    ${BOLD}5)${NC}  nexus-external   Cloud extension (PM, ext. n8n)"
-        echo ""
-        prompt "Which role does this node serve? (1-5): " ROLE_CHOICE
-        case "$ROLE_CHOICE" in
-            1) ROLE_NAME="edge" ;;
-            2) ROLE_NAME="core" ;;
-            3) ROLE_NAME="worker" ;;
-            4) ROLE_NAME="backup" ;;
-            5) ROLE_NAME="external" ;;
-            *) error "Invalid choice." ;;
-        esac
-    fi
-
     write_state "$EXEC_MODE" "$SSH_TARGET" "$ROLE_NAME"
     echo ""
     success "Node bootstrapped as [${BOLD}${ROLE_NAME}${NC}]. Future runs will detect this role automatically."
     exit 0
 fi
 
-# ==============================================================================
-# STEP 2: NODE ROLE SELECTION
-# ==============================================================================
-echo ""
-divider
-echo -e "  ${BOLD}Step 2 │ Node Role${NC}"
-divider
-
-if [[ -z "$ROLE_NAME" ]]; then
-    if [[ "$CURRENT_ROLE" != "none" ]]; then
-        # Existing node detected — offer to keep or change
-        echo ""
-        echo -e "  This target is already registered as ${BOLD}${CURRENT_ROLE}${NC}."
-        prompt "Keep this role? (Y/n): " KEEP_ROLE
-        if [[ "${KEEP_ROLE:-Y}" =~ ^[Yy]$ || -z "${KEEP_ROLE:-}" ]]; then
-            ROLE_NAME="$CURRENT_ROLE"
-        fi
-    fi
-
-    if [[ -z "$ROLE_NAME" ]]; then
-        echo ""
-        echo "  Select the architectural role to provision:"
-        echo ""
-        echo -e "    ${BOLD}1)${NC}  nexus-edge       ${DIM}TLS ingress, reverse proxy, firewall, DNS${NC}"
-        echo -e "    ${BOLD}2)${NC}  nexus-core       ${DIM}AI Workbench — n8n, OpenClaw, Postgres, Redis${NC}"
-        echo -e "    ${BOLD}3)${NC}  nexus-worker     ${DIM}Local LLM inference — Ollama, LM Studio${NC}"
-        echo -e "    ${BOLD}4)${NC}  nexus-backup     ${DIM}Offsite storage vault — Synology, S3, Restic${NC}"
-        echo -e "    ${BOLD}5)${NC}  nexus-external   ${DIM}Cloud extension — ext. n8n, Plane PM${NC}"
-        echo ""
-        prompt "Enter role (1-5): " ROLE_CHOICE
-
-        case "$ROLE_CHOICE" in
-            1) ROLE_NAME="edge" ;;
-            2) ROLE_NAME="core" ;;
-            3) ROLE_NAME="worker" ;;
-            4) ROLE_NAME="backup" ;;
-            5) ROLE_NAME="external" ;;
-            *) error "Invalid choice. Exiting." ;;
-        esac
+# If the target already has a different role, warn
+if [[ "$CURRENT_ROLE" != "none" && "$CURRENT_ROLE" != "$ROLE_NAME" ]]; then
+    echo ""
+    warning "This target is already registered as ${BOLD}${CURRENT_ROLE}${NC}, but you selected ${BOLD}${ROLE_NAME}${NC}."
+    prompt "Change this node's role? (y/N): " CHANGE_ROLE
+    if [[ ! "${CHANGE_ROLE:-N}" =~ ^[Yy]$ ]]; then
+        ROLE_NAME="$CURRENT_ROLE"
+        ROLE_DIR="$(resolve_role_dir "$ROLE_NAME")"
+        info "Keeping existing role: ${ROLE_NAME}"
     fi
 fi
 
-ROLE_DIR="$(resolve_role_dir "$ROLE_NAME")"
-success "Target role: ${BOLD}${ROLE_NAME}${NC} (${ROLE_DIR})"
 
 # ==============================================================================
-# STEP 3: ACTION SELECTION
+# STEP 4: ACTION SELECTION
 # ==============================================================================
 echo ""
 divider
-echo -e "  ${BOLD}Step 3 │ Action${NC}"
+echo -e "  ${BOLD}Step 4 │ Action${NC}"
 divider
 
 if [[ -z "$ACTION_NAME" ]]; then
@@ -341,12 +349,12 @@ if [[ -z "$ACTION_NAME" ]]; then
 fi
 
 # ==============================================================================
-# STEP 4: SAFETY & CONFIRMATION
+# STEP 5: SAFETY & CONFIRMATION
 # ==============================================================================
 if [[ "$ACTION_NAME" == "install" && "$CURRENT_ROLE" != "none" ]]; then
     echo ""
     divider
-    echo -e "  ${BOLD}Step 4 │ Safety Check${NC}"
+    echo -e "  ${BOLD}Step 5 │ Safety Check${NC}"
     divider
     echo ""
     warning "This target already has a ${BOLD}${CURRENT_ROLE}${NC} installation."
