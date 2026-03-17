@@ -182,6 +182,36 @@ resolve_role_dir() {
     esac
 }
 
+# --- Grid Status Probe ---
+# Reads known node targets from .env.topology and checks if they have a .nexus-state
+probe_grid_status() {
+    declare -gA GRID_STATUS
+    local roles=("core" "edge" "worker" "backup" "external")
+    for role in "${roles[@]}"; do
+        GRID_STATUS[$role]="○"  # default: unknown/not registered
+    done
+
+    if [[ ! -f "$TOPOLOGY_FILE" ]]; then
+        return
+    fi
+
+    # Check each role target defined in topology
+    while IFS='=' read -r key val; do
+        [[ "$key" =~ ^#.*$ || -z "$key" ]] && continue
+        key=$(echo "$key" | tr -d '[:space:]')
+        val=$(echo "$val" | tr -d '[:space:]')
+        # Expect lines like EDGE_TARGET=nexus@192.168.x.x
+        if [[ "$key" =~ ^([A-Z]+)_TARGET$ ]]; then
+            local role_upper=${BASH_REMATCH[1]}
+            local role_lower
+            role_lower=$(echo "$role_upper" | tr '[:upper:]' '[:lower:]')
+            if ssh -q -o ConnectTimeout=3 "$val" '[ -f "$HOME/.nexus-state" ]' 2>/dev/null; then
+                GRID_STATUS[$role_lower]="✔"
+            fi
+        fi
+    done < "$TOPOLOGY_FILE"
+}
+
 # --- Service Discovery ---
 DISCOVERED_SERVICES=()
 
@@ -238,11 +268,25 @@ divider
 echo ""
 echo -e "  The Nexus ${BOLD}4+1 Architecture${NC} consists of these roles:"
 echo ""
-echo -e "    ${GREEN}●${NC}  ${BOLD}nexus-core${NC}       ${DIM}AI Workbench — n8n, OpenClaw, Postgres, Redis${NC}    ${YELLOW}[required]${NC}"
-echo -e "    ${DIM}○${NC}  ${BOLD}nexus-edge${NC}       ${DIM}TLS ingress, reverse proxy, firewall, DNS${NC}      ${DIM}[optional]${NC}"
-echo -e "    ${DIM}○${NC}  ${BOLD}nexus-worker${NC}     ${DIM}Local LLM inference — Ollama, LM Studio${NC}        ${DIM}[optional]${NC}"
-echo -e "    ${DIM}○${NC}  ${BOLD}nexus-backup${NC}     ${DIM}Offsite storage vault — Synology, S3, USB${NC}      ${DIM}[optional]${NC}"
-echo -e "    ${DIM}○${NC}  ${BOLD}nexus-external${NC}   ${DIM}Cloud extension — ext. n8n, Plane PM${NC}           ${DIM}[optional]${NC}"
+
+# Probe known nodes from .env.topology for registered state
+probe_grid_status
+
+_grid_icon() {
+    local role=$1
+    local status=${GRID_STATUS[$role]:-○}
+    if [[ "$status" == "✔" ]]; then
+        echo -e "${GREEN}✔${NC}"
+    else
+        echo -e "${DIM}○${NC}"
+    fi
+}
+
+echo -e "    $(_grid_icon core)  ${BOLD}nexus-core${NC}       ${DIM}AI Workbench — n8n, OpenClaw, Postgres, Redis${NC}    ${YELLOW}[required]${NC}"
+echo -e "    $(_grid_icon edge)  ${BOLD}nexus-edge${NC}       ${DIM}TLS ingress, reverse proxy, firewall, DNS${NC}      ${DIM}[optional]${NC}"
+echo -e "    $(_grid_icon worker)  ${BOLD}nexus-worker${NC}     ${DIM}Local LLM inference — Ollama, LM Studio${NC}        ${DIM}[optional]${NC}"
+echo -e "    $(_grid_icon backup)  ${BOLD}nexus-backup${NC}     ${DIM}Offsite storage vault — Synology, S3, USB${NC}      ${DIM}[optional]${NC}"
+echo -e "    $(_grid_icon external)  ${BOLD}nexus-external${NC}   ${DIM}Cloud extension — ext. n8n, Plane PM${NC}           ${DIM}[optional]${NC}"
 echo ""
 echo -e "  ${DIM}Tip: Start with nexus-core. Add other nodes as your grid grows.${NC}"
 
@@ -479,58 +523,113 @@ if [[ "$ROLE_NAME" == "core" ]]; then
 fi
 
 # ==============================================================================
-# DEPLOYMENT PHASE
+# DEPLOYMENT PHASE — with post-action loop
 # ==============================================================================
-echo ""
-divider
-echo -e "  ${BOLD}Deploying${NC}  ${ROLE_NAME} → ${ACTION_NAME}"
-divider
-echo ""
 
-if [[ "$EXEC_MODE" == "local" ]]; then
-    info "Initiating Local Pipeline [${ACTION_NAME}] for ${ROLE_NAME}..."
+_run_action() {
+    local action=$1
+    echo ""
+    divider
+    echo -e "  ${BOLD}Deploying${NC}  ${ROLE_NAME} → ${action}"
+    divider
+    echo ""
 
-    if [[ ! -d "$ROLE_DIR" ]]; then
-        warning "Directory $ROLE_DIR not populated in repo. Skipping module execution."
-    else
-        TARGET_SCRIPT="${ROLE_DIR}/scripts/${ACTION_NAME}.sh"
-        if [[ -f "$TARGET_SCRIPT" ]]; then
-            bash "$TARGET_SCRIPT" "${COMPONENT_NAME:-all}"
+    if [[ "$EXEC_MODE" == "local" ]]; then
+        info "Initiating Local Pipeline [${action}] for ${ROLE_NAME}..."
+
+        if [[ ! -d "$ROLE_DIR" ]]; then
+            warning "Directory $ROLE_DIR not populated in repo. Skipping module execution."
         else
-            error "Management script not found: ${TARGET_SCRIPT}"
+            TARGET_SCRIPT="${ROLE_DIR}/scripts/${action}.sh"
+            if [[ -f "$TARGET_SCRIPT" ]]; then
+                bash "$TARGET_SCRIPT" "${COMPONENT_NAME:-all}"
+            else
+                warning "Script not found: ${TARGET_SCRIPT}. Action skipped."
+            fi
         fi
+
+        if [[ "$action" == "install" ]]; then
+            write_state "$EXEC_MODE" "$SSH_TARGET" "$ROLE_NAME"
+        fi
+
+    elif [[ "$EXEC_MODE" == "remote" ]]; then
+        info "Initiating Remote Pipeline [${action}] to ${SSH_TARGET}..."
+        ssh -q "$SSH_TARGET" "mkdir -p /tmp/nexus-install"
+        info "Transferring payload to target..."
+        rsync -az --exclude='.git' --exclude='node_modules' ./ "$SSH_TARGET:/tmp/nexus-install/" > /dev/null
+        scp "$TOPOLOGY_FILE" "${SSH_TARGET}:/tmp/nexus-install/" > /dev/null
+        info "Executing remote [${action}] payload..."
+        TARGET_SCRIPT="${ROLE_DIR}/scripts/${action}.sh"
+        ssh -t "$SSH_TARGET" "cd /tmp/nexus-install || exit 1; bash \"$TARGET_SCRIPT\" \"${COMPONENT_NAME:-all}\""
+        if [[ "$action" == "install" ]]; then
+            write_state "$EXEC_MODE" "$SSH_TARGET" "$ROLE_NAME"
+        fi
+        success "Remote [${action}] complete."
     fi
+}
 
-    # Write State (Only on install)
-    if [[ "$ACTION_NAME" == "install" ]]; then
-        write_state "$EXEC_MODE" "$SSH_TARGET" "$ROLE_NAME"
-    fi
+# Destructive actions exit immediately; safe actions loop back
+_is_loopable() {
+    [[ "$1" == "verify" || "$1" == "update" || "$1" == "control" ]]
+}
 
-elif [[ "$EXEC_MODE" == "remote" ]]; then
-    info "Initiating Remote Pipeline [${ACTION_NAME}] to ${SSH_TARGET}..."
+_run_action "$ACTION_NAME"
 
-    # 1. Create a remote temp directory
-    ssh -q "$SSH_TARGET" "mkdir -p /tmp/nexus-install"
-
-    # 2. Transfer payload
-    info "Transferring payload to target..."
-    rsync -avz --exclude='.git' --exclude='node_modules' ./ "$SSH_TARGET:/tmp/nexus-install/" > /dev/null
-
-    # 3. Transfer topology config
-    scp "$TOPOLOGY_FILE" "${SSH_TARGET}:/tmp/nexus-install/" > /dev/null
-
-    # 4. Execute remote script & generate state
-    info "Executing remote [${ACTION_NAME}] payload..."
-    TARGET_SCRIPT="${ROLE_DIR}/scripts/${ACTION_NAME}.sh"
-
-    ssh -t "$SSH_TARGET" "cd /tmp/nexus-install || exit 1; bash \"$TARGET_SCRIPT\" \"${COMPONENT_NAME:-all}\""
-
-    # Write state on install
-    if [[ "$ACTION_NAME" == "install" ]]; then
-        write_state "$EXEC_MODE" "$SSH_TARGET" "$ROLE_NAME"
-    fi
-
-    success "Remote [${ACTION_NAME}] complete."
+if _is_loopable "$ACTION_NAME"; then
+    while true; do
+        echo ""
+        divider
+        inspect_state "$EXEC_MODE" "$SSH_TARGET"
+        if [[ "$CURRENT_ROLE" != "none" ]]; then
+            echo -e "  ${GREEN}✔${NC}  ${BOLD}${ROLE_NAME}${NC} is registered  ${DIM}(version: ${CURRENT_VERSION})${NC}"
+        else
+            echo -e "  ${DIM}○${NC}  ${BOLD}${ROLE_NAME}${NC} is ${YELLOW}not registered${NC} — run Install or Adopt to register"
+        fi
+        divider
+        echo ""
+        echo -e "  ${BOLD}What next?${NC}"
+        echo ""
+        echo -e "    ${BOLD}1)${NC}  ${GREEN}Verify${NC}      ${DIM}Read-only: check services, ports, disk${NC}"
+        echo -e "    ${BOLD}2)${NC}  Update      ${DIM}System packages only (apt upgrade). Configs stay untouched${NC}"
+        echo -e "    ${BOLD}3)${NC}  Control     ${DIM}Start / Stop / Restart managed services${NC}"
+        echo -e "    ${BOLD}4)${NC}  ${YELLOW}Reinstall${NC}   ${DIM}⚠ Wipe and re-provision from scratch${NC}"
+        echo -e "    ${BOLD}5)${NC}  ${YELLOW}Uninstall${NC}   ${DIM}⚠ Remove this node role entirely${NC}"
+        echo ""
+        echo -e "    ${BOLD}s)${NC}  Switch node  ${DIM}Go back to node selection (Step 2)${NC}"
+        echo -e "    ${BOLD}q)${NC}  Quit"
+        echo ""
+        prompt "Select action (1-5 / s / q): " NEXT_CHOICE
+        case "$NEXT_CHOICE" in
+            1) _run_action "verify" ;;
+            2) _run_action "update" ;;
+            3) _run_action "control" ;;
+            4)
+                warning "This will wipe and re-provision ${BOLD}${ROLE_NAME}${NC}. Are you sure?"
+                prompt "Type YES to confirm: " CONFIRM
+                if [[ "$CONFIRM" == "YES" ]]; then
+                    _run_action "install"
+                    break
+                else
+                    info "Reinstall cancelled."
+                fi
+                ;;
+            5)
+                warning "This will remove the ${BOLD}${ROLE_NAME}${NC} role. Are you sure?"
+                prompt "Type YES to confirm: " CONFIRM
+                if [[ "$CONFIRM" == "YES" ]]; then
+                    _run_action "uninstall"
+                    break
+                else
+                    info "Uninstall cancelled."
+                fi
+                ;;
+            [Ss]) exec bash "$0" ;;
+            [Qq]|"")
+                break
+                ;;
+            *) warning "Invalid choice. Please enter 1-5, s, or q." ;;
+        esac
+    done
 fi
 
 echo ""
