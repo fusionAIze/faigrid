@@ -349,7 +349,9 @@ if [[ -z "$ROLE_NAME" ]]; then
     echo -e "    ${BOLD}4)${NC}  nexus-backup     ${DIM}Restic vault (NAS, USB disk, S3 bucket)${NC}"
     echo -e "    ${BOLD}5)${NC}  nexus-external   ${DIM}Public cloud node (VPS, agency server)${NC}"
     echo ""
-    prompt "Enter role (1-5): " ROLE_CHOICE
+    echo -e "    ${BOLD}q)${NC}  Quit"
+    echo ""
+    prompt "Enter role (1-5 / q): " ROLE_CHOICE
 
     case "$ROLE_CHOICE" in
         1) ROLE_NAME="core" ;;
@@ -357,7 +359,8 @@ if [[ -z "$ROLE_NAME" ]]; then
         3) ROLE_NAME="worker" ;;
         4) ROLE_NAME="backup" ;;
         5) ROLE_NAME="external" ;;
-        *) error "Invalid choice. Exiting." ;;
+        [Qq]|"") exit 0 ;;
+        *) warning "Invalid choice. Please enter 1-5 or q." ;;
     esac
 
     # Smart suggestion for backup co-location
