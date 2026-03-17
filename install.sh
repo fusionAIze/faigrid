@@ -183,30 +183,30 @@ resolve_role_dir() {
 }
 
 # --- Grid Status Probe ---
-# Reads known node targets from .env.topology and checks if they have a .nexus-state
-probe_grid_status() {
-    declare -gA GRID_STATUS
-    local roles=("core" "edge" "worker" "backup" "external")
-    for role in "${roles[@]}"; do
-        GRID_STATUS[$role]="○"  # default: unknown/not registered
-    done
+# Uses individual variables (Bash 3.2 compatible — no associative arrays)
+GRID_STATUS_core="○"
+GRID_STATUS_edge="○"
+GRID_STATUS_worker="○"
+GRID_STATUS_backup="○"
+GRID_STATUS_external="○"
 
+probe_grid_status() {
     if [[ ! -f "$TOPOLOGY_FILE" ]]; then
         return
     fi
 
-    # Check each role target defined in topology
+    # Check each *_TARGET= line in topology
     while IFS='=' read -r key val; do
-        [[ "$key" =~ ^#.*$ || -z "$key" ]] && continue
-        key=$(echo "$key" | tr -d '[:space:]')
-        val=$(echo "$val" | tr -d '[:space:]')
-        # Expect lines like EDGE_TARGET=nexus@192.168.x.x
+        # strip whitespace, skip comments/empty
+        key="${key//[[:space:]]/}"
+        val="${val//[[:space:]]/}"
+        [[ -z "$key" || "$key" == \#* ]] && continue
+
         if [[ "$key" =~ ^([A-Z]+)_TARGET$ ]]; then
-            local role_upper=${BASH_REMATCH[1]}
             local role_lower
-            role_lower=$(echo "$role_upper" | tr '[:upper:]' '[:lower:]')
+            role_lower=$(echo "${BASH_REMATCH[1]}" | tr '[:upper:]' '[:lower:]')
             if ssh -q -o ConnectTimeout=3 "$val" '[ -f "$HOME/.nexus-state" ]' 2>/dev/null; then
-                GRID_STATUS[$role_lower]="✔"
+                eval "GRID_STATUS_${role_lower}=\"✔\""
             fi
         fi
     done < "$TOPOLOGY_FILE"
