@@ -614,42 +614,71 @@ fi
 # ==============================================================================
 
 _run_action() {
-    local action=$1
+    local mode=$1
+    local ssh_target=$2
+    local role=$3
+    local action=$4
+    local role_dir=$5
+    
+    local cmd_arg="${COMPONENT_NAME:-all}"
+
+    # Handle control sub-commands interactively
+    if [ "$action" = "control" ]; then
+        echo ""
+        echo -e "  ${BOLD}Control Interface${NC} — Select command for ${BOLD}${role}${NC}:"
+        echo ""
+        echo -e "    ${BOLD}1)${NC}  ${GREEN}start${NC}"
+        echo -e "    ${BOLD}2)${NC}  ${RED}stop${NC}"
+        echo -e "    ${BOLD}3)${NC}  ${YELLOW}restart${NC}"
+        echo -e "    ${BOLD}4)${NC}  status"
+        echo -e "    ${BOLD}5)${NC}  reload"
+        echo ""
+        prompt "Select command (1-5): " CONTROL_CHOICE
+        case "$CONTROL_CHOICE" in
+            1) cmd_arg="start" ;;
+            2) cmd_arg="stop" ;;
+            3) cmd_arg="restart" ;;
+            4) cmd_arg="status" ;;
+            5) cmd_arg="reload" ;;
+            *) warning "Invalid choice. Defaulting to 'status'." ; cmd_arg="status" ;;
+        esac
+    fi
+
     echo ""
     divider
-    echo -e "  ${BOLD}Deploying${NC}  ${ROLE_NAME} → ${action}"
+    echo -e "  ${BOLD}Deploying${NC}  ${role} → ${action} (${cmd_arg})"
     divider
     echo ""
 
-    if [[ "$EXEC_MODE" == "local" ]]; then
-        info "Initiating Local Pipeline [${action}] for ${ROLE_NAME}..."
+    if [ "$mode" = "local" ]; then
+        info "Initiating Local Pipeline [${action}] for ${role}..."
 
-        if [[ ! -d "$ROLE_DIR" ]]; then
-            warning "Directory $ROLE_DIR not populated in repo. Skipping module execution."
+        if [ ! -d "$role_dir" ]; then
+            warning "Directory $role_dir not populated in repo. Skipping module execution."
         else
-            TARGET_SCRIPT="${ROLE_DIR}/scripts/${action}.sh"
-            if [[ -f "$TARGET_SCRIPT" ]]; then
-                bash "$TARGET_SCRIPT" "${COMPONENT_NAME:-all}"
+            TARGET_SCRIPT="${role_dir}/scripts/${action}.sh"
+            if [ -f "$TARGET_SCRIPT" ]; then
+                bash "$TARGET_SCRIPT" "$cmd_arg"
             else
                 warning "Script not found: ${TARGET_SCRIPT}. Action skipped."
             fi
         fi
 
-        if [[ "$action" == "install" ]]; then
-            write_state "$EXEC_MODE" "$SSH_TARGET" "$ROLE_NAME"
+        if [ "$action" = "install" ]; then
+            write_state "$mode" "$ssh_target" "$role"
         fi
 
-    elif [[ "$EXEC_MODE" == "remote" ]]; then
-        info "Initiating Remote Pipeline [${action}] to ${SSH_TARGET}..."
-        ssh -q "$SSH_TARGET" "mkdir -p /tmp/nexus-install"
+    elif [ "$mode" = "remote" ]; then
+        info "Initiating Remote Pipeline [${action}] to ${ssh_target}..."
+        ssh -q "$ssh_target" "mkdir -p /tmp/nexus-install"
         info "Transferring payload to target..."
-        rsync -az --exclude='.git' --exclude='node_modules' ./ "$SSH_TARGET:/tmp/nexus-install/" > /dev/null
-        scp "$TOPOLOGY_FILE" "${SSH_TARGET}:/tmp/nexus-install/" > /dev/null
+        rsync -az --exclude='.git' --exclude='node_modules' ./ "$ssh_target:/tmp/nexus-install/" > /dev/null
+        scp "$TOPOLOGY_FILE" "${ssh_target}:/tmp/nexus-install/" > /dev/null
         info "Executing remote [${action}] payload..."
-        TARGET_SCRIPT="${ROLE_DIR}/scripts/${action}.sh"
-        ssh -t "$SSH_TARGET" "cd /tmp/nexus-install || exit 1; bash \"$TARGET_SCRIPT\" \"${COMPONENT_NAME:-all}\""
-        if [[ "$action" == "install" ]]; then
-            write_state "$EXEC_MODE" "$SSH_TARGET" "$ROLE_NAME"
+        TARGET_SCRIPT="${role_dir}/scripts/${action}.sh"
+        ssh -t "$ssh_target" "cd /tmp/nexus-install || exit 1; bash \"$TARGET_SCRIPT\" \"$cmd_arg\""
+        if [ "$action" = "install" ]; then
+            write_state "$mode" "$ssh_target" "$role"
         fi
         success "Remote [${action}] complete."
     fi
@@ -662,7 +691,7 @@ _is_loopable() {
 
 # Exit interactive mode before critical actions
 set -e
-_run_action "$ACTION_NAME"
+_run_action "$EXEC_MODE" "$SSH_TARGET" "$ROLE_NAME" "$ACTION_NAME" "$ROLE_DIR"
 
 if _is_loopable "$ACTION_NAME"; then
     while true; do
@@ -690,14 +719,14 @@ if _is_loopable "$ACTION_NAME"; then
         echo ""
         prompt "Select action (1-5 / s / q): " NEXT_CHOICE
         case "$NEXT_CHOICE" in
-            1) _run_action "verify" ;;
-            2) _run_action "update" ;;
-            3) _run_action "control" ;;
+            1) _run_action "$EXEC_MODE" "$SSH_TARGET" "$ROLE_NAME" "verify" "$ROLE_DIR" ;;
+            2) _run_action "$EXEC_MODE" "$SSH_TARGET" "$ROLE_NAME" "update" "$ROLE_DIR" ;;
+            3) _run_action "$EXEC_MODE" "$SSH_TARGET" "$ROLE_NAME" "control" "$ROLE_DIR" ;;
             4)
                 warning "This will wipe and re-provision ${BOLD}${ROLE_NAME}${NC}. Are you sure?"
                 prompt "Type YES to confirm: " CONFIRM
                 if [[ "$CONFIRM" == "YES" ]]; then
-                    _run_action "install"
+                    _run_action "$EXEC_MODE" "$SSH_TARGET" "$ROLE_NAME" "install" "$ROLE_DIR"
                     break
                 else
                     info "Reinstall cancelled."
@@ -707,7 +736,7 @@ if _is_loopable "$ACTION_NAME"; then
                 warning "This will remove the ${BOLD}${ROLE_NAME}${NC} role. Are you sure?"
                 prompt "Type YES to confirm: " CONFIRM
                 if [[ "$CONFIRM" == "YES" ]]; then
-                    _run_action "uninstall"
+                    _run_action "$EXEC_MODE" "$SSH_TARGET" "$ROLE_NAME" "uninstall" "$ROLE_DIR"
                     break
                 else
                     info "Uninstall cancelled."
