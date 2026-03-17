@@ -49,6 +49,8 @@ prompt_hidden() {
 STATE_FILE="$HOME/.nexus-state"
 TOPOLOGY_FILE=".env.topology"
 LOCAL_REGISTRY=".nexus/state"
+# Repository root for relative path resolution
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CURRENT_ROLE="none"
 CURRENT_VERSION="none"
 
@@ -709,7 +711,11 @@ _run_action() {
         rsync -az --exclude='.git' --exclude='node_modules' ./ "$ssh_target:/tmp/nexus-install/" > /dev/null
         scp "$TOPOLOGY_FILE" "${ssh_target}:/tmp/nexus-install/" > /dev/null
         info "Executing remote [${action}] payload..."
-        TARGET_SCRIPT="${role_dir}/scripts/${action}.sh"
+        
+        # Calculate relative path from REPO_ROOT to target script
+        REL_ROLE_DIR="${role_dir#$REPO_ROOT/}"
+        TARGET_SCRIPT="${REL_ROLE_DIR}/scripts/${action}.sh"
+        
         ssh -t "$ssh_target" "cd /tmp/nexus-install || exit 1; bash \"$TARGET_SCRIPT\" \"$cmd_arg\""
         if [ "$action" = "install" ]; then
             write_state "$mode" "$ssh_target" "$role"

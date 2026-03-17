@@ -18,6 +18,12 @@ case "$ACTION" in
   restart)
     cd "${COMPOSE_DIR}" || exit 1 && docker compose --env-file "${ENV_FILE}" restart
     ;;
+  status)
+    cd "${COMPOSE_DIR}" || exit 1 && docker compose --env-file "${ENV_FILE}" ps
+    ;;
+  reload)
+    cd "${COMPOSE_DIR}" || exit 1 && docker compose --env-file "${ENV_FILE}" up -d --force-recreate
+    ;;
   install)  bash "${SCRIPT_DIR}/install.sh" ;;
   update)   bash "${SCRIPT_DIR}/update.sh" ;;
   backup)   bash "${SCRIPT_DIR}/backup.sh" ;;
@@ -25,7 +31,7 @@ case "$ACTION" in
   verify)   bash "${SCRIPT_DIR}/verify.sh" ;;
   uninstall) bash "${SCRIPT_DIR}/uninstall.sh" ;;
   *)
-    echo "Usage: $0 {start|stop|restart|install|update|backup|restore|verify|uninstall}"
+    echo "Usage: $0 {start|stop|restart|status|reload|install|update|backup|restore|verify|uninstall}"
     exit 1
     ;;
 esac

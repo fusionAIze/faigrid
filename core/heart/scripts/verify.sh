@@ -1,3 +1,6 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
 echo "── nexus-core / Docker Services ──"
 docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 
