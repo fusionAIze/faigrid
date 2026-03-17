@@ -27,6 +27,9 @@ docs/local/
 # OS junk
 .DS_Store
 
+# Local Nexus Registry
+.nexus/
+
 # OpenClaw secrets
 **/openclaw.providers.env
 **/openclaw.channels.env

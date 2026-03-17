@@ -48,8 +48,12 @@ prompt_hidden() {
 
 STATE_FILE="$HOME/.nexus-state"
 TOPOLOGY_FILE=".env.topology"
+LOCAL_REGISTRY=".nexus/state"
 CURRENT_ROLE="none"
 CURRENT_VERSION="none"
+
+# Ensure local registry exists
+mkdir -p "$LOCAL_REGISTRY"
 
 # --- CLI Arguments ---
 AUTO_YES="false"
@@ -160,12 +164,21 @@ write_state() {
         echo "NEXUS_ROLE=$role" > "$STATE_FILE"
         echo "NEXUS_VERSION=latest" >> "$STATE_FILE"
         echo "INSTALL_DATE=$(date)" >> "$STATE_FILE"
-        success "Saved state to ${STATE_FILE}"
+        # Also save to local registry
+        echo "NEXUS_ROLE=$role" > "$LOCAL_REGISTRY/local.state"
+        echo "NEXUS_VERSION=latest" >> "$LOCAL_REGISTRY/local.state"
+        echo "INSTALL_DATE=$(date)" >> "$LOCAL_REGISTRY/local.state"
+        success "Saved state to ${STATE_FILE} (and local registry)"
     else
         ssh -q "$ssh_target" "echo 'NEXUS_ROLE=$role' > \"\$HOME/.nexus-state\"; \
             echo 'NEXUS_VERSION=latest' >> \"\$HOME/.nexus-state\"; \
             echo 'INSTALL_DATE=$(date)' >> \"\$HOME/.nexus-state\""
-        success "Saved remote state to ~/${ssh_target}:~/.nexus-state"
+        # Also save to local registry
+        echo "NEXUS_ROLE=$role" > "$LOCAL_REGISTRY/${role}.state"
+        echo "NEXUS_VERSION=latest" >> "$LOCAL_REGISTRY/${role}.state"
+        echo "INSTALL_DATE=$(date)" >> "$LOCAL_REGISTRY/${role}.state"
+        echo "SSH_TARGET=$ssh_target" >> "$LOCAL_REGISTRY/${role}.state"
+        success "Saved remote state to ~/${ssh_target}:~/.nexus-state (and local registry)"
     fi
 }
 
@@ -191,25 +204,29 @@ GRID_STATUS_backup="○"
 GRID_STATUS_external="○"
 
 probe_grid_status() {
+    # 1. Check local registry first (instant)
+    local roles=("core" "edge" "worker" "backup" "external")
+    for role in "${roles[@]}"; do
+        if [[ -f "$LOCAL_REGISTRY/${role}.state" ]]; then
+            eval "GRID_STATUS_${role}=\"✔\""
+        fi
+    done
+
+    # 2. Check local machine state
+    if [[ -f "$STATE_FILE" ]]; then
+        # If we have a local state, we need to know WHICH role it is
+        local local_role
+        local_role=$(grep "NEXUS_ROLE=" "$STATE_FILE" | cut -d'=' -f2)
+        if [[ -n "$local_role" ]]; then
+             eval "GRID_STATUS_${local_role}=\"✔\""
+        fi
+    fi
+
+    # 3. If topology exists, we COULD probe, but let's stick to local registry
+    # for Step 1 for maximum speed. Probe happens anyway during node selection.
     if [[ ! -f "$TOPOLOGY_FILE" ]]; then
         return
     fi
-
-    # Check each *_TARGET= line in topology
-    while IFS='=' read -r key val; do
-        # strip whitespace, skip comments/empty
-        key="${key//[[:space:]]/}"
-        val="${val//[[:space:]]/}"
-        [[ -z "$key" || "$key" == \#* ]] && continue
-
-        if [[ "$key" =~ ^([A-Z]+)_TARGET$ ]]; then
-            local role_lower
-            role_lower=$(echo "${BASH_REMATCH[1]}" | tr '[:upper:]' '[:lower:]')
-            if ssh -q -o ConnectTimeout=3 "$val" '[ -f "$HOME/.nexus-state" ]' 2>/dev/null; then
-                eval "GRID_STATUS_${role_lower}=\"✔\""
-            fi
-        fi
-    done < "$TOPOLOGY_FILE"
 }
 
 # --- Service Discovery ---
