@@ -548,7 +548,8 @@ if [[ -z "$ACTION_NAME" ]]; then
         echo -e "    ${BOLD}4)${NC}  ${YELLOW}Reinstall${NC}   ${DIM}⚠ Wipe and re-provision from scratch${NC}"
         echo -e "    ${BOLD}5)${NC}  ${YELLOW}Uninstall${NC}   ${DIM}⚠ Remove this node role entirely${NC}"
         echo ""
-        echo -e "    ${BOLD}s)${NC}  Switch node  ${DIM}Go back to node selection (Step 2)${NC}"
+        echo -e "    ${BOLD}h)${NC}  ${BOLD}Help / Connect${NC} ${DIM}How to access services from your workstation${NC}"
+        echo -e "    ${BOLD}s)${NC}  Switch node    ${DIM}Go back to node selection (Step 2)${NC}"
         echo -e "    ${BOLD}q)${NC}  Quit"
         echo ""
         echo -e "  ${DIM}Tip: Start with Verify to see the current state of this node.${NC}"
@@ -560,9 +561,10 @@ if [[ -z "$ACTION_NAME" ]]; then
             3) ACTION_NAME="control" ;;
             4) ACTION_NAME="install" ;;
             5) ACTION_NAME="uninstall" ;;
+            [Hh]) _show_help "$EXEC_MODE" "$SSH_TARGET" "$ROLE_NAME" ; exec bash "$0" ;;
             [Ss]) exec bash "$0" ;;
             [Qq]|"") exit 0 ;;
-            *) warning "Invalid choice. Please enter 1-5, s, or q." ;;
+            *) warning "Invalid choice. Please enter 1-5, h, s, or q." ;;
         esac
     else
         # Fresh target — install is the natural first action
@@ -715,6 +717,65 @@ _run_action() {
     fi
 }
 
+# Show tailored connection help based on role and target
+_show_help() {
+    local mode=$1
+    local ssh_target=$2
+    local role=$3
+    
+    local ip="localhost"
+    if [[ "$mode" == "remote" ]]; then
+        # Extract IP from user@ip
+        [[ "$ssh_target" == *"@"* ]] && ip=$(echo "$ssh_target" | cut -d'@' -f2) || ip="$ssh_target"
+    fi
+
+    echo ""
+    divider
+    echo -e "  ${BOLD}Access & Connection Guide │ ${role}${NC}"
+    divider
+    echo ""
+
+    case "$role" in
+        core)
+            echo -e "  ${BOLD}n8n Automation Workbench:${NC}"
+            echo -e "    Local URL  : http://${ip}:5678"
+            if [[ "$mode" == "remote" ]]; then
+                echo -e "    SSH Tunnel : ${C_CYAN}ssh -L 5678:localhost:5678 ${ssh_target}${NC}"
+                echo -e "    ${DIM}(Run this on your workstation to access n8n in your local browser)${NC}"
+            fi
+            echo ""
+            echo -e "  ${BOLD}OpenClaw Gateway:${NC}"
+            echo -e "    Port       : 18789 (Internal)"
+            echo -e "    Status     : Check via 'Verify' or 'Control'"
+            ;;
+        edge)
+            echo -e "  ${BOLD}Pi-hole Admin:${NC}"
+            echo -e "    URL        : http://${ip}/admin"
+            echo ""
+            echo -e "  ${BOLD}Caddy Ingress:${NC}"
+            echo -e "    Ports      : 80 / 443"
+            echo -e "    Config     : /etc/caddy/Caddyfile"
+            ;;
+        worker)
+            echo -e "  ${BOLD}Ollama API:${NC}"
+            echo -e "    Local URL  : http://${ip}:11434"
+            if [[ "$mode" == "remote" ]]; then
+                echo -e "    SSH Tunnel : ${C_CYAN}ssh -L 11434:localhost:11434 ${ssh_target}${NC}"
+            fi
+            ;;
+        *)
+            echo -e "  No specific connection help for this role yet."
+            ;;
+    esac
+
+    echo ""
+    echo -e "  ${BOLD}Documentation:${NC}"
+    echo -e "    Runbooks   : docs/runbooks/"
+    echo -e "    Architecture: docs/architecture.md"
+    echo ""
+    divider
+}
+
 # Destructive actions exit immediately; safe actions loop back
 _is_loopable() {
     [[ "$1" == "verify" || "$1" == "update" || "$1" == "control" ]]
@@ -745,10 +806,11 @@ if _is_loopable "$ACTION_NAME"; then
         echo -e "    ${BOLD}4)${NC}  ${YELLOW}Reinstall${NC}   ${DIM}⚠ Wipe and re-provision from scratch${NC}"
         echo -e "    ${BOLD}5)${NC}  ${YELLOW}Uninstall${NC}   ${DIM}⚠ Remove this node role entirely${NC}"
         echo ""
+        echo -e "    ${BOLD}h)${NC}  ${BOLD}Help / Connect${NC}"
         echo -e "    ${BOLD}s)${NC}  Switch node  ${DIM}Go back to node selection (Step 2)${NC}"
         echo -e "    ${BOLD}q)${NC}  Quit"
         echo ""
-        prompt "Select action (1-5 / s / q): " NEXT_CHOICE
+        prompt "Select action (1-5 / h / s / q): " NEXT_CHOICE
         case "$NEXT_CHOICE" in
             1) _run_action "$EXEC_MODE" "$SSH_TARGET" "$ROLE_NAME" "verify" "$ROLE_DIR" || true ;;
             2) _run_action "$EXEC_MODE" "$SSH_TARGET" "$ROLE_NAME" "update" "$ROLE_DIR" || true ;;
@@ -773,11 +835,12 @@ if _is_loopable "$ACTION_NAME"; then
                     info "Uninstall cancelled."
                 fi
                 ;;
+            [Hh]) _show_help "$EXEC_MODE" "$SSH_TARGET" "$ROLE_NAME" ;;
             [Ss]) exec bash "$0" ;;
             [Qq]|"")
                 break
                 ;;
-            *) warning "Invalid choice. Please enter 1-5, s, or q." ;;
+            *) warning "Invalid choice. Please enter 1-5, h, s, or q." ;;
         esac
     done
 fi
