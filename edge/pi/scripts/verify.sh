@@ -1,10 +1,71 @@
 #!/usr/bin/env bash
+# nexus-edge: verify.sh — Read-only health check for the Edge node
+# Caddy is OPTIONAL on edge (used as internal LAN proxy; not required if
+# all external traffic is handled by nexus-external).
 set -euo pipefail
-echo "[nexus-edge] Verifying Caddy..."
-if systemctl is-active --quiet caddy; then
-    echo "[SUCCESS] Caddy service is running."
+
+YELLOW='\033[1;33m'
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+DIM='\033[2m'
+NC='\033[0m'
+
+ok()   { echo -e "  ${GREEN}✔${NC}  $1"; }
+warn() { echo -e "  ${YELLOW}⚠${NC}  $1"; }
+fail() { echo -e "  ${RED}✘${NC}  $1"; }
+section() { echo ""; echo -e "${DIM}── $1 ──${NC}"; }
+
+section "nexus-edge / Services"
+
+# --- Caddy (OPTIONAL) ---
+if command -v caddy &>/dev/null || pgrep -x caddy &>/dev/null; then
+    if systemctl is-active --quiet caddy 2>/dev/null; then
+        ok "Caddy: running (internal LAN proxy mode)"
+    else
+        warn "Caddy: installed but not running — OK if not configured yet"
+    fi
 else
-    echo "[ERROR] Caddy service is NOT running."
+    warn "Caddy: not installed — optional for internal LAN proxying"
 fi
-echo "[nexus-edge] Verifying UFW..."
-sudo ufw status verbose
+
+# --- Pi-hole ---
+if command -v pihole &>/dev/null; then
+    if pihole status 2>/dev/null | grep -q "Active"; then
+        ok "Pi-hole: active"
+    else
+        warn "Pi-hole: installed but not active"
+    fi
+else
+    fail "Pi-hole: not found"
+fi
+
+# --- UFW Firewall ---
+section "nexus-edge / Firewall (UFW)"
+if command -v ufw &>/dev/null; then
+    if sudo ufw status 2>/dev/null | grep -q "Status: active"; then
+        ok "UFW: active"
+        sudo ufw status verbose | sed -n '1,60p'
+    else
+        fail "UFW: inactive — firewall is not protecting this node"
+    fi
+else
+    fail "UFW: not installed"
+fi
+
+# --- Network ---
+section "nexus-edge / Listening Ports"
+echo -e "  ${DIM}Expecting: 22 (SSH), 53 (DNS), 80/443 (optional Caddy)${NC}"
+sudo ss -tulpn 2>/dev/null | grep -E ':22|:53|:80|:443' || echo "  (none of the expected ports are listening)"
+
+# --- Disk ---
+section "nexus-edge / Disk Usage"
+df -h / | tail -n 1
+
+# --- System ---
+section "nexus-edge / System"
+echo "  Hostname : $(hostname)"
+echo "  Uptime   : $(uptime -p 2>/dev/null || uptime)"
+echo "  OS       : $(grep PRETTY_NAME /etc/os-release 2>/dev/null | cut -d'"' -f2 || uname -sr)"
+
+echo ""
+ok "nexus-edge verify complete"

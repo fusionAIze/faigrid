@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ==============================================================================
 # fusionAIze Nexus Labs - Advanced Universal Orchestrator
-# Version 2.0.0
+# Version 2.1.0
 # ==============================================================================
 
 set -euo pipefail
@@ -27,7 +27,7 @@ cat << "EOF"
                                                                                                          
 EOF
 echo -e "${NC}"
-echo -e "${DIM}  Sovereign AI Infrastructure — Advanced Universal Orchestrator v2.0${NC}"
+echo -e "${DIM}  Sovereign AI Infrastructure — Advanced Universal Orchestrator v2.1${NC}"
 echo ""
 
 # --- Helpers ---
