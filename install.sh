@@ -451,7 +451,25 @@ if [[ "$EXEC_MODE" == "remote" ]]; then
     
     # Pre-flight: Check for rsync on remote target
     if ! ssh -q "$SSH_TARGET" "command -v rsync" > /dev/null; then
-        error "rsync is not installed on ${SSH_TARGET}. Please install it (e.g., 'sudo apt install rsync') and try again."
+        warning "rsync is missing on ${SSH_TARGET}."
+        
+        # Check if user has sudo privileges (non-interactive check)
+        if ssh -q "$SSH_TARGET" "sudo -n true" 2>/dev/null; then
+            prompt "Would you like me to install rsync automatically via sudo? (y/n): " INSTALL_RSYNC
+            if [[ "$INSTALL_RSYNC" == "y" ]]; then
+                info "Installing rsync on remote target..."
+                ssh -t "$SSH_TARGET" "sudo apt-get update && sudo apt-get install -y rsync"
+                if ssh -q "$SSH_TARGET" "command -v rsync" > /dev/null; then
+                    success "rsync installed successfully."
+                else
+                    error "Automatic installation failed. Please install rsync manually."
+                fi
+            else
+                error "rsync is required. Please install it manually and try again."
+            fi
+        else
+            error "rsync is missing and I don't have sudo privileges to install it. Please install rsync manually (e.g., 'sudo apt install rsync') and try again."
+        fi
     fi
     success "Connected to ${SSH_TARGET} (rsync verified)."
 else
