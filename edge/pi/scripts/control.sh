@@ -6,7 +6,12 @@ ACTION="${1:-}"
 
 case "$ACTION" in
   start|stop|restart|status|reload)
-    sudo systemctl "$ACTION" caddy
+    if systemctl list-unit-files caddy.service | grep -q 'caddy.service'; then
+        sudo systemctl "$ACTION" caddy
+    else
+        echo "⚠ Unit caddy.service not found. Is Caddy installed?"
+        exit 0
+    fi
     ;;
   install)   bash "$DIR/install.sh" ;;
   update)    bash "$DIR/update.sh" ;;

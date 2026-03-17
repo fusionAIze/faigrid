@@ -719,9 +719,9 @@ if _is_loopable "$ACTION_NAME"; then
         echo ""
         prompt "Select action (1-5 / s / q): " NEXT_CHOICE
         case "$NEXT_CHOICE" in
-            1) _run_action "$EXEC_MODE" "$SSH_TARGET" "$ROLE_NAME" "verify" "$ROLE_DIR" ;;
-            2) _run_action "$EXEC_MODE" "$SSH_TARGET" "$ROLE_NAME" "update" "$ROLE_DIR" ;;
-            3) _run_action "$EXEC_MODE" "$SSH_TARGET" "$ROLE_NAME" "control" "$ROLE_DIR" ;;
+            1) _run_action "$EXEC_MODE" "$SSH_TARGET" "$ROLE_NAME" "verify" "$ROLE_DIR" || true ;;
+            2) _run_action "$EXEC_MODE" "$SSH_TARGET" "$ROLE_NAME" "update" "$ROLE_DIR" || true ;;
+            3) _run_action "$EXEC_MODE" "$SSH_TARGET" "$ROLE_NAME" "control" "$ROLE_DIR" || true ;;
             4)
                 warning "This will wipe and re-provision ${BOLD}${ROLE_NAME}${NC}. Are you sure?"
                 prompt "Type YES to confirm: " CONFIRM
