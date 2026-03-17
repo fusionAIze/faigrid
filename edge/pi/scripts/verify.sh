@@ -17,26 +17,32 @@ section() { echo ""; echo -e "${DIM}── $1 ──${NC}"; }
 
 section "nexus-edge / Services"
 
+# --- Pi-hole ---
+if command -v pihole &>/dev/null; then
+    # Version 6+ check: is FTL running and listening?
+    if pgrep -x "pihole-FTL" &>/dev/null || pihole status 2>/dev/null | grep -qE "Active|listening"; then
+        ok "Pi-hole: active (pihole-FTL detected)"
+    else
+        warn "Pi-hole: installed but service seems inactive"
+    fi
+else
+    # Fallback: check if the process is there even if binary isn't in PATH (unlikely but safer)
+    if pgrep -x "pihole-FTL" &>/dev/null; then
+        ok "Pi-hole: active (detected via process list)"
+    else
+        fail "Pi-hole: not found"
+    fi
+fi
+
 # --- Caddy (OPTIONAL) ---
-if command -v caddy &>/dev/null || pgrep -x caddy &>/dev/null; then
-    if systemctl is-active --quiet caddy 2>/dev/null; then
+if command -v caddy &>/dev/null || pgrep -x caddy &>/dev/null || [ -f "/usr/bin/caddy" ]; then
+    if systemctl is-active --quiet caddy 2>/dev/null || pgrep -x caddy &>/dev/null; then
         ok "Caddy: running (internal LAN proxy mode)"
     else
-        warn "Caddy: installed but not running — OK if not configured yet"
+        warn "Caddy: found but not running — likely port conflict with Pi-hole (80/443)"
     fi
 else
     warn "Caddy: not installed — optional for internal LAN proxying"
-fi
-
-# --- Pi-hole ---
-if command -v pihole &>/dev/null; then
-    if pihole status 2>/dev/null | grep -q "Active"; then
-        ok "Pi-hole: active"
-    else
-        warn "Pi-hole: installed but not active"
-    fi
-else
-    fail "Pi-hole: not found"
 fi
 
 # --- UFW Firewall ---
