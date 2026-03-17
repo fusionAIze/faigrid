@@ -134,22 +134,22 @@ inspect_state() {
     local mode=$1
     local ssh_target=$2
 
-    if [[ "$mode" == "local" ]]; then
-        if [[ -f "$STATE_FILE" ]]; then
+    if [ "$mode" = "local" ]; then
+        if [ -f "$STATE_FILE" ]; then
             # shellcheck disable=SC1090
-            source "$STATE_FILE"
+            source "$STATE_FILE" || true
             CURRENT_ROLE=${NEXUS_ROLE:-none}
             CURRENT_VERSION=${NEXUS_VERSION:-none}
         fi
-    else
-        # Use \$HOME so the path resolves on the REMOTE machine, not locally
-        if ssh -q "$ssh_target" '[ -f "$HOME/.nexus-state" ]'; then
-             local remote_state
-             remote_state=$(ssh -q "$ssh_target" 'cat "$HOME/.nexus-state"')
-             CURRENT_ROLE=$(echo "$remote_state" | grep "NEXUS_ROLE" | cut -d'=' -f2 || echo "none")
-             CURRENT_VERSION=$(echo "$remote_state" | grep "NEXUS_VERSION" | cut -d'=' -f2 || echo "none")
-        else
-             CURRENT_ROLE="none"
+    elif [ "$mode" = "remote" ]; then
+        # Check remote state safely
+        if ssh -q -o ConnectTimeout=3 "$ssh_target" "[ -f \"\$HOME/.nexus-state\" ]" 2>/dev/null; then
+            local remote_state
+            remote_state=$(ssh -q -o ConnectTimeout=3 "$ssh_target" "cat \"\$HOME/.nexus-state\"" || echo "")
+            if [ -n "$remote_state" ]; then
+                CURRENT_ROLE=$(echo "$remote_state" | grep "NEXUS_ROLE" | cut -d'=' -f2 || echo "none")
+                CURRENT_VERSION=$(echo "$remote_state" | grep "NEXUS_VERSION" | cut -d'=' -f2 || echo "none")
+            fi
         fi
     fi
 }
@@ -162,21 +162,27 @@ write_state() {
 
     # Save to local registry first
     mkdir -p "$LOCAL_REGISTRY"
-    echo "NEXUS_ROLE=$role" > "$LOCAL_REGISTRY/${role}.state"
-    echo "NEXUS_VERSION=latest" >> "$LOCAL_REGISTRY/${role}.state"
-    echo "INSTALL_DATE=$(date)" >> "$LOCAL_REGISTRY/${role}.state"
-    echo "EXEC_MODE=$mode" >> "$LOCAL_REGISTRY/${role}.state"
-    [[ "$mode" == "remote" ]] && echo "SSH_TARGET=$ssh_target" >> "$LOCAL_REGISTRY/${role}.state"
+    {
+        echo "NEXUS_ROLE=$role"
+        echo "NEXUS_VERSION=latest"
+        echo "INSTALL_DATE=$(date)"
+        echo "EXEC_MODE=$mode"
+        if [ "$mode" = "remote" ]; then
+            echo "SSH_TARGET=$ssh_target"
+        fi
+    } > "$LOCAL_REGISTRY/${role}.state"
 
-    if [[ "$mode" == "local" ]]; then
-        echo "NEXUS_ROLE=$role" > "$STATE_FILE"
-        echo "NEXUS_VERSION=latest" >> "$STATE_FILE"
-        echo "INSTALL_DATE=$(date)" >> "$STATE_FILE"
+    if [ "$mode" = "local" ]; then
+        {
+            echo "NEXUS_ROLE=$role"
+            echo "NEXUS_VERSION=latest"
+            echo "INSTALL_DATE=$(date)"
+        } > "$STATE_FILE"
         success "Saved state to ${STATE_FILE} (and local registry)"
     else
         ssh -q "$ssh_target" "echo 'NEXUS_ROLE=$role' > \"\$HOME/.nexus-state\"; \
             echo 'NEXUS_VERSION=latest' >> \"\$HOME/.nexus-state\"; \
-            echo 'INSTALL_DATE=$(date)' >> \"\$HOME/.nexus-state\""
+            echo 'INSTALL_DATE=$(date)' >> \"\$HOME/.nexus-state\"" || true
         success "Saved remote state to ~/${ssh_target}:~/.nexus-state (and local registry)"
     fi
 }
@@ -217,11 +223,23 @@ probe_grid_status() {
 load_local_state() {
     local role=$1
     local state_file="$LOCAL_REGISTRY/${role}.state"
-    if [[ -f "$state_file" ]]; then
-        EXEC_MODE=$(grep "EXEC_MODE=" "$state_file" | cut -d'=' -f2 || true)
-        SSH_TARGET=$(grep "SSH_TARGET=" "$state_file" | cut -d'=' -f2 || true)
-        [[ -n "$EXEC_MODE" ]] && MODE_CHOICE="$EXEC_MODE"
+    if [ -f "$state_file" ]; then
+        # Safer parsing for Bash 3.2 + set -e + pipefail
+        while IFS='=' read -r key val; do
+            if [ -z "$key" ] || echo "$key" | grep -q "^#"; then
+                continue
+            fi
+            case "$key" in
+                EXEC_MODE)  EXEC_MODE="$val" ;;
+                SSH_TARGET) SSH_TARGET="$val" ;;
+            esac
+        done < "$state_file"
+
+        if [ -n "${EXEC_MODE:-}" ]; then
+            MODE_CHOICE="$EXEC_MODE"
+        fi
     fi
+    return 0
 }
 
 # --- Service Discovery ---
@@ -281,7 +299,10 @@ echo ""
 echo -e "  The Nexus ${BOLD}4+1 Architecture${NC} consists of these roles:"
 echo ""
 
-# Probe known nodes from .env.topology for registered state
+# Start of interactive wizard
+set +e
+
+# Probe known nodes from .nexus/state for registered icons
 probe_grid_status
 
 _grid_icon() {
@@ -369,10 +390,12 @@ echo -e "  ${BOLD}Step 3 │ Deploy Mode${NC}"
 divider
 
 if [[ -z "$MODE_CHOICE" ]]; then
-    if [[ -n "$EXEC_MODE" ]]; then
+    if [[ -n "${EXEC_MODE:-}" ]]; then
         # Known target found in registry
         local target_desc="Local Node"
-        [[ "$EXEC_MODE" == "remote" ]] && target_desc="SSH: ${SSH_TARGET}"
+        if [ "$EXEC_MODE" = "remote" ]; then
+            target_desc="SSH: ${SSH_TARGET:-unknown}"
+        fi
         
         echo ""
         echo -e "  ${CYAN}💡${NC}  Known target found for ${BOLD}${ROLE_NAME}${NC}:"
@@ -381,7 +404,7 @@ if [[ -z "$MODE_CHOICE" ]]; then
         echo -e "    ${BOLD}2)${NC}  Change target ${DIM}(Switch to local/remote/new IP)${NC}"
         echo ""
         prompt "Choice (1/2): " USE_EXISTING
-        if [[ "$USE_EXISTING" == "2" ]]; then
+        if [ "$USE_EXISTING" = "2" ]; then
             EXEC_MODE=""
             MODE_CHOICE=""
             SSH_TARGET=""
@@ -622,6 +645,8 @@ _is_loopable() {
     [[ "$1" == "verify" || "$1" == "update" || "$1" == "control" ]]
 }
 
+# Exit interactive mode before critical actions
+set -e
 _run_action "$ACTION_NAME"
 
 if _is_loopable "$ACTION_NAME"; then
