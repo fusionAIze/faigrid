@@ -218,8 +218,8 @@ load_local_state() {
     local role=$1
     local state_file="$LOCAL_REGISTRY/${role}.state"
     if [[ -f "$state_file" ]]; then
-        EXEC_MODE=$(grep "EXEC_MODE=" "$state_file" | cut -d'=' -f2)
-        SSH_TARGET=$(grep "SSH_TARGET=" "$state_file" | cut -d'=' -f2)
+        EXEC_MODE=$(grep "EXEC_MODE=" "$state_file" | cut -d'=' -f2 || true)
+        SSH_TARGET=$(grep "SSH_TARGET=" "$state_file" | cut -d'=' -f2 || true)
         [[ -n "$EXEC_MODE" ]] && MODE_CHOICE="$EXEC_MODE"
     fi
 }
