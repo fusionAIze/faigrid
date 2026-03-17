@@ -62,25 +62,28 @@ cmd_update_all() {
 
 cmd_install() {
   print_header "Install Tool"
-  
-  # Give a quick list
+
+  # Build a plain indexed list (Bash 3.2 compatible — no associative arrays)
   local i=1
-  declare -A plugin_map
+  local plugin_list=()
   for p in $(get_plugins); do
-    local cat=$(get_plugin_meta "$p" "TOOL_CATEGORY")
-    local name=$(get_plugin_meta "$p" "TOOL_NAME")
+    local cat name
+    cat=$(get_plugin_meta "$p" "TOOL_CATEGORY")
+    name=$(get_plugin_meta "$p" "TOOL_NAME")
     printf "  %2d) [%-10s] %s\n" "$i" "$cat" "$name"
-    plugin_map[$i]="$p"
-    ((i++))
+    plugin_list+=("$p")
+    i=$((i + 1))
   done
-  
+
   echo ""
   read -r -p "Select a number to install (or enter to cancel): " choice
   if [[ -z "$choice" ]]; then return; fi
-  
-  if [[ -n "${plugin_map[$choice]:-}" ]]; then
-    local p="${plugin_map[$choice]}"
-    local name=$(get_plugin_meta "$p" "TOOL_NAME")
+
+  local idx=$((choice - 1))
+  if [[ "$idx" -ge 0 && "$idx" -lt ${#plugin_list[@]} ]]; then
+    local p="${plugin_list[$idx]}"
+    local name
+    name=$(get_plugin_meta "$p" "TOOL_NAME")
     info "Installing $name..."
     (source "$p" && tool_install)
     success "Done. Run 'status' to verify."
