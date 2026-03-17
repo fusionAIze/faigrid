@@ -160,24 +160,23 @@ write_state() {
     local ssh_target=$2
     local role=$3
 
+    # Save to local registry first
+    mkdir -p "$LOCAL_REGISTRY"
+    echo "NEXUS_ROLE=$role" > "$LOCAL_REGISTRY/${role}.state"
+    echo "NEXUS_VERSION=latest" >> "$LOCAL_REGISTRY/${role}.state"
+    echo "INSTALL_DATE=$(date)" >> "$LOCAL_REGISTRY/${role}.state"
+    echo "EXEC_MODE=$mode" >> "$LOCAL_REGISTRY/${role}.state"
+    [[ "$mode" == "remote" ]] && echo "SSH_TARGET=$ssh_target" >> "$LOCAL_REGISTRY/${role}.state"
+
     if [[ "$mode" == "local" ]]; then
         echo "NEXUS_ROLE=$role" > "$STATE_FILE"
         echo "NEXUS_VERSION=latest" >> "$STATE_FILE"
         echo "INSTALL_DATE=$(date)" >> "$STATE_FILE"
-        # Also save to local registry
-        echo "NEXUS_ROLE=$role" > "$LOCAL_REGISTRY/local.state"
-        echo "NEXUS_VERSION=latest" >> "$LOCAL_REGISTRY/local.state"
-        echo "INSTALL_DATE=$(date)" >> "$LOCAL_REGISTRY/local.state"
         success "Saved state to ${STATE_FILE} (and local registry)"
     else
         ssh -q "$ssh_target" "echo 'NEXUS_ROLE=$role' > \"\$HOME/.nexus-state\"; \
             echo 'NEXUS_VERSION=latest' >> \"\$HOME/.nexus-state\"; \
             echo 'INSTALL_DATE=$(date)' >> \"\$HOME/.nexus-state\""
-        # Also save to local registry
-        echo "NEXUS_ROLE=$role" > "$LOCAL_REGISTRY/${role}.state"
-        echo "NEXUS_VERSION=latest" >> "$LOCAL_REGISTRY/${role}.state"
-        echo "INSTALL_DATE=$(date)" >> "$LOCAL_REGISTRY/${role}.state"
-        echo "SSH_TARGET=$ssh_target" >> "$LOCAL_REGISTRY/${role}.state"
         success "Saved remote state to ~/${ssh_target}:~/.nexus-state (and local registry)"
     fi
 }
@@ -204,28 +203,24 @@ GRID_STATUS_backup="○"
 GRID_STATUS_external="○"
 
 probe_grid_status() {
-    # 1. Check local registry first (instant)
+    # Check local registry only (instant)
     local roles=("core" "edge" "worker" "backup" "external")
     for role in "${roles[@]}"; do
         if [[ -f "$LOCAL_REGISTRY/${role}.state" ]]; then
             eval "GRID_STATUS_${role}=\"✔\""
         fi
     done
+}
 
-    # 2. Check local machine state
-    if [[ -f "$STATE_FILE" ]]; then
-        # If we have a local state, we need to know WHICH role it is
-        local local_role
-        local_role=$(grep "NEXUS_ROLE=" "$STATE_FILE" | cut -d'=' -f2)
-        if [[ -n "$local_role" ]]; then
-             eval "GRID_STATUS_${local_role}=\"✔\""
-        fi
-    fi
-
-    # 3. If topology exists, we COULD probe, but let's stick to local registry
-    # for Step 1 for maximum speed. Probe happens anyway during node selection.
-    if [[ ! -f "$TOPOLOGY_FILE" ]]; then
-        return
+# --- Load Local State ---
+# Retrieves target info (EXEC_MODE, SSH_TARGET) from registry
+load_local_state() {
+    local role=$1
+    local state_file="$LOCAL_REGISTRY/${role}.state"
+    if [[ -f "$state_file" ]]; then
+        EXEC_MODE=$(grep "EXEC_MODE=" "$state_file" | cut -d'=' -f2)
+        SSH_TARGET=$(grep "SSH_TARGET=" "$state_file" | cut -d'=' -f2)
+        [[ -n "$EXEC_MODE" ]] && MODE_CHOICE="$EXEC_MODE"
     fi
 }
 
@@ -362,6 +357,9 @@ fi
 ROLE_DIR="$(resolve_role_dir "$ROLE_NAME")"
 success "Selected: ${BOLD}${ROLE_NAME}${NC}"
 
+# Check for cached target info
+load_local_state "$ROLE_NAME"
+
 # ==============================================================================
 # STEP 3: DEPLOY MODE
 # ==============================================================================
@@ -371,6 +369,28 @@ echo -e "  ${BOLD}Step 3 │ Deploy Mode${NC}"
 divider
 
 if [[ -z "$MODE_CHOICE" ]]; then
+    if [[ -n "$EXEC_MODE" ]]; then
+        # Known target found in registry
+        local target_desc="Local Node"
+        [[ "$EXEC_MODE" == "remote" ]] && target_desc="SSH: ${SSH_TARGET}"
+        
+        echo ""
+        echo -e "  ${CYAN}💡${NC}  Known target found for ${BOLD}${ROLE_NAME}${NC}:"
+        echo ""
+        echo -e "    ${BOLD}1)${NC}  Use existing  ${DIM}(${target_desc})${NC}"
+        echo -e "    ${BOLD}2)${NC}  Change target ${DIM}(Switch to local/remote/new IP)${NC}"
+        echo ""
+        prompt "Choice (1/2): " USE_EXISTING
+        if [[ "$USE_EXISTING" == "2" ]]; then
+            EXEC_MODE=""
+            MODE_CHOICE=""
+            SSH_TARGET=""
+        fi
+    fi
+fi
+
+# If no cached mode (or user chose to change), ask
+if [[ -z "$MODE_CHOICE" ]]; then
     echo ""
     echo -e "  How are you deploying ${BOLD}${ROLE_NAME}${NC}?"
     echo ""
@@ -378,11 +398,15 @@ if [[ -z "$MODE_CHOICE" ]]; then
     echo -e "    ${BOLD}2)${NC}  Remote Push   ${DIM}— Push to a remote node via SSH from this workstation${NC}"
     echo ""
     prompt "Select mode (1/2): " MODE_CHOICE
+    
+    if [[ "$MODE_CHOICE" == "1" ]]; then
+        EXEC_MODE="local"
+    elif [[ "$MODE_CHOICE" == "2" ]]; then
+        EXEC_MODE="remote"
+    fi
 fi
 
-EXEC_MODE=""
-if [[ "$MODE_CHOICE" == "2" || "$MODE_CHOICE" == "remote" ]]; then
-    EXEC_MODE="remote"
+if [[ "$EXEC_MODE" == "remote" ]]; then
     if [[ -z "$SSH_TARGET" ]]; then
         echo ""
         prompt "SSH target (e.g. nexus@192.168.178.10): " SSH_TARGET
