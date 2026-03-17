@@ -391,25 +391,24 @@ divider
 
 if [[ -z "$ACTION_NAME" ]]; then
     echo ""
-    if [[ "$CURRENT_ROLE" != "none" ]]; then
-        echo -e "  What do you want to do with this ${BOLD}${ROLE_NAME}${NC} node?"
-    else
-        echo -e "  What do you want to do with ${BOLD}${ROLE_NAME}${NC}?"
-    fi
+    echo -e "  What do you want to do with this ${BOLD}${ROLE_NAME}${NC} node?"
     echo ""
 
     if [[ "$CURRENT_ROLE" != "none" ]]; then
-        # Existing registered node — update/verify are the sensible defaults
-        echo -e "    ${BOLD}1)${NC}  Update      ${DIM}Push latest configuration / payload${NC}"
-        echo -e "    ${BOLD}2)${NC}  Verify      ${DIM}Run health checks on this node${NC}"
-        echo -e "    ${BOLD}3)${NC}  Control     ${DIM}Start / Stop / Restart services${NC}"
-        echo -e "    ${BOLD}4)${NC}  Reinstall   ${DIM}⚠ Fresh provisioning (destructive)${NC}"
-        echo -e "    ${BOLD}5)${NC}  Uninstall   ${DIM}⚠ Clean removal of the node role${NC}"
+        # Existing registered node — safe actions first, destructive at bottom
+        echo -e "    ${BOLD}1)${NC}  ${GREEN}Verify${NC}      ${DIM}Read-only: check services, ports, disk (changes nothing)${NC}"
+        echo -e "    ${BOLD}2)${NC}  Update      ${DIM}System packages only (apt upgrade). Your configs stay untouched${NC}"
+        echo -e "    ${BOLD}3)${NC}  Control     ${DIM}Start / Stop / Restart managed services${NC}"
+        echo ""
+        echo -e "    ${BOLD}4)${NC}  ${YELLOW}Reinstall${NC}   ${DIM}⚠ Wipe and re-provision from scratch${NC}"
+        echo -e "    ${BOLD}5)${NC}  ${YELLOW}Uninstall${NC}   ${DIM}⚠ Remove this node role entirely${NC}"
+        echo ""
+        echo -e "  ${DIM}Tip: Start with Verify to see the current state of this node.${NC}"
         echo ""
         prompt "Select action (1-5): " ACTION_CHOICE
         case "$ACTION_CHOICE" in
-            1) ACTION_NAME="update" ;;
-            2) ACTION_NAME="verify" ;;
+            1) ACTION_NAME="verify" ;;
+            2) ACTION_NAME="update" ;;
             3) ACTION_NAME="control" ;;
             4) ACTION_NAME="install" ;;
             5) ACTION_NAME="uninstall" ;;
@@ -417,8 +416,8 @@ if [[ -z "$ACTION_NAME" ]]; then
         esac
     else
         # Fresh target — install is the natural first action
-        echo -e "    ${BOLD}1)${NC}  Install     ${DIM}Fresh provisioning of the node${NC}"
-        echo -e "    ${BOLD}2)${NC}  Verify      ${DIM}Run connectivity / environment checks${NC}"
+        echo -e "    ${BOLD}1)${NC}  Install     ${DIM}Set up this node with the ${ROLE_NAME} role${NC}"
+        echo -e "    ${BOLD}2)${NC}  Verify      ${DIM}Check connectivity and environment (read-only)${NC}"
         echo ""
         prompt "Select action (1/2): " ACTION_CHOICE
         case "$ACTION_CHOICE" in
