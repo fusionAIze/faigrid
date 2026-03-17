@@ -521,26 +521,34 @@ if [[ -z "$ACTION_NAME" ]]; then
         echo -e "    ${BOLD}5)${NC}  ${YELLOW}Uninstall${NC}   ${DIM}⚠ Remove this node role entirely${NC}"
         echo ""
         echo -e "  ${DIM}Tip: Start with Verify to see the current state of this node.${NC}"
+        echo -e "    ${BOLD}s)${NC}  Switch node  ${DIM}Go back to node selection (Step 2)${NC}"
+        echo -e "    ${BOLD}q)${NC}  Quit"
         echo ""
-        prompt "Select action (1-5): " ACTION_CHOICE
+        prompt "Select action (1-5 / s / q): " ACTION_CHOICE
         case "$ACTION_CHOICE" in
             1) ACTION_NAME="verify" ;;
             2) ACTION_NAME="update" ;;
             3) ACTION_NAME="control" ;;
             4) ACTION_NAME="install" ;;
             5) ACTION_NAME="uninstall" ;;
-            *) error "Invalid choice. Exiting." ;;
+            [Ss]) exec bash "$0" ;;
+            [Qq]|"") exit 0 ;;
+            *) warning "Invalid choice. Please enter 1-5, s, or q." ;;
         esac
     else
         # Fresh target — install is the natural first action
         echo -e "    ${BOLD}1)${NC}  Install     ${DIM}Set up this node with the ${ROLE_NAME} role${NC}"
         echo -e "    ${BOLD}2)${NC}  Verify      ${DIM}Check connectivity and environment (read-only)${NC}"
+        echo -e "    ${BOLD}s)${NC}  Switch node  ${DIM}Go back to node selection (Step 2)${NC}"
+        echo -e "    ${BOLD}q)${NC}  Quit"
         echo ""
-        prompt "Select action (1/2): " ACTION_CHOICE
+        prompt "Select action (1-2 / s / q): " ACTION_CHOICE
         case "$ACTION_CHOICE" in
             1) ACTION_NAME="install" ;;
             2) ACTION_NAME="verify" ;;
-            *) error "Invalid choice. Exiting." ;;
+            [Ss]) exec bash "$0" ;;
+            [Qq]|"") exit 0 ;;
+            *) warning "Invalid choice. Please enter 1-2, s, or q." ;;
         esac
     fi
 fi
