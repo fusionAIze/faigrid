@@ -687,7 +687,6 @@ _run_action() {
         if [ "$action" = "install" ]; then
             write_state "$mode" "$ssh_target" "$role"
         fi
-        success "Remote [${action}] complete."
     fi
 }
 
