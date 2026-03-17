@@ -681,6 +681,7 @@ if _is_loopable "$ACTION_NAME"; then
         echo -e "    ${BOLD}1)${NC}  ${GREEN}Verify${NC}      ${DIM}Read-only: check services, ports, disk${NC}"
         echo -e "    ${BOLD}2)${NC}  Update      ${DIM}System packages only (apt upgrade). Configs stay untouched${NC}"
         echo -e "    ${BOLD}3)${NC}  Control     ${DIM}Start / Stop / Restart managed services${NC}"
+        echo ""
         echo -e "    ${BOLD}4)${NC}  ${YELLOW}Reinstall${NC}   ${DIM}⚠ Wipe and re-provision from scratch${NC}"
         echo -e "    ${BOLD}5)${NC}  ${YELLOW}Uninstall${NC}   ${DIM}⚠ Remove this node role entirely${NC}"
         echo ""
