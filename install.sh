@@ -274,7 +274,15 @@ probe_grid_status
 
 _grid_icon() {
     local role=$1
-    local status=${GRID_STATUS[$role]:-○}
+    local status
+    case "$role" in
+        core)     status="$GRID_STATUS_core" ;;
+        edge)     status="$GRID_STATUS_edge" ;;
+        worker)   status="$GRID_STATUS_worker" ;;
+        backup)   status="$GRID_STATUS_backup" ;;
+        external) status="$GRID_STATUS_external" ;;
+        *)        status="○" ;;
+    esac
     if [[ "$status" == "✔" ]]; then
         echo -e "${GREEN}✔${NC}"
     else
