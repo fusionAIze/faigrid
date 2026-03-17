@@ -434,15 +434,26 @@ fi
 
 if [[ "$EXEC_MODE" == "remote" ]]; then
     if [[ -z "$SSH_TARGET" ]]; then
+        default_ip="192.168.178.10"
+        case "$ROLE_NAME" in
+            core)   default_ip="192.168.178.20" ;;
+            worker) default_ip="192.168.178.30" ;;
+            backup) default_ip="192.168.178.40" ;;
+        esac
         echo ""
-        prompt "SSH target (e.g. nexus@192.168.178.10): " SSH_TARGET
+        prompt "SSH target (e.g. nexus@${default_ip}): " SSH_TARGET
     fi
 
     info "Testing SSH connectivity to ${SSH_TARGET}..."
     if ! ssh -q "$SSH_TARGET" exit; then
         error "SSH connectivity to ${SSH_TARGET} failed. Ensure keys or passwords are correct."
     fi
-    success "Connected to ${SSH_TARGET}."
+    
+    # Pre-flight: Check for rsync on remote target
+    if ! ssh -q "$SSH_TARGET" "command -v rsync" > /dev/null; then
+        error "rsync is not installed on ${SSH_TARGET}. Please install it (e.g., 'sudo apt install rsync') and try again."
+    fi
+    success "Connected to ${SSH_TARGET} (rsync verified)."
 else
     EXEC_MODE="local"
     success "On-Node mode: this machine is the target."
