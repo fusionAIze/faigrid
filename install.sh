@@ -633,13 +633,20 @@ _run_action() {
         echo -e "    ${BOLD}4)${NC}  status"
         echo -e "    ${BOLD}5)${NC}  reload"
         echo ""
-        prompt "Select command (1-5): " CONTROL_CHOICE
+        echo -e "    ${BOLD}a)${NC}  Action selection  ${DIM}(Back to Step 4)${NC}"
+        echo -e "    ${BOLD}s)${NC}  Switch node       ${DIM}(Back to Step 2)${NC}"
+        echo -e "    ${BOLD}q)${NC}  Quit"
+        echo ""
+        prompt "Select command (1-5 / a / s / q): " CONTROL_CHOICE
         case "$CONTROL_CHOICE" in
             1) cmd_arg="start" ;;
             2) cmd_arg="stop" ;;
             3) cmd_arg="restart" ;;
             4) cmd_arg="status" ;;
             5) cmd_arg="reload" ;;
+            [Aa]) return 0 ;;
+            [Ss]) exec bash "$0" ;;
+            [Qq]|"") exit 0 ;;
             *) warning "Invalid choice. Defaulting to 'status'." ; cmd_arg="status" ;;
         esac
     fi
