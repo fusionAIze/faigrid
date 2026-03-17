@@ -190,12 +190,12 @@ divider
 
 if [[ -z "$MODE_CHOICE" ]]; then
     echo ""
-    echo "  Where should the orchestrator execute?"
+    echo "  How are you deploying?"
     echo ""
-    echo -e "    ${BOLD}1)${NC}  Local    — Execute directly on this machine"
-    echo -e "    ${BOLD}2)${NC}  Remote   — Push to another machine via SSH"
+    echo -e "    ${BOLD}1)${NC}  On-Node     ${DIM}— I am logged into the target node right now${NC}"
+    echo -e "    ${BOLD}2)${NC}  Remote Push  ${DIM}— Push to a remote node via SSH from this workstation${NC}"
     echo ""
-    prompt "Select target (1/2): " MODE_CHOICE
+    prompt "Select mode (1/2): " MODE_CHOICE
 fi
 
 EXEC_MODE=""
@@ -213,7 +213,7 @@ if [[ "$MODE_CHOICE" == "2" || "$MODE_CHOICE" == "remote" ]]; then
     success "Connected to ${SSH_TARGET}."
 else
     EXEC_MODE="local"
-    success "Local orchestration selected."
+    success "On-Node mode: this machine is the target."
 fi
 
 # Detect existing state
