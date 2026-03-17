@@ -138,9 +138,10 @@ inspect_state() {
             CURRENT_VERSION=${NEXUS_VERSION:-none}
         fi
     else
-        if ssh -q "$ssh_target" "[ -f \"$STATE_FILE\" ]"; then
+        # Use \$HOME so the path resolves on the REMOTE machine, not locally
+        if ssh -q "$ssh_target" '[ -f "$HOME/.nexus-state" ]'; then
              local remote_state
-             remote_state=$(ssh -q "$ssh_target" "cat \"$STATE_FILE\"")
+             remote_state=$(ssh -q "$ssh_target" 'cat "$HOME/.nexus-state"')
              CURRENT_ROLE=$(echo "$remote_state" | grep "NEXUS_ROLE" | cut -d'=' -f2 || echo "none")
              CURRENT_VERSION=$(echo "$remote_state" | grep "NEXUS_VERSION" | cut -d'=' -f2 || echo "none")
         else
