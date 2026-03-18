@@ -2,25 +2,32 @@
 TOOL_NAME="rtk"
 TOOL_CATEGORY="wrappers"
 TOOL_DESC="RTK Shell Wrapper"
-TOOL_TYPE="git"
+TOOL_TYPE="binary"
 
-INSTALL_DIR="/opt/fusionaize-nexus/rtk"
+# Official install puts the binary at ~/.local/bin/rtk
+BINARY_PATH="${HOME}/.local/bin/rtk"
 
 tool_install() {
-    if [[ ! -d "$INSTALL_DIR" ]]; then
-        sudo git clone https://github.com/rtk-ai/rtk "$INSTALL_DIR"
-    fi
+    curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/refs/heads/master/install.sh | sh
+    # Ensure ~/.local/bin is on PATH for the current session
+    export PATH="$PATH:${HOME}/.local/bin"
 }
+
 tool_update() {
-    if [[ -d "$INSTALL_DIR" ]]; then ( cd "$INSTALL_DIR" && sudo git pull ); fi
+    # Re-running the install script pulls the latest release
+    curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/refs/heads/master/install.sh | sh
 }
+
 tool_status() {
-    if [[ -d "$INSTALL_DIR" ]]; then
-        local rev
-        rev=$(git -C "$INSTALL_DIR" rev-parse --short HEAD 2>/dev/null || echo "unknown")
-        echo "Installed (${rev})"
+    if command -v rtk >/dev/null 2>&1 || [[ -x "${BINARY_PATH}" ]]; then
+        local ver
+        ver=$(rtk --version 2>&1 | head -1 || echo "")
+        echo "Installed${ver:+ (${ver})}"
     else
         echo "Not installed"
     fi
 }
-tool_uninstall() { sudo rm -rf "${INSTALL_DIR}"; }
+
+tool_uninstall() {
+    rm -f "${BINARY_PATH}"
+}
