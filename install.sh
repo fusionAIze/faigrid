@@ -556,11 +556,17 @@ if [[ -z "$ACTION_NAME" ]]; then
         echo -e "    ${BOLD}1)${NC}  ${GREEN}Verify${NC}      ${DIM}Read-only: check services, ports, disk (changes nothing)${NC}"
         echo -e "    ${BOLD}2)${NC}  Update      ${DIM}System packages only (apt upgrade). Your configs stay untouched${NC}"
         echo -e "    ${BOLD}3)${NC}  Control     ${DIM}Start / Stop / Restart managed services${NC}"
-        echo ""
-        echo -e "    ${BOLD}4)${NC}  ${YELLOW}Reinstall${NC}   ${DIM}⚠ Wipe and re-provision from scratch${NC}"
-        echo -e "    ${BOLD}5)${NC}  ${YELLOW}Uninstall${NC}   ${DIM}⚠ Remove this node role entirely${NC}"
         if [[ "$ROLE_NAME" == "core" ]]; then
-            echo -e "    ${BOLD}6)${NC}  ${CYAN}Backup${NC}      ${DIM}Dump Postgres + n8n volume to /var/backups/nexus-core-heart${NC}"
+            echo -e "    ${BOLD}4)${NC}  ${MAGENTA}Workbench${NC}   ${DIM}AI Tooling — CLIs, Agents, Routers${NC}"
+        fi
+        echo ""
+        if [[ "$ROLE_NAME" == "core" ]]; then
+            echo -e "    ${BOLD}5)${NC}  ${YELLOW}Reinstall${NC}   ${DIM}⚠ Wipe and re-provision from scratch${NC}"
+            echo -e "    ${BOLD}6)${NC}  ${YELLOW}Uninstall${NC}   ${DIM}⚠ Remove this node role entirely${NC}"
+            echo -e "    ${BOLD}7)${NC}  ${CYAN}Backup${NC}      ${DIM}Dump Postgres + n8n volume to /var/backups/nexus-core-heart${NC}"
+        else
+            echo -e "    ${BOLD}4)${NC}  ${YELLOW}Reinstall${NC}   ${DIM}⚠ Wipe and re-provision from scratch${NC}"
+            echo -e "    ${BOLD}5)${NC}  ${YELLOW}Uninstall${NC}   ${DIM}⚠ Remove this node role entirely${NC}"
         fi
         echo ""
         echo -e "    ${BOLD}h)${NC}  ${BOLD}Help / Connect${NC} ${DIM}How to access services from your workstation${NC}"
@@ -570,7 +576,7 @@ if [[ -z "$ACTION_NAME" ]]; then
         echo -e "  ${DIM}Tip: Start with Verify to see the current state of this node.${NC}"
         echo ""
         if [[ "$ROLE_NAME" == "core" ]]; then
-            prompt "Select action (1-6 / h / s / q): " ACTION_CHOICE
+            prompt "Select action (1-7 / h / s / q): " ACTION_CHOICE
         else
             prompt "Select action (1-5 / h / s / q): " ACTION_CHOICE
         fi
@@ -578,13 +584,14 @@ if [[ -z "$ACTION_NAME" ]]; then
             1) ACTION_NAME="verify" ;;
             2) ACTION_NAME="update" ;;
             3) ACTION_NAME="control" ;;
-            4) ACTION_NAME="install" ;;
-            5) ACTION_NAME="uninstall" ;;
-            6) if [[ "$ROLE_NAME" == "core" ]]; then ACTION_NAME="backup"; else warning "Invalid choice."; fi ;;
+            4) if [[ "$ROLE_NAME" == "core" ]]; then ACTION_NAME="workbench"; else ACTION_NAME="install"; fi ;;
+            5) if [[ "$ROLE_NAME" == "core" ]]; then ACTION_NAME="install"; else ACTION_NAME="uninstall"; fi ;;
+            6) if [[ "$ROLE_NAME" == "core" ]]; then ACTION_NAME="uninstall"; else warning "Invalid choice. Please enter 1-5, h, s, or q."; fi ;;
+            7) if [[ "$ROLE_NAME" == "core" ]]; then ACTION_NAME="backup"; else warning "Invalid choice. Please enter 1-5, h, s, or q."; fi ;;
             [Hh]) _show_help "$EXEC_MODE" "$SSH_TARGET" "$ROLE_NAME" ; exec bash "$0" ;;
             [Ss]) exec bash "$0" ;;
             [Qq]|"") _quit ;;
-            *) warning "Invalid choice. Please enter 1-5, h, s, or q." ;;
+            *) warning "Invalid choice." ;;
         esac
     else
         # Fresh target — install is the natural first action
@@ -698,6 +705,21 @@ _run_action() {
     
     local cmd_arg="${COMPONENT_NAME:-all}"
 
+    # Workbench — dispatch through heart control.sh which resolves the path
+    if [ "$action" = "workbench" ]; then
+        if [ "$mode" = "local" ]; then
+            local wb_launcher="${role_dir}/scripts/control.sh"
+            if [ -f "$wb_launcher" ]; then
+                bash "$wb_launcher" "workbench"
+            else
+                warning "Workbench launcher not found at ${wb_launcher}."
+            fi
+        else
+            warning "Workbench is only available in on-node (local) mode."
+        fi
+        return 0
+    fi
+
     # Handle control sub-commands interactively
     if [ "$action" = "control" ]; then
         echo ""
@@ -708,20 +730,16 @@ _run_action() {
         echo -e "    ${BOLD}3)${NC}  ${YELLOW}Restart${NC}"
         echo -e "    ${BOLD}4)${NC}  Status"
         echo -e "    ${BOLD}5)${NC}  Reload"
-        if [[ "$role" == "core" ]]; then
-            echo -e "    ${BOLD}w)${NC}  ${MAGENTA}Workbench${NC}   ${DIM}AI Tooling (RTK, CLIs, Agents)${NC}"
-        fi
         echo ""
         echo -e "    ${BOLD}a)${NC}  Action selection  ${DIM}(Back to Step 4)${NC}"
         echo ""
-        prompt "Select command (1-5 / w / a / s / q): " CONTROL_CHOICE
+        prompt "Select command (1-5 / a / s / q): " CONTROL_CHOICE
         case "$CONTROL_CHOICE" in
             1) cmd_arg="start" ;;
             2) cmd_arg="stop" ;;
             3) cmd_arg="restart" ;;
             4) cmd_arg="status" ;;
             5) cmd_arg="reload" ;;
-            [Ww]) if [[ "$role" == "core" ]]; then cmd_arg="workbench"; else warning "Workbench only available on core."; return 0; fi ;;
             [Aa]) return 0 ;;
             [Ss]) exec bash "$0" ;;
             [Qq]|"") _quit ;;
@@ -835,7 +853,7 @@ _show_help() {
 
 # Destructive actions exit immediately; safe actions loop back
 _is_loopable() {
-    [[ "$1" == "verify" || "$1" == "update" || "$1" == "control" || "$1" == "backup" ]]
+    [[ "$1" == "verify" || "$1" == "update" || "$1" == "control" || "$1" == "workbench" || "$1" == "backup" ]]
 }
 
 # Execute the requested action
@@ -858,11 +876,17 @@ if _is_loopable "$ACTION_NAME"; then
         echo -e "    ${BOLD}1)${NC}  ${GREEN}Verify${NC}      ${DIM}Read-only: check services, ports, disk${NC}"
         echo -e "    ${BOLD}2)${NC}  Update      ${DIM}System packages only (apt upgrade). Configs stay untouched${NC}"
         echo -e "    ${BOLD}3)${NC}  Control     ${DIM}Start / Stop / Restart managed services${NC}"
-        echo ""
-        echo -e "    ${BOLD}4)${NC}  ${YELLOW}Reinstall${NC}   ${DIM}⚠ Wipe and re-provision from scratch${NC}"
-        echo -e "    ${BOLD}5)${NC}  ${YELLOW}Uninstall${NC}   ${DIM}⚠ Remove this node role entirely${NC}"
         if [[ "$ROLE_NAME" == "core" ]]; then
-            echo -e "    ${BOLD}6)${NC}  ${CYAN}Backup${NC}      ${DIM}Dump Postgres + n8n volume to /var/backups/nexus-core-heart${NC}"
+            echo -e "    ${BOLD}4)${NC}  ${MAGENTA}Workbench${NC}   ${DIM}AI Tooling — CLIs, Agents, Routers${NC}"
+        fi
+        echo ""
+        if [[ "$ROLE_NAME" == "core" ]]; then
+            echo -e "    ${BOLD}5)${NC}  ${YELLOW}Reinstall${NC}   ${DIM}⚠ Wipe and re-provision from scratch${NC}"
+            echo -e "    ${BOLD}6)${NC}  ${YELLOW}Uninstall${NC}   ${DIM}⚠ Remove this node role entirely${NC}"
+            echo -e "    ${BOLD}7)${NC}  ${CYAN}Backup${NC}      ${DIM}Dump Postgres + n8n volume to /var/backups/nexus-core-heart${NC}"
+        else
+            echo -e "    ${BOLD}4)${NC}  ${YELLOW}Reinstall${NC}   ${DIM}⚠ Wipe and re-provision from scratch${NC}"
+            echo -e "    ${BOLD}5)${NC}  ${YELLOW}Uninstall${NC}   ${DIM}⚠ Remove this node role entirely${NC}"
         fi
         echo ""
         echo -e "    ${BOLD}h)${NC}  ${BOLD}Help / Connect${NC}"
@@ -870,7 +894,7 @@ if _is_loopable "$ACTION_NAME"; then
         echo -e "    ${BOLD}q)${NC}  Quit"
         echo ""
         if [[ "$ROLE_NAME" == "core" ]]; then
-            prompt "Select action (1-6 / h / s / q): " NEXT_CHOICE
+            prompt "Select action (1-7 / h / s / q): " NEXT_CHOICE
         else
             prompt "Select action (1-5 / h / s / q): " NEXT_CHOICE
         fi
@@ -879,31 +903,28 @@ if _is_loopable "$ACTION_NAME"; then
             2) _run_action "$EXEC_MODE" "$SSH_TARGET" "$ROLE_NAME" "update" "$ROLE_DIR" || true ;;
             3) _run_action "$EXEC_MODE" "$SSH_TARGET" "$ROLE_NAME" "control" "$ROLE_DIR" || true ;;
             4)
-                warning "This will wipe and re-provision ${BOLD}${ROLE_NAME}${NC}. Are you sure?"
-                prompt "Type YES to confirm: " CONFIRM
-                if [[ "$CONFIRM" == "YES" ]]; then
-                    _run_action "$EXEC_MODE" "$SSH_TARGET" "$ROLE_NAME" "install" "$ROLE_DIR"
-                    break
+                if [[ "$ROLE_NAME" == "core" ]]; then
+                    _run_action "$EXEC_MODE" "$SSH_TARGET" "$ROLE_NAME" "workbench" "$ROLE_DIR" || true
                 else
-                    info "Reinstall cancelled."
+                    warning "This will wipe and re-provision ${BOLD}${ROLE_NAME}${NC}. Are you sure?"
+                    prompt "Type YES to confirm: " CONFIRM
+                    if [[ "$CONFIRM" == "YES" ]]; then
+                        _run_action "$EXEC_MODE" "$SSH_TARGET" "$ROLE_NAME" "install" "$ROLE_DIR"
+                        break
+                    else
+                        info "Reinstall cancelled."
+                    fi
                 fi
                 ;;
             5)
                 if [[ "$ROLE_NAME" == "core" ]]; then
-                    echo ""
-                    warning "DESTRUCTIVE: This will permanently delete ALL Docker volumes!"
-                    echo -e "  ${RED}✖${NC}  ${DIM}postgres_data${NC}  — n8n workflows, credentials, execution history"
-                    echo -e "  ${RED}✖${NC}  ${DIM}n8n_data${NC}       — settings, installed nodes, encryption key"
-                    echo -e "  ${RED}✖${NC}  ${DIM}redis_data${NC}     — queue state"
-                    echo ""
-                    echo -e "  ${YELLOW}Tip: Run${NC} ${BOLD}Backup (6)${NC} ${YELLOW}first to preserve your data.${NC}"
-                    echo ""
-                    prompt "Type 'delete-all-data' to confirm permanent data loss: " CONFIRM
-                    if [[ "$CONFIRM" == "delete-all-data" ]]; then
-                        _run_action "$EXEC_MODE" "$SSH_TARGET" "$ROLE_NAME" "uninstall" "$ROLE_DIR"
+                    warning "This will wipe and re-provision ${BOLD}${ROLE_NAME}${NC}. Are you sure?"
+                    prompt "Type YES to confirm: " CONFIRM
+                    if [[ "$CONFIRM" == "YES" ]]; then
+                        _run_action "$EXEC_MODE" "$SSH_TARGET" "$ROLE_NAME" "install" "$ROLE_DIR"
                         break
                     else
-                        info "Uninstall cancelled."
+                        info "Reinstall cancelled."
                     fi
                 else
                     warning "This will remove the ${BOLD}${ROLE_NAME}${NC} role. Are you sure?"
@@ -918,9 +939,30 @@ if _is_loopable "$ACTION_NAME"; then
                 ;;
             6)
                 if [[ "$ROLE_NAME" == "core" ]]; then
+                    echo ""
+                    warning "DESTRUCTIVE: This will permanently delete ALL Docker volumes!"
+                    echo -e "  ${RED}✖${NC}  ${DIM}postgres_data${NC}  — n8n workflows, credentials, execution history"
+                    echo -e "  ${RED}✖${NC}  ${DIM}n8n_data${NC}       — settings, installed nodes, encryption key"
+                    echo -e "  ${RED}✖${NC}  ${DIM}redis_data${NC}     — queue state"
+                    echo ""
+                    echo -e "  ${YELLOW}Tip: Run${NC} ${BOLD}Backup (7)${NC} ${YELLOW}first to preserve your data.${NC}"
+                    echo ""
+                    prompt "Type 'delete-all-data' to confirm permanent data loss: " CONFIRM
+                    if [[ "$CONFIRM" == "delete-all-data" ]]; then
+                        _run_action "$EXEC_MODE" "$SSH_TARGET" "$ROLE_NAME" "uninstall" "$ROLE_DIR"
+                        break
+                    else
+                        info "Uninstall cancelled."
+                    fi
+                else
+                    warning "Invalid choice."
+                fi
+                ;;
+            7)
+                if [[ "$ROLE_NAME" == "core" ]]; then
                     _run_action "$EXEC_MODE" "$SSH_TARGET" "$ROLE_NAME" "backup" "$ROLE_DIR" || true
                 else
-                    warning "Invalid choice. Please enter 1-5, h, s, or q."
+                    warning "Invalid choice."
                 fi
                 ;;
             [Hh]) _show_help "$EXEC_MODE" "$SSH_TARGET" "$ROLE_NAME" ;;
