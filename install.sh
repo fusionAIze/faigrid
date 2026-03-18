@@ -746,7 +746,7 @@ _show_help() {
             echo -e "  ${BOLD}n8n Automation Workbench:${NC}"
             echo -e "    Local URL  : http://${ip}:5678"
             if [[ "$mode" == "remote" ]]; then
-                echo -e "    SSH Tunnel : ${C_CYAN}ssh -L 5678:localhost:5678 ${ssh_target}${NC}"
+                echo -e "    SSH Tunnel : ${CYAN}ssh -L 5678:localhost:5678 ${ssh_target}${NC}"
                 echo -e "    ${DIM}(Run this on your workstation to access n8n in your local browser)${NC}"
             fi
             echo ""
@@ -766,7 +766,7 @@ _show_help() {
             echo -e "  ${BOLD}Ollama API:${NC}"
             echo -e "    Local URL  : http://${ip}:11434"
             if [[ "$mode" == "remote" ]]; then
-                echo -e "    SSH Tunnel : ${C_CYAN}ssh -L 11434:localhost:11434 ${ssh_target}${NC}"
+                echo -e "    SSH Tunnel : ${CYAN}ssh -L 11434:localhost:11434 ${ssh_target}${NC}"
             fi
             ;;
         *)
