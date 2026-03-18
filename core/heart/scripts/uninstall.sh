@@ -4,18 +4,15 @@
 # ==============================================================================
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
-CORE_ROOT="$(cd "${SCRIPT_DIR}/../.." &>/dev/null && pwd)"
-
-# shellcheck source=_lib.sh
-source "${SCRIPT_DIR}/_lib.sh"
-resolve_compose_paths
+STACK_DIR="/opt/fusionaize-nexus/core-heart"
+COMPOSE_DIR="${STACK_DIR}/compose"
+ENV_FILE="${STACK_DIR}/.env"
 
 echo "[nexus-core-heart] Uninstalling core stack..."
 
 if [[ -d "${COMPOSE_DIR}" ]]; then
     cd "${COMPOSE_DIR}" || exit 1
-    if command -v docker &>/dev/null && docker compose version &>/dev/null; then
+    if command -v docker &> /dev/null && docker compose version &> /dev/null; then
         echo "[nexus-core-heart] Stopping and removing containers/volumes..."
         docker compose --env-file "${ENV_FILE}" down -v || true
     fi

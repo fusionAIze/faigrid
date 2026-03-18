@@ -47,6 +47,15 @@ prompt_hidden() {
     echo ""
 }
 
+_quit() {
+    echo ""
+    divider
+    success "Nexus Labs Orchestration Complete! 🚀"
+    divider
+    echo ""
+    exit 0
+}
+
 STATE_FILE="$HOME/.nexus-state"
 TOPOLOGY_FILE=".env.topology"
 LOCAL_REGISTRY=".nexus/state"
@@ -362,7 +371,7 @@ if [[ -z "$ROLE_NAME" ]]; then
         3) ROLE_NAME="worker" ;;
         4) ROLE_NAME="backup" ;;
         5) ROLE_NAME="external" ;;
-        [Qq]|"") exit 0 ;;
+        [Qq]|"") _quit ;;
         *) warning "Invalid choice. Please enter 1-5 or q." ;;
     esac
 
@@ -574,7 +583,7 @@ if [[ -z "$ACTION_NAME" ]]; then
             6) if [[ "$ROLE_NAME" == "core" ]]; then ACTION_NAME="backup"; else warning "Invalid choice."; fi ;;
             [Hh]) _show_help "$EXEC_MODE" "$SSH_TARGET" "$ROLE_NAME" ; exec bash "$0" ;;
             [Ss]) exec bash "$0" ;;
-            [Qq]|"") exit 0 ;;
+            [Qq]|"") _quit ;;
             *) warning "Invalid choice. Please enter 1-5, h, s, or q." ;;
         esac
     else
@@ -592,7 +601,7 @@ if [[ -z "$ACTION_NAME" ]]; then
             1) ACTION_NAME="install" ;;
             2) ACTION_NAME="verify" ;;
             [Ss]) exec bash "$0" ;;
-            [Qq]|"") exit 0 ;;
+            [Qq]|"") _quit ;;
             *) warning "Invalid choice. Please enter 1-2, s, or q." ;;
         esac
     fi
@@ -715,7 +724,7 @@ _run_action() {
             [Ww]) if [[ "$role" == "core" ]]; then cmd_arg="workbench"; else warning "Workbench only available on core."; return 0; fi ;;
             [Aa]) return 0 ;;
             [Ss]) exec bash "$0" ;;
-            [Qq]|"") exit 0 ;;
+            [Qq]|"") _quit ;;
             *) warning "Invalid choice. Defaulting to 'status'." ; cmd_arg="status" ;;
         esac
     fi
