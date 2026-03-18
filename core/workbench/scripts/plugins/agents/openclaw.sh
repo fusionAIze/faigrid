@@ -8,15 +8,19 @@ tool_install() {
     echo "Please use docs/runbooks/step-02_5-openclaw-native.md to install."
 }
 tool_update() {
-    # Would call the native update script and restart service
     sudo systemctl restart openclaw.service || true
 }
 tool_status() {
     if systemctl is-active --quiet openclaw.service; then
-        echo "Installed (Running)"
+        local ver
+        ver=$(openclaw --version 2>/dev/null | head -1 || echo "")
+        echo "Installed (Running${ver:+ v${ver}})"
     elif systemctl is-enabled --quiet openclaw.service 2>/dev/null; then
         echo "Installed (Stopped)"
     else
         echo "Not installed"
     fi
+}
+tool_uninstall() {
+    echo "Use docs/runbooks/ to uninstall OpenClaw safely." >&2
 }

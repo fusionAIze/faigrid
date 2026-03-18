@@ -13,8 +13,15 @@ tool_install() {
     fi
 }
 tool_update() {
-    if [[ -d "$INSTALL_DIR" ]]; then cd "$INSTALL_DIR" || exit 1; sudo git pull; fi
+    if [[ -d "$INSTALL_DIR" ]]; then ( cd "$INSTALL_DIR" && sudo git pull ); fi
 }
 tool_status() {
-    if [[ -d "$INSTALL_DIR" ]]; then echo "Installed"; else echo "Not installed"; fi
+    if [[ -d "$INSTALL_DIR" ]]; then
+        local rev
+        rev=$(git -C "$INSTALL_DIR" rev-parse --short HEAD 2>/dev/null || echo "unknown")
+        echo "Installed (${rev})"
+    else
+        echo "Not installed"
+    fi
 }
+tool_uninstall() { sudo rm -rf "${INSTALL_DIR}"; }

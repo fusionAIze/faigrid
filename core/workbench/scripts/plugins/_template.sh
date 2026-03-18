@@ -26,12 +26,22 @@ tool_status() {
     # Check if the tool is installed and return its status/version.
     # MUST print "Not installed" if it is missing.
     #
-    # Example for pipx:
-    # pipx list --short | grep "^example-cli" || echo "Not installed"
-    
+    # Example for pipx:   pipx list --short | awk '/^example-cli /{print $2}'
+    # Example for npm/cmd: command -v example-cli && example-cli --version 2>&1 | head -1
+
     if command -v example-cli >/dev/null 2>&1; then
-        echo "Installed ($(example-cli --version))"
+        local ver
+        ver=$(example-cli --version 2>&1 | head -1 || echo "")
+        echo "Installed${ver:+ (${ver})}"
     else
         echo "Not installed"
     fi
+}
+
+tool_uninstall() {
+    # Remove the installed tool. Examples:
+    # pipx uninstall example-cli
+    # npm uninstall -g example-cli
+    # sudo rm -rf "${INSTALL_DIR}"
+    echo "Uninstalling ${TOOL_NAME}..."
 }

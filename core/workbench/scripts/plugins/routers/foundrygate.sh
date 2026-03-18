@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-
 TOOL_NAME="foundrygate"
 TOOL_CATEGORY="routers"
 TOOL_DESC="Main AI Routing Gateway (typelicious)"
@@ -15,19 +14,20 @@ tool_install() {
         echo "Check $INSTALL_DIR/README.md for docker launch instructions."
     fi
 }
-
 tool_update() {
     if [[ -d "$INSTALL_DIR" ]]; then
-        cd "$INSTALL_DIR" || exit 1; sudo git pull
+        ( cd "$INSTALL_DIR" && sudo git pull )
     else
         echo "FoundryGate not found in $INSTALL_DIR."
     fi
 }
-
 tool_status() {
     if [[ -d "$INSTALL_DIR" ]]; then
-        cd "$INSTALL_DIR" && echo "Installed ($(git rev-parse --short HEAD))"
+        local rev
+        rev=$(git -C "$INSTALL_DIR" rev-parse --short HEAD 2>/dev/null || echo "unknown")
+        echo "Installed (${rev})"
     else
         echo "Not installed"
     fi
 }
+tool_uninstall() { sudo rm -rf "${INSTALL_DIR}"; }

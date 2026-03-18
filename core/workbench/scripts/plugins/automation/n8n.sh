@@ -22,8 +22,10 @@ tool_uninstall() {
     fi
 }
 tool_status() {
-    if docker ps --format '{{.Names}}' | grep -q "^nexus-n8n"; then
-        echo "Installed (Running)"
+    if docker ps --format '{{.Names}}' 2>/dev/null | grep -q "^nexus-n8n"; then
+        local ver
+        ver=$(docker inspect nexus-n8n --format '{{.Config.Image}}' 2>/dev/null | grep -o '[^:]*$' || echo "")
+        echo "Installed (Running${ver:+ v${ver}})"
     else
         echo "Not installed"
     fi
