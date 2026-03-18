@@ -58,44 +58,68 @@ cmd_summary() {
 }
 
 cmd_boost() {
-  print_header "Boost Workbench — Bulk Installation"
-  echo "Select a category to install all its tools:"
-  echo "  1) CLIs          (antigravity, gemini, etc.)"
-  echo "  2) Routers       (foundrygate, openrouter, etc.)"
-  echo "  3) Agents        (openclaw, paperclip, etc.)"
-  echo "  4) Wrappers      (rtk, etc.)"
-  echo "  5) EVERYTHING    (The full palette)"
+  print_header "Boost Workbench — Interactive Selection"
+  echo "I will now walk you through each tool category."
+  echo "Decide for each if you want to include its tools in this bulk installation."
   echo ""
-  read -r -p "Boost Choice (1-5 / c to cancel): " boost_opt
-  
-  local target_cat=""
-  case "$boost_opt" in
-    1) target_cat="clis" ;;
-    2) target_cat="routers" ;;
-    3) target_cat="agents" ;;
-    4) target_cat="wrappers" ;;
-    5) target_cat="all" ;;
-    *) return ;;
-  esac
 
-  info "Boosting $target_cat..."
+  # Get unique categories (Bash 3.2 compatible way)
+  local categories=()
   while read -r p; do
-    local category name
-    category=$(get_plugin_meta "$p" "TOOL_CATEGORY")
-    name=$(get_plugin_meta "$p" "TOOL_NAME")
-    
-    if [[ "$target_cat" == "all" || "$category" == "$target_cat" ]]; then
-      local stat
-      stat=$( (source "$p" >/dev/null 2>&1 && tool_status) || echo "Error" )
-      if [[ "$stat" == *"Not installed"* ]]; then
-        info "Installing $name..."
-        (source "$p" && tool_install) || warn "Failed to install $name"
-      else
-        info "$name is already installed. Skipping."
-      fi
-    fi
+    local cat
+    cat=$(get_plugin_meta "$p" "TOOL_CATEGORY")
+    # Add to list if not already there (simple dedup)
+    local found=0
+    for c in "${categories[@]}"; do
+      if [[ "$c" == "$cat" ]]; then found=1; break; fi
+    done
+    if [[ "$found" -eq 0 ]]; then categories+=("$cat"); fi
   done < <(get_plugins)
-  success "Boost complete."
+
+  local selected_cats=""
+  for cat in "${categories[@]}"; do
+    read -r -p "  Include $cat? [y/N]: " include_opt
+    if [[ "$include_opt" == "y" || "$include_opt" == "Y" ]]; then
+      selected_cats="${selected_cats}${cat} "
+    fi
+  done
+
+  if [[ -z "$selected_cats" ]]; then
+    warn "No categories selected. Boost cancelled."
+    return
+  fi
+
+  echo ""
+  info "Selected for Boost: ${C_BOLD}${selected_cats}${C_RESET}"
+  read -r -p "  Confirm and start installation? [Y/n]: " confirm_opt
+  if [[ "$confirm_opt" == "n" || "$confirm_opt" == "N" ]]; then
+    info "Boost cancelled."
+    return
+  fi
+
+  echo ""
+  for target_cat in $selected_cats; do
+    info "Boosting category: $target_cat..."
+    while read -r p; do
+      local category name
+      category=$(get_plugin_meta "$p" "TOOL_CATEGORY")
+      name=$(get_plugin_meta "$p" "TOOL_NAME")
+      
+      if [[ "$category" == "$target_cat" ]]; then
+        local stat
+        stat=$( (source "$p" >/dev/null 2>&1 && tool_status) || echo "Error" )
+        if [[ "$stat" == *"Not installed"* ]]; then
+          printf "  ${C_CYAN}▸${C_RESET} Installing $name...\n"
+          (source "$p" && tool_install) >/dev/null 2>&1 || warn "Failed to install $name"
+        else
+          printf "  ${C_GREEN}✔${C_RESET} $name already installed.\n"
+        fi
+      fi
+    done < <(get_plugins)
+    echo ""
+  done
+  
+  success "Boost complete. Run 'status' to review your workbench."
 }
 
 cmd_update_all() {
