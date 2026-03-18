@@ -2,10 +2,18 @@
 TOOL_NAME="antigravity"
 TOOL_CATEGORY="clis"
 TOOL_DESC="Antigravity AI CLI"
-TOOL_TYPE="pipx"
+TOOL_TYPE="tbd"
+# TODO: antigravity appears to be a desktop IDE platform; confirm if a
+#       standalone CLI exists and update tool_install/tool_uninstall accordingly.
 
-tool_install() { pipx install antigravity-cli; }
-tool_update()  { pipx upgrade antigravity-cli; }
+tool_install() {
+    echo "[antigravity] No confirmed CLI install method yet." >&2
+    echo "[antigravity] Check https://www.antigravity.dev for CLI docs." >&2
+    return 1
+}
+tool_update() {
+    echo "[antigravity] Update not available — install method TBD." >&2
+}
 tool_status() {
     if command -v antigravity >/dev/null 2>&1; then
         local ver
@@ -15,4 +23,6 @@ tool_status() {
         echo "Not installed"
     fi
 }
-tool_uninstall() { pipx uninstall antigravity-cli; }
+tool_uninstall() {
+    echo "[antigravity] Uninstall not available — install method TBD." >&2
+}

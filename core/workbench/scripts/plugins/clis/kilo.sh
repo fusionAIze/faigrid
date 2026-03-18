@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
 TOOL_NAME="kilo"
 TOOL_CATEGORY="clis"
-TOOL_DESC="Kilo CLI Agent"
-TOOL_TYPE="pipx"
+TOOL_DESC="Kilo Code CLI Agent (OpenCode fork)"
+TOOL_TYPE="npm"
 
-tool_install() { pipx install kilo-ai || echo "Check pipx installation."; }
-tool_update()  { pipx upgrade kilo-ai; }
+tool_install() {
+    sudo npm install -g @kilocode/cli || echo "Please check npm configuration."
+}
+tool_update() {
+    sudo npm update -g @kilocode/cli
+}
 tool_status() {
     if command -v kilo >/dev/null 2>&1; then
         local ver
@@ -15,4 +19,4 @@ tool_status() {
         echo "Not installed"
     fi
 }
-tool_uninstall() { pipx uninstall kilo-ai; }
+tool_uninstall() { sudo npm uninstall -g @kilocode/cli; }
