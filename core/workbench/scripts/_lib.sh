@@ -10,7 +10,6 @@ export C_BLUE='\033[0;34m'
 export C_MAGENTA='\033[0;35m'
 export C_CYAN='\033[0;36m'
 export C_BOLD='\033[1m'
-export C_DIM='\033[2m'
 
 # Logging
 info() { printf "%b[INFO]%b %s\n" "${C_CYAN}" "${C_RESET}" "$*"; }
