@@ -715,7 +715,13 @@ _run_action() {
                 warning "Workbench launcher not found at ${wb_launcher}."
             fi
         else
-            warning "Workbench is only available in on-node (local) mode."
+            # Remote: sync repo then open interactive TTY session on target node
+            info "Syncing repo to ${ssh_target}..."
+            ssh -q "$ssh_target" "mkdir -p /tmp/nexus-install"
+            rsync -az --exclude='.git' --exclude='node_modules' ./ "${ssh_target}:/tmp/nexus-install/" > /dev/null
+            info "Launching Workbench on ${ssh_target}..."
+            echo ""
+            ssh -t "$ssh_target" "cd /tmp/nexus-install && bash core/heart/scripts/control.sh workbench"
         fi
         return 0
     fi
