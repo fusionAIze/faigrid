@@ -49,3 +49,49 @@ rtk git           # instead of git
 ```
 
 Use raw OS commands only when `rtk` lacks the necessary flags or when running native infrastructure actions (like `systemctl`, `apt`, `brew`).
+
+## Operational Guardrails
+
+1. **Deny-by-default**: Never expose ports beyond `localhost` or internal subnets unless they are explicitly destined for `nexus-edge` ingress. All core services bind to `127.0.0.1`.
+2. **State Detection First**: The main `install.sh` parses `~/.nexus-state`. Always check existing state before provisioning to avoid unintended overwrites.
+3. **No destructive scripts without safeguard**: Any script that purges volumes, removes stack directories, or drops databases must include an explicit user confirmation prompt before executing.
+4. **Bash 3.2 compatibility is mandatory** — macOS ships Bash 3.2; all scripts must run on it.
+   Forbidden Bash 4+ features:
+   - `declare -A` / `declare -gA` — associative arrays → use individual variables or `case` statements
+   - `declare -g` — global declaration inside functions → declare at script scope instead
+   - `mapfile` / `readarray` → use `while read` loops
+   - `${!varname}` indirect expansion under `set -u` → use `case` statements
+
+## Security Guidelines
+
+- **Never hardcode IP addresses or secrets.** Derive targets from `.env.topology`; derive credentials from `.env` templates.
+- **Secrets never in Git.** Token files, `.env`, and credentials live outside the repo. `.gitignore` must cover them.
+- **Prompt before destructive actions.** Uninstall, wipe, or volume removal must warn the user and require confirmation.
+
+### System User & Service Isolation Pattern
+
+When writing install scripts that register persistent services (systemd units), follow the openclaw pattern — never run services as root:
+
+```bash
+# 1. Create dedicated system user (no login shell, no home dir)
+sudo useradd -r -s /usr/sbin/nologin -M <service>
+
+# 2. Own config/secret files as root:<service>, mode 640
+sudo chown root:<service> /etc/<service>/secret.token
+sudo chmod 640            /etc/<service>/secret.token
+
+# 3. Restrict config directory itself
+sudo chown root:<service> /etc/<service>/
+sudo chmod 750            /etc/<service>/
+
+# 4. Reference in systemd unit
+# [Service]
+# User=<service>
+# Group=<service>
+```
+
+Apply this pattern consistently:
+- Dedicated user per service (e.g., `openclaw`, `nexus`)
+- All secret files: `root:<service>` / `640`
+- Service directories: `root:<service>` / `750`
+- Runtime data dirs owned by the service user: `<service>:<service>` / `750`
