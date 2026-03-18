@@ -789,8 +789,7 @@ _is_loopable() {
     [[ "$1" == "verify" || "$1" == "update" || "$1" == "control" ]]
 }
 
-# Exit interactive mode before critical actions
-set -e
+# Execute the requested action
 _run_action "$EXEC_MODE" "$SSH_TARGET" "$ROLE_NAME" "$ACTION_NAME" "$ROLE_DIR"
 
 if _is_loopable "$ACTION_NAME"; then
