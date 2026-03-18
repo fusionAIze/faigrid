@@ -694,6 +694,7 @@ _run_action() {
         else
             TARGET_SCRIPT="${role_dir}/scripts/${action}.sh"
             if [ -f "$TARGET_SCRIPT" ]; then
+                echo ""
                 bash "$TARGET_SCRIPT" "$cmd_arg"
             else
                 warning "Script not found: ${TARGET_SCRIPT}. Action skipped."
@@ -711,6 +712,7 @@ _run_action() {
         rsync -az --exclude='.git' --exclude='node_modules' ./ "$ssh_target:/tmp/nexus-install/" > /dev/null
         scp "$TOPOLOGY_FILE" "${ssh_target}:/tmp/nexus-install/" > /dev/null
         info "Executing remote [${action}] payload..."
+        echo ""
         
         # Calculate relative path from REPO_ROOT to target script
         REL_ROLE_DIR="${role_dir#$REPO_ROOT/}"
