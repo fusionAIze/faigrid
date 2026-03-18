@@ -661,18 +661,20 @@ _run_action() {
         echo -e "    ${BOLD}3)${NC}  ${YELLOW}restart${NC}"
         echo -e "    ${BOLD}4)${NC}  status"
         echo -e "    ${BOLD}5)${NC}  reload"
+        if [[ "$role" == "core" ]]; then
+            echo -e "    ${BOLD}w)${NC}  ${MAGENTA}Workbench${NC}   ${DIM}AI Tooling (RTK, CLIs, Agents)${NC}"
+        fi
         echo ""
         echo -e "    ${BOLD}a)${NC}  Action selection  ${DIM}(Back to Step 4)${NC}"
-        echo -e "    ${BOLD}s)${NC}  Switch node       ${DIM}(Back to Step 2)${NC}"
-        echo -e "    ${BOLD}q)${NC}  Quit"
         echo ""
-        prompt "Select command (1-5 / a / s / q): " CONTROL_CHOICE
+        prompt "Select command (1-5 / w / a / s / q): " CONTROL_CHOICE
         case "$CONTROL_CHOICE" in
             1) cmd_arg="start" ;;
             2) cmd_arg="stop" ;;
             3) cmd_arg="restart" ;;
             4) cmd_arg="status" ;;
             5) cmd_arg="reload" ;;
+            [Ww]) if [[ "$role" == "core" ]]; then cmd_arg="workbench"; else warning "Workbench only available on core."; return 0; fi ;;
             [Aa]) return 0 ;;
             [Ss]) exec bash "$0" ;;
             [Qq]|"") exit 0 ;;
