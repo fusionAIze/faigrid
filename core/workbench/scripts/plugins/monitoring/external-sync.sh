@@ -6,18 +6,22 @@ TOOL_TYPE="script"
 
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)"
 
+tool_install() {
+    # external-sync has no automated install — it activates when a nexus-external node is registered
+    echo "[external-sync] No automated install. Add a nexus-external node via the orchestrator to activate." >&2
+}
+
 tool_status() {
     # Check if we have an external target in .env.topology
-    info "Syncing status to cloud..."
     local ext_target=""
     if [[ -f ".env.topology" ]]; then
         ext_target=$(grep "ROLE=external" .env.topology -B 5 | grep "SSH_TARGET" | cut -d'=' -f2 || echo "")
     fi
-    
+
     if [[ -n "$ext_target" ]]; then
         echo "Configured (${ext_target})"
     else
-        echo "Not configured"
+        echo "Not installed"
     fi
 }
 

@@ -13,9 +13,30 @@ fi
 COMPOSE_DIR="${STACK_DIR}/compose"
 ENV_FILE="${STACK_DIR}/.env"
 
-# Fallback for ENV_FILE if not in STACK_DIR
+# Fallback 1: compose files may live directly in STACK_DIR (no /compose subdir)
+if [[ ! -d "${COMPOSE_DIR}" ]]; then
+    if [[ -f "${STACK_DIR}/docker-compose.yml" ]] || [[ -f "${STACK_DIR}/compose.yml" ]]; then
+        COMPOSE_DIR="${STACK_DIR}"
+    fi
+fi
+
+# Fallback 2: discover active compose project path via docker compose ls
+if [[ ! -d "${COMPOSE_DIR}" ]] && command -v docker &>/dev/null; then
+    NEXUS_CONFIG="$(docker compose ls --format json 2>/dev/null \
+        | grep -o '"ConfigFiles":"[^"]*"' | head -1 \
+        | cut -d'"' -f4)"
+    if [[ -n "${NEXUS_CONFIG}" && -f "${NEXUS_CONFIG}" ]]; then
+        COMPOSE_DIR="$(dirname "${NEXUS_CONFIG}")"
+    fi
+fi
+
+# ENV_FILE: resolve relative to wherever compose was found
 if [[ ! -f "${ENV_FILE}" ]]; then
-    ENV_FILE="${COMPOSE_DIR}/.env.example"
+    if [[ -f "${COMPOSE_DIR}/.env" ]]; then
+        ENV_FILE="${COMPOSE_DIR}/.env"
+    elif [[ -f "${COMPOSE_DIR}/.env.example" ]]; then
+        ENV_FILE="${COMPOSE_DIR}/.env.example"
+    fi
 fi
 
 ACTION="${1:-}"

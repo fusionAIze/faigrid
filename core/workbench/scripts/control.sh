@@ -110,7 +110,7 @@ cmd_boost() {
         stat=$( (source "$p" >/dev/null 2>&1 && tool_status) || echo "Error" )
         if [[ "$stat" == *"Not installed"* ]]; then
           printf "  ${C_CYAN}▸${C_RESET} Installing $name...\n"
-          (source "$p" && tool_install) >/dev/null 2>&1 || warn "Failed to install $name"
+          (source "$p" && tool_install) >/dev/null || warn "Failed to install $name"
         else
           printf "  ${C_GREEN}✔${C_RESET} $name already installed.\n"
         fi
@@ -145,14 +145,14 @@ cmd_install() {
   # Build a plain indexed list (Bash 3.2 compatible — no associative arrays)
   local i=1
   local plugin_list=()
-  for p in $(get_plugins); do
+  while read -r p; do
     local cat name
     cat=$(get_plugin_meta "$p" "TOOL_CATEGORY")
     name=$(get_plugin_meta "$p" "TOOL_NAME")
     printf "  %2d) [%-10s] %s\n" "$i" "$cat" "$name"
     plugin_list+=("$p")
     i=$((i + 1))
-  done
+  done < <(get_plugins)
 
   echo ""
   read -r -p "Select a number to install (or enter to cancel): " choice
