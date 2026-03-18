@@ -5,10 +5,10 @@ TOOL_DESC="OpenAI Codex CLI interface"
 TOOL_TYPE="npm"
 
 tool_install() {
-    sudo npm install -g @openai/codex || echo "Please check npm configuration."
+    npm install -g openai-codex-cli
 }
 tool_update() {
-    sudo npm update -g @openai/codex
+    npm update -g openai-codex-cli
 }
 tool_status() {
     if command -v codex >/dev/null 2>&1; then
@@ -19,4 +19,4 @@ tool_status() {
         echo "Not installed"
     fi
 }
-tool_uninstall() { sudo npm uninstall -g @openai/codex; }
+tool_uninstall() { npm uninstall -g openai-codex-cli; }
