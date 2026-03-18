@@ -29,6 +29,17 @@ get_plugins() {
   find "${PLUGINS_DIR}" -mindepth 2 -type f -name "*.sh" ! -name "_template.sh" | sort
 }
 
+# Only plugins without TOOL_MANAGED="auto" — used in install / boost / update
+get_installable_plugins() {
+  while read -r p; do
+    local managed
+    managed=$(get_plugin_meta "$p" "TOOL_MANAGED")
+    if [[ "$managed" != "auto" ]]; then
+      echo "$p"
+    fi
+  done < <(get_plugins)
+}
+
 # Safe metadata read — never sources the plugin
 get_plugin_meta() {
   local plugin_file="$1"
@@ -104,7 +115,7 @@ cmd_install() {
     fi
     plugin_list+=("$p")
     i=$((i + 1))
-  done < <(get_plugins)
+  done < <(get_installable_plugins)
 
   local total=${#plugin_list[@]}
   echo ""
@@ -152,7 +163,7 @@ cmd_boost() {
     fi
     plugin_list+=("$p")
     i=$((i + 1))
-  done < <(get_plugins)
+  done < <(get_installable_plugins)
 
   local total=${#plugin_list[@]}
   echo ""
@@ -280,7 +291,7 @@ cmd_update() {
       printf "%b\n" "$update_label"
     fi
     i=$((i + 1))
-  done < <(get_plugins)
+  done < <(get_installable_plugins)
 
   local total=${#plugin_list[@]}
 
