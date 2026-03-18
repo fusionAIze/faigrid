@@ -18,6 +18,13 @@ if [[ -d "${CORE_DIR}/openclaw" ]]; then
     bash "${CORE_DIR}/openclaw/scripts/verify.sh"
 fi
 
+# Workbench summary
+if [[ -d "${CORE_DIR}/workbench" ]]; then
+    echo ""
+    echo -n "── nexus-core / Workbench : "
+    bash "${CORE_DIR}/workbench/scripts/control.sh" summary 2>/dev/null || echo "not accessible"
+fi
+
 echo ""
 echo "── nexus-core / System ──"
 echo -n "  Disk    : "

@@ -43,6 +43,61 @@ cmd_status() {
   echo ""
 }
 
+cmd_summary() {
+  local total=0
+  local installed=0
+  while read -r p; do
+    total=$((total + 1))
+    local stat
+    stat=$( (source "$p" >/dev/null 2>&1 && tool_status) || echo "Error" )
+    if [[ "$stat" != *"Not installed"* && "$stat" != "Error" ]]; then
+      installed=$((installed + 1))
+    fi
+  done < <(get_plugins)
+  echo "${installed}/${total} tools installed"
+}
+
+cmd_boost() {
+  print_header "Boost Workbench — Bulk Installation"
+  echo "Select a category to install all its tools:"
+  echo "  1) CLIs          (antigravity, gemini, etc.)"
+  echo "  2) Routers       (foundrygate, openrouter, etc.)"
+  echo "  3) Agents        (openclaw, paperclip, etc.)"
+  echo "  4) Wrappers      (rtk, etc.)"
+  echo "  5) EVERYTHING    (The full palette)"
+  echo ""
+  read -r -p "Boost Choice (1-5 / c to cancel): " boost_opt
+  
+  local target_cat=""
+  case "$boost_opt" in
+    1) target_cat="clis" ;;
+    2) target_cat="routers" ;;
+    3) target_cat="agents" ;;
+    4) target_cat="wrappers" ;;
+    5) target_cat="all" ;;
+    *) return ;;
+  esac
+
+  info "Boosting $target_cat..."
+  while read -r p; do
+    local category name
+    category=$(get_plugin_meta "$p" "TOOL_CATEGORY")
+    name=$(get_plugin_meta "$p" "TOOL_NAME")
+    
+    if [[ "$target_cat" == "all" || "$category" == "$target_cat" ]]; then
+      local stat
+      stat=$( (source "$p" >/dev/null 2>&1 && tool_status) || echo "Error" )
+      if [[ "$stat" == *"Not installed"* ]]; then
+        info "Installing $name..."
+        (source "$p" && tool_install) || warn "Failed to install $name"
+      else
+        info "$name is already installed. Skipping."
+      fi
+    fi
+  done < <(get_plugins)
+  success "Boost complete."
+}
+
 cmd_update_all() {
   print_header "Updating All Installed Tools"
   while read -r p; do
@@ -98,6 +153,7 @@ show_menu() {
     echo "1. View Status / Registry"
     echo "2. Install a Tool"
     echo "3. Update All Installed Tools"
+    echo "4. Boost Workbench (Bulk Install)"
     echo "0. Exit"
     echo ""
     read -r -p "Choice: " opt
@@ -107,6 +163,7 @@ show_menu() {
       1) cmd_status ;;
       2) cmd_install ;;
       3) cmd_update_all ;;
+      4) cmd_boost ;;
       0|q|quit) exit 0 ;;
       *) warn "Unknown option" ;;
     esac
@@ -119,8 +176,10 @@ if [[ $# -eq 0 ]]; then
 else
   case "$1" in
     status)    cmd_status ;;
+    summary)   cmd_summary ;;
     update-all) cmd_update_all ;;
     install)   cmd_install ;;
+    boost)     cmd_boost ;;
     *) die "Unknown command: $1" ;;
   esac
 fi
