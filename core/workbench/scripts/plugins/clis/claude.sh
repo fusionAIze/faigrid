@@ -5,10 +5,10 @@ TOOL_DESC="Anthropic Claude CLI agent"
 TOOL_TYPE="npm"
 
 tool_install() {
-    npm install -g @anthropic-ai/claude-cli || echo "Please check npm configuration."
+    sudo npm install -g @anthropic-ai/claude-code || echo "Please check npm configuration."
 }
 tool_update() {
-    npm update -g @anthropic-ai/claude-cli
+    sudo npm update -g @anthropic-ai/claude-code
 }
 tool_status() {
     if command -v claude >/dev/null 2>&1; then
@@ -19,4 +19,4 @@ tool_status() {
         echo "Not installed"
     fi
 }
-tool_uninstall() { npm uninstall -g @anthropic-ai/claude-cli; }
+tool_uninstall() { sudo npm uninstall -g @anthropic-ai/claude-code; }

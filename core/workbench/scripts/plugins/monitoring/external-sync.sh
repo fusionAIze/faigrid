@@ -3,7 +3,6 @@ TOOL_NAME="external-sync"
 TOOL_CATEGORY="monitoring"
 TOOL_DESC="Cloud-to-Core Sync Monitoring (Nexus External)"
 TOOL_TYPE="script"
-TOOL_MANAGED="auto"   # activated by orchestrator, not manually installable
 
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)"
 
