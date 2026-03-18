@@ -10,6 +10,7 @@ export C_BLUE='\033[0;34m'
 export C_MAGENTA='\033[0;35m'
 export C_CYAN='\033[0;36m'
 export C_BOLD='\033[1m'
+export C_DIM='\033[2m'
 
 # Logging
 info() { printf "%b[INFO]%b %s\n" "${C_CYAN}" "${C_RESET}" "$*"; }
@@ -17,6 +18,17 @@ success() { printf "%b[SUCCESS]%b %s\n" "${C_GREEN}" "${C_RESET}" "$*"; }
 warn() { printf "%b[WARN]%b %s\n" "${C_YELLOW}" "${C_RESET}" "$*"; }
 error() { printf "%b[ERROR]%b %s\n" "${C_RED}" "${C_RESET}" "$*" >&2; }
 die() { error "$@"; exit 1; }
+
+# OS / package manager detection
+# Prints: apt | dnf | yum | brew | unknown
+detect_pkg_manager() {
+  if   command -v apt-get >/dev/null 2>&1; then echo "apt"
+  elif command -v dnf     >/dev/null 2>&1; then echo "dnf"
+  elif command -v yum     >/dev/null 2>&1; then echo "yum"
+  elif command -v brew    >/dev/null 2>&1; then echo "brew"
+  else                                          echo "unknown"
+  fi
+}
 
 # UI Helpers
 print_header() {
