@@ -3,6 +3,7 @@ TOOL_NAME="ship-faster"
 TOOL_CATEGORY="agents"
 TOOL_DESC="Ship-faster workflow tool"
 TOOL_TYPE="git"
+FAIGATE_CLIENT="ship-faster"
 
 INSTALL_DIR="/opt/fusionaize-nexus/shipfaster"
 

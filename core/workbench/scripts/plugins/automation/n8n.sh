@@ -3,6 +3,7 @@ TOOL_NAME="n8n"
 TOOL_CATEGORY="automation"
 TOOL_DESC="n8n Workflow Automation (Core Compose)"
 TOOL_TYPE="docker"
+FAIGATE_CLIENT="n8n"
 
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)"
 

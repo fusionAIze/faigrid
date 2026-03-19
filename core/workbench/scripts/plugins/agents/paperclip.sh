@@ -3,6 +3,7 @@ TOOL_NAME="paperclip"
 TOOL_CATEGORY="agents"
 TOOL_DESC="Paperclip AI Agent"
 TOOL_TYPE="git"
+FAIGATE_CLIENT="paperclip"
 
 INSTALL_DIR="/opt/fusionaize-nexus/paperclip"
 

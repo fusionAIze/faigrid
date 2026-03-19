@@ -134,8 +134,8 @@ tool_configure() {
     _oc_key "DISCORD_BOT_TOKEN"
     echo ""
 
-    # ── FoundryGate provider (openclaw.json) ─────────────────────────────────
-    info "── FoundryGate Provider (openclaw.json)"
+    # ── fusionAIze Gate provider (openclaw.json) ──────────────────────────────
+    info "── fusionAIze Gate Provider (openclaw.json)"
 
     local oc_json="/var/lib/openclaw/.openclaw-prod/openclaw.json"
 
@@ -145,41 +145,46 @@ tool_configure() {
 import json, sys
 try:
     cfg = json.load(open('${oc_json}'))
-    fg  = cfg.get('models',{}).get('providers',{}).get('foundrygate',{})
-    has_cg = 'yes' if 'clawgate' in cfg.get('models',{}).get('providers',{}) else 'no'
+    providers = cfg.get('models',{}).get('providers',{})
+    fg = providers.get('faigate', providers.get('foundrygate', {}))
+    has_legacy = 'yes' if ('foundrygate' in providers or 'clawgate' in providers) else 'no'
     primary = cfg.get('agents',{}).get('defaults',{}).get('model',{}).get('primary','')
-    print(fg.get('baseUrl','') + '|' + fg.get('apiKey','') + '|' + primary + '|' + has_cg)
-except Exception as e:
+    print(fg.get('baseUrl','') + '|' + fg.get('apiKey','') + '|' + primary + '|' + has_legacy)
+except Exception:
     print('|||no')
 " 2>/dev/null || echo "|||no")
 
-    local cur_fg_url cur_fg_key cur_primary has_clawgate
+    local cur_fg_url cur_fg_key cur_primary has_legacy
     cur_fg_url=$(  echo "$cur_state" | cut -d'|' -f1)
     cur_fg_key=$(  echo "$cur_state" | cut -d'|' -f2)
     cur_primary=$( echo "$cur_state" | cut -d'|' -f3)
-    has_clawgate=$(echo "$cur_state" | cut -d'|' -f4)
+    has_legacy=$(  echo "$cur_state" | cut -d'|' -f4)
 
     if [[ -n "$cur_fg_url" ]]; then
         info "  Current: baseUrl=${cur_fg_url}  apiKey=${cur_fg_key}"
     else
-        info "  foundrygate: not yet configured"
+        info "  faigate: not yet configured"
     fi
 
-    # Auto-detect port from FoundryGate .env if installed
+    # Auto-detect port from faigate .env if installed
     local fg_port="8090"
-    local fg_env="/opt/fusionaize-nexus/foundrygate/.env"
-    if [[ -f "$fg_env" ]]; then
-        local detected_port
-        detected_port=$(sudo grep "^FOUNDRYGATE_PORT=" "$fg_env" 2>/dev/null \
-            | cut -d'=' -f2 | tr -d '"' || echo "")
-        [[ -n "$detected_port" ]] && fg_port="$detected_port"
-    fi
+    for _fg_env in \
+        "/opt/fusionaize-nexus/faigate/.env" \
+        "/opt/fusionaize-nexus/foundrygate/.env"; do
+        if sudo test -f "$_fg_env" 2>/dev/null; then
+            local detected_port
+            detected_port=$(sudo grep -E "^FAIGATE_PORT=|^FOUNDRYGATE_PORT=" "$_fg_env" 2>/dev/null \
+                | head -1 | cut -d'=' -f2 | tr -d '"' || echo "")
+            [[ -n "$detected_port" ]] && fg_port="$detected_port"
+            break
+        fi
+    done
 
     # Derive current port from existing URL for display
     local cur_port
     cur_port=$(echo "$cur_fg_url" | grep -oE ':[0-9]+' | tr -d ':' | head -1 || echo "")
 
-    printf "  FoundryGate port        [%s]: " "${cur_port:-$fg_port}"
+    printf "  fusionAIze Gate port    [%s]: " "${cur_port:-$fg_port}"
     read -r input_port
     if [[ -n "$input_port" ]]; then
         fg_port="$input_port"
@@ -187,22 +192,22 @@ except Exception as e:
         fg_port="$cur_port"
     fi
 
-    printf "  FoundryGate apiKey      [%s]: " "${cur_fg_key:-local}"
+    printf "  apiKey                  [%s]: " "${cur_fg_key:-local}"
     read -r fg_token
     [[ -z "$fg_token" ]] && fg_token="${cur_fg_key:-local}"
 
-    printf "  Set foundrygate/auto as primary? current=[%s] (y/N): " \
+    printf "  Set faigate/auto as primary? current=[%s] (y/N): " \
         "${cur_primary:-(not set)}"
     read -r set_primary
     local fg_set_default="no"
     [[ "${set_primary:-N}" =~ ^[Yy]$ ]] && fg_set_default="yes"
 
-    # Offer to remove legacy clawgate entry if present
-    local remove_clawgate="no"
-    if [[ "$has_clawgate" == "yes" ]]; then
-        printf "  Remove legacy 'clawgate' provider entry? (y/N): "
-        read -r rm_cg
-        [[ "${rm_cg:-N}" =~ ^[Yy]$ ]] && remove_clawgate="yes"
+    # Offer to remove legacy foundrygate / clawgate entries if present
+    local remove_legacy="no"
+    if [[ "$has_legacy" == "yes" ]]; then
+        printf "  Remove legacy 'foundrygate'/'clawgate' provider entries? (y/N): "
+        read -r rm_lg
+        [[ "${rm_lg:-N}" =~ ^[Yy]$ ]] && remove_legacy="yes"
     fi
 
     # Patch openclaw.json via python3.
@@ -215,44 +220,46 @@ import json
 with open("${oc_json}") as f:
     cfg = json.load(f)
 
-# Write foundrygate provider block with all FoundryGate provider IDs
-cfg.setdefault("models", {}).setdefault("providers", {})["foundrygate"] = {
+# Write faigate provider block with all fusionAIze Gate model IDs
+cfg.setdefault("models", {}).setdefault("providers", {})["faigate"] = {
     "baseUrl": "http://127.0.0.1:${fg_port}/v1",
     "apiKey":  "${fg_token}",
     "auth":    "api-key",
     "api":     "openai-completions",
     "models": [
-        {"id": "auto",                "name": "FoundryGate Auto-Router",              "contextWindow": 128000,  "maxTokens": 8000},
-        {"id": "deepseek-chat",       "name": "DeepSeek Chat (via FoundryGate)",      "contextWindow": 128000,  "maxTokens": 8000},
-        {"id": "deepseek-reasoner",   "name": "DeepSeek Reasoner (via FoundryGate)",  "contextWindow": 128000,  "maxTokens": 8000},
-        {"id": "gemini-flash-lite",   "name": "Gemini Flash-Lite (via FoundryGate)",  "contextWindow": 1000000, "maxTokens": 8000},
-        {"id": "gemini-flash",        "name": "Gemini Flash (via FoundryGate)",       "contextWindow": 1000000, "maxTokens": 8000},
-        {"id": "local-worker",        "name": "Local Worker (via FoundryGate)",       "contextWindow": 128000,  "maxTokens": 8000},
-        {"id": "image-worker",        "name": "Image Provider (via FoundryGate)",     "contextWindow": 128000,  "maxTokens": 8000},
-        {"id": "openrouter-fallback", "name": "OpenRouter Fallback (via FoundryGate)","contextWindow": 128000,  "maxTokens": 8000},
+        {"id": "auto",                "name": "faigate Auto-Router",              "contextWindow": 200000,  "maxTokens": 8000},
+        {"id": "deepseek-chat",       "name": "DeepSeek Chat (via faigate)",      "contextWindow": 128000,  "maxTokens": 8000},
+        {"id": "deepseek-reasoner",   "name": "DeepSeek Reasoner (via faigate)",  "contextWindow": 128000,  "maxTokens": 8000},
+        {"id": "gemini-flash-lite",   "name": "Gemini Flash-Lite (via faigate)",  "contextWindow": 1000000, "maxTokens": 8000},
+        {"id": "gemini-flash",        "name": "Gemini Flash (via faigate)",       "contextWindow": 1000000, "maxTokens": 8000},
+        {"id": "local-worker",        "name": "Local Worker (via faigate)",       "contextWindow": 128000,  "maxTokens": 8000},
+        {"id": "image-provider",      "name": "Image Provider (via faigate)",     "contextWindow": 128000,  "maxTokens": 8000},
+        {"id": "openrouter-fallback", "name": "OpenRouter Fallback (via faigate)","contextWindow": 128000,  "maxTokens": 8000},
     ]
 }
 
 if "${fg_set_default}" == "yes":
     ad = cfg.setdefault("agents", {}).setdefault("defaults", {})
-    ad.setdefault("model",      {})["primary"] = "foundrygate/auto"
-    ad.setdefault("imageModel", {})["primary"] = "foundrygate/auto"
+    ad.setdefault("model",      {})["primary"] = "faigate/auto"
+    ad.setdefault("imageModel", {})["primary"] = "faigate/auto"
     ad["models"] = {
-        "foundrygate/auto":                {"alias": "auto"},
-        "foundrygate/deepseek-chat":       {"alias": "ds"},
-        "foundrygate/deepseek-reasoner":   {"alias": "r1"},
-        "foundrygate/gemini-flash-lite":   {"alias": "lite"},
-        "foundrygate/gemini-flash":        {"alias": "flash"},
-        "foundrygate/local-worker":        {"alias": "local"},
-        "foundrygate/image-worker":        {"alias": "img"},
-        "foundrygate/openrouter-fallback": {"alias": "or"},
+        "faigate/auto":                {"alias": "auto"},
+        "faigate/deepseek-chat":       {"alias": "ds"},
+        "faigate/deepseek-reasoner":   {"alias": "r1"},
+        "faigate/gemini-flash-lite":   {"alias": "lite"},
+        "faigate/gemini-flash":        {"alias": "flash"},
+        "faigate/local-worker":        {"alias": "local"},
+        "faigate/image-provider":      {"alias": "img"},
+        "faigate/openrouter-fallback": {"alias": "or"},
     }
-    ad.setdefault("subagents", {})["model"] = "foundrygate/auto"
+    ad.setdefault("subagents", {})["model"] = "faigate/auto"
     if "heartbeat" in ad:
-        ad["heartbeat"]["model"] = "foundrygate/gemini-flash-lite"
+        ad["heartbeat"]["model"] = "faigate/gemini-flash-lite"
 
-if "${remove_clawgate}" == "yes":
-    cfg.get("models", {}).get("providers", {}).pop("clawgate", None)
+if "${remove_legacy}" == "yes":
+    providers = cfg.get("models", {}).get("providers", {})
+    providers.pop("foundrygate", None)
+    providers.pop("clawgate", None)
 
 with open("${oc_json}", "w") as f:
     json.dump(cfg, f, indent=2)
@@ -261,12 +268,34 @@ print("OK")
 PYEOF
 
     if sudo python3 "$tmppy"; then
-        success "foundrygate provider written to ${oc_json}"
-        [[ "$remove_clawgate" == "yes" ]] && info "  legacy clawgate entry removed"
+        success "faigate provider written to ${oc_json}"
+        [[ "$remove_legacy" == "yes" ]] && info "  legacy foundrygate/clawgate entries removed"
     else
         warn "Failed to patch ${oc_json}"
     fi
     rm -f "$tmppy"
+    echo ""
+
+    # ── faigate OpenClaw Skill ─────────────────────────────────────────────────
+    info "── faigate Skill for OpenClaw"
+    local faigate_dir="/opt/fusionaize-nexus/faigate"
+    local skill_src="${faigate_dir}/skills/faigate/SKILL.md"
+    local skills_dir="/var/lib/openclaw/.openclaw-prod/skills"
+
+    if ! sudo test -f "$skill_src" 2>/dev/null; then
+        info "  faigate skill not found (${skill_src}) — install faigate first."
+    else
+        printf "  Install /faigate skill from fusionAIze Gate repo? (y/N): "
+        read -r install_skill
+        if [[ "${install_skill:-N}" =~ ^[Yy]$ ]]; then
+            sudo mkdir -p "$skills_dir"
+            sudo mkdir -p "${skills_dir}/faigate"
+            sudo cp "$skill_src" "${skills_dir}/faigate/SKILL.md"
+            sudo chown -R openclaw:openclaw "$skills_dir" 2>/dev/null || true
+            success "Skill installed → ${skills_dir}/faigate/SKILL.md"
+            info "  Available commands: /faigate stats | health | daily | route | traces | recent"
+        fi
+    fi
     echo ""
 
     # Model probe — runs as the openclaw system user to load providers.env correctly

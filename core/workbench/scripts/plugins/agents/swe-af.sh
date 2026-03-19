@@ -3,6 +3,7 @@ TOOL_NAME="swe-af"
 TOOL_CATEGORY="agents"
 TOOL_DESC="Agent-Field SWE-AF"
 TOOL_TYPE="git"
+FAIGATE_CLIENT="swe-af"
 
 INSTALL_DIR="/opt/fusionaize-nexus/swe-af"
 
