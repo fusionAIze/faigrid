@@ -621,6 +621,159 @@ cmd_uninstall() {
   fi
 }
 
+# ── Service Control ────────────────────────────────────────────────────────────
+
+# Determine if a service is Running or Stopped.
+_ctrl_service_status() {
+  local tool_type="$1" service="$2"
+  case "$tool_type" in
+    systemd)
+      systemctl is-active --quiet "${service}.service" 2>/dev/null \
+        && echo "Running" || echo "Stopped"
+      ;;
+    docker)
+      docker ps --format '{{.Names}}' 2>/dev/null | grep -q "^${service}$" \
+        && echo "Running" || echo "Stopped"
+      ;;
+    *)
+      # git-type tools (e.g. faigate): systemd-first, docker-fallback
+      if systemctl is-active --quiet "${service}.service" 2>/dev/null; then
+        echo "Running"
+      elif docker ps --format '{{.Names}}' 2>/dev/null | grep -q "^${service}"; then
+        echo "Running"
+      else
+        echo "Stopped"
+      fi
+      ;;
+  esac
+}
+
+# Execute start/stop/restart/logs for a service.
+_ctrl_action() {
+  local action="$1" tool_type="$2" service="$3"
+  case "$tool_type" in
+    systemd) _ctrl_systemd "$action" "$service" ;;
+    docker)  _ctrl_docker  "$action" "$service" ;;
+    *)
+      # git-type: prefer systemd if the unit exists
+      if systemctl list-units --full --all 2>/dev/null \
+           | grep -q "${service}.service"; then
+        _ctrl_systemd "$action" "$service"
+      else
+        _ctrl_docker "$action" "$service"
+      fi ;;
+  esac
+}
+
+_ctrl_systemd() {
+  local action="$1" service="$2"
+  case "$action" in
+    start)   sudo systemctl start   "${service}.service" \
+               && success "${service} started."   ;;
+    stop)    sudo systemctl stop    "${service}.service" \
+               && success "${service} stopped."   ;;
+    restart) sudo systemctl restart "${service}.service" \
+               && success "${service} restarted." ;;
+    logs)    sudo journalctl -u "${service}.service" -n 50 --no-pager ;;
+  esac
+}
+
+_ctrl_docker() {
+  local action="$1" service="$2"
+  case "$action" in
+    start)   docker start   "$service" && success "${service} started."   ;;
+    stop)    docker stop    "$service" && success "${service} stopped."   ;;
+    restart) docker restart "$service" && success "${service} restarted." ;;
+    logs)    docker logs --tail 50 "$service" ;;
+  esac
+}
+
+cmd_control() {
+  wb_header "Service Control"
+  printf "  ${C_DIM}Start, stop, restart or tail logs for installed services.${C_RESET}\n\n"
+
+  local plugin_list=()
+  local i=1
+
+  printf "  %-4s  %-12s  %-16s  %-8s  %s\n" "No." "CATEGORY" "TOOL" "TYPE" "STATUS"
+  printf "  %s\n" "──────────────────────────────────────────────────────────────"
+
+  while read -r p; do
+    local cat name tool_type tool_service inst_stat svc_stat
+    cat=$(get_plugin_meta  "$p" "TOOL_CATEGORY")
+    name=$(get_plugin_meta "$p" "TOOL_NAME")
+    tool_type=$(get_plugin_meta "$p" "TOOL_TYPE")
+    tool_service=$(get_plugin_meta "$p" "TOOL_SERVICE")
+    [[ -z "$tool_service" ]] && tool_service="$name"
+
+    # Only services we can actually control
+    [[ "$tool_type" != "systemd" && "$tool_type" != "docker" \
+       && "$tool_type" != "git" ]] && continue
+
+    # Only installed tools
+    inst_stat=$( (source "$p" >/dev/null 2>&1 && tool_status) 2>/dev/null || echo "" )
+    [[ "$inst_stat" == *"Not installed"* || -z "$inst_stat" ]] && continue
+
+    svc_stat=$(_ctrl_service_status "$tool_type" "$tool_service")
+
+    local color="$C_RED"
+    [[ "$svc_stat" == "Running" ]] && color="$C_GREEN"
+
+    printf "  ${C_BOLD}%3d)${C_RESET}  %-12s  %-16s  %-8s  ${color}%s${C_RESET}\n" \
+      "$i" "$cat" "$name" "$tool_type" "$svc_stat"
+    plugin_list+=("$p")
+    i=$((i + 1))
+  done < <(get_plugins)
+
+  if [[ ${#plugin_list[@]} -eq 0 ]]; then
+    echo ""; warn "No controllable services found."; return
+  fi
+
+  local total=${#plugin_list[@]}
+  echo ""
+  read -r -p "  ▸ Select service (c = cancel  q = quit): " choice
+  case "$choice" in
+    q|Q) _quit ;;
+    c|C|"") info "Cancelled."; return ;;
+  esac
+
+  if ! [[ "$choice" -ge 1 && "$choice" -le "$total" ]] 2>/dev/null; then
+    error "Invalid selection."; return
+  fi
+
+  local p="${plugin_list[$((choice - 1))]}"
+  local name tool_type tool_service
+  name=$(get_plugin_meta        "$p" "TOOL_NAME")
+  tool_type=$(get_plugin_meta   "$p" "TOOL_TYPE")
+  tool_service=$(get_plugin_meta "$p" "TOOL_SERVICE")
+  [[ -z "$tool_service" ]] && tool_service="$name"
+
+  local cur_stat color
+  cur_stat=$(_ctrl_service_status "$tool_type" "$tool_service")
+  color="$C_RED"; [[ "$cur_stat" == "Running" ]] && color="$C_GREEN"
+
+  echo ""
+  printf "  ${C_BOLD}%s${C_RESET}  ${C_DIM}(%s)${C_RESET}  Status: ${color}%s${C_RESET}\n\n" \
+    "$name" "$tool_service" "$cur_stat"
+  printf "    ${C_BOLD}1)${C_RESET}  Start\n"
+  printf "    ${C_BOLD}2)${C_RESET}  Stop\n"
+  printf "    ${C_BOLD}3)${C_RESET}  Restart\n"
+  printf "    ${C_BOLD}4)${C_RESET}  Logs     ${C_DIM}last 50 lines${C_RESET}\n"
+  echo ""
+  read -r -p "  ▸ Action (c = cancel): " action
+  echo ""
+
+  case "$action" in
+    q|Q)    _quit ;;
+    c|C|"") info "Cancelled."; return ;;
+    1) _ctrl_action "start"   "$tool_type" "$tool_service" ;;
+    2) _ctrl_action "stop"    "$tool_type" "$tool_service" ;;
+    3) _ctrl_action "restart" "$tool_type" "$tool_service" ;;
+    4) _ctrl_action "logs"    "$tool_type" "$tool_service" ;;
+    *) error "Invalid action." ;;
+  esac
+}
+
 # ── Main menu ──────────────────────────────────────────────────────────────────
 
 show_menu() {
@@ -636,6 +789,7 @@ show_menu() {
     printf "    ${C_BOLD}4)${C_RESET}  ${C_CYAN}Boost${C_RESET}        ${C_DIM}Bulk install — pick tools across all categories${C_RESET}\n"
     printf "    ${C_BOLD}5)${C_RESET}  ${C_MAGENTA}Configure${C_RESET}    ${C_DIM}Set API keys and tool settings${C_RESET}\n"
     printf "    ${C_BOLD}6)${C_RESET}  ${C_RED}Uninstall${C_RESET}    ${C_DIM}Remove an installed tool${C_RESET}\n"
+    printf "    ${C_BOLD}7)${C_RESET}  ${C_CYAN}Control${C_RESET}      ${C_DIM}Start, stop, restart or tail logs for a service${C_RESET}\n"
     echo ""
     printf "    ${C_BOLD}q)${C_RESET}  Quit\n"
     echo ""
@@ -648,8 +802,9 @@ show_menu() {
       4) cmd_boost ;;
       5) cmd_configure ;;
       6) cmd_uninstall ;;
+      7) cmd_control ;;
       0|[qQ]|quit|exit) _quit ;;
-      *) warn "Invalid option — enter 1-6 or q." ;;
+      *) warn "Invalid option — enter 1-7 or q." ;;
     esac
   done
 }
@@ -667,6 +822,7 @@ else
     boost)      cmd_boost ;;
     configure)  cmd_configure ;;
     uninstall)  cmd_uninstall ;;
+    control)    cmd_control ;;
     *) die "Unknown command: $1" ;;
   esac
 fi

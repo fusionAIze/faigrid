@@ -3,6 +3,7 @@ TOOL_NAME="openclaw"
 TOOL_CATEGORY="agents"
 TOOL_DESC="Host-native OpenClaw orchestrator"
 TOOL_TYPE="systemd"
+TOOL_SERVICE="openclaw"
 
 # Resolve path to the native server scripts sitting next to us in the repo.
 # Works whether the repo is at its normal location or rsync'd to /tmp/nexus-install/.

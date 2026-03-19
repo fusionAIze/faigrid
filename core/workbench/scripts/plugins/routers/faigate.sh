@@ -3,6 +3,7 @@ TOOL_NAME="faigate"
 TOOL_CATEGORY="routers"
 TOOL_DESC="fusionAIze Gate — Multi-client AI Routing Gateway"
 TOOL_TYPE="git"
+TOOL_SERVICE="faigate"
 
 INSTALL_DIR="/opt/fusionaize-nexus/faigate"
 FAIGATE_PORT="${FAIGATE_PORT:-8090}"
