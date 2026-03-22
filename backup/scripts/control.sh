@@ -5,7 +5,7 @@ ACTION="${1:-}"
 
 case "$ACTION" in
   start|stop|restart|status)
-    echo "[nexus-backup] Managing backup timers..."
+    echo "[grid-backup] Managing backup timers..."
     if systemctl list-unit-files | grep -q "restic-backup.timer"; then
         sudo systemctl "$ACTION" restic-backup.timer
     else

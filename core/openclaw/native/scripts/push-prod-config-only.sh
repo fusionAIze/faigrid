@@ -4,7 +4,7 @@ DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=_remote_diff.sh
 source "$DIR/_remote_diff.sh"
 
-HOST_ALIAS="${HOST_ALIAS:-nexus-core}"
+HOST_ALIAS="${HOST_ALIAS:-grid-core}"
 APPLY="false"
 RESTART="false"
 VERIFY="true"
@@ -20,8 +20,8 @@ while [ $# -gt 0 ]; do
     -h|--help)
       cat <<USAGE
 Usage:
-  HOST_ALIAS=nexus-core $0
-  HOST_ALIAS=nexus-core $0 --apply --restart
+  HOST_ALIAS=grid-core $0
+  HOST_ALIAS=grid-core $0 --apply --restart
 Options:
   --apply         actually write to server
   --restart       restart openclaw after apply

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Shared utilities for nexus-core heart scripts.
+# Shared utilities for grid-core heart scripts.
 # Source this file; do NOT execute it directly.
 
 # ── Output helpers ─────────────────────────────────────────────────────────────

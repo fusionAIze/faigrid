@@ -1,6 +1,6 @@
 # Step 02 — Core (Base setup)
 
-Target: `nexus-core` (Debian stable, LAN node).
+Target: `grid-core` (Debian stable, LAN node).
 
 This step covers:
 - hostname + static IP (recommended via router reservation)
@@ -12,14 +12,14 @@ This step covers:
 
 ## 0) Assumptions
 - LAN: `192.168.178.0/24`
-- Core: `nexus-core` at `192.168.178.20` (example)
+- Core: `grid-core` at `192.168.178.20` (example)
 - Users:
   - `nexus` (admin/bootstrap, sudo)
   - `nexus-ops` (daily operator, sudo, NOT docker)
 
 ## 1) Hostname + IP
 Set hostname on Debian:
-- `sudo hostnamectl set-hostname nexus-core`
+- `sudo hostnamectl set-hostname grid-core`
 
 Prefer router DHCP reservation for stable IP.
 If you must configure a static IP on Debian, document the chosen method (NetworkManager/systemd-networkd).
@@ -50,7 +50,7 @@ Validate:
 ## 4) SSH hardening (key-only)
 Copy the repo to the core (or clone it):
 - `git clone <your-fork-url>`
-- `cd fusionaize-nexus-labs/core/base`
+- `cd faigrid/core/base`
 
 Apply hardening:
 - `./scripts/ssh-hardening-apply.sh`

@@ -1,6 +1,6 @@
-# Step 09 — nexus-external (Public Cloud) Deployment
+# Step 09 — grid-external (Public Cloud) Deployment
 
-This runbook describes how to set up the **nexus-external** role on a public VPS (e.g., Hetzner, DigitalOcean) to host exposed instances of n8n and Plane.so.
+This runbook describes how to set up the **grid-external** role on a public VPS (e.g., Hetzner, DigitalOcean) to host exposed instances of n8n and Plane.so.
 
 ## Goal State
 - Exposed n8n (https://n8n.your-agency.com)

@@ -7,7 +7,7 @@ setup() {
     export REPO_ROOT="${BATS_TEST_DIRNAME}/../.."
     export CORE_ROOT="${REPO_ROOT}/core"
     
-    # Isolate HOME to protect real `~/.config/nexus/nexus.env`
+    # Isolate HOME to protect real `~/.config/faigrid/grid.env`
     export HOME="${BATS_TEST_TMPDIR}/home"
     mkdir -p "$HOME"
 }
@@ -19,7 +19,7 @@ setup() {
     [ ! -f "$_NEXUS_ENV_FILE" ]
     
     # Write key
-    nexus_write_env "TEST_API_KEY" "sk-abc-12345"
+    grid_write_env "TEST_API_KEY" "sk-abc-12345"
     
     # File should now exist with correct permissions
     [ -f "$_NEXUS_ENV_FILE" ]
@@ -29,12 +29,12 @@ setup() {
     
     # Read key
     local result
-    result=$(nexus_read_env "TEST_API_KEY")
+    result=$(grid_read_env "TEST_API_KEY")
     [ "$result" == "sk-abc-12345" ]
     
     # Update key
-    nexus_write_env "TEST_API_KEY" "sk-xyz-99999"
-    result=$(nexus_read_env "TEST_API_KEY")
+    grid_write_env "TEST_API_KEY" "sk-xyz-99999"
+    result=$(grid_read_env "TEST_API_KEY")
     [ "$result" == "sk-xyz-99999" ]
 }
 
@@ -44,10 +44,12 @@ setup() {
     # Create empty mock bashrc
     touch "${HOME}/.bashrc"
     
-    nexus_ensure_sourced
-    nexus_ensure_sourced
+    grid_ensure_sourced
+    grid_ensure_sourced
     
     local count
-    count=$(grep -c "nexus/nexus.env" "${HOME}/.bashrc" || echo 0)
+    count=$(grep -c "faigrid/grid.env" "${HOME}/.bashrc" || true)
+    # If grep -c returns nothing, fallback to 0 safely
+    if [[ -z "$count" ]]; then count=0; fi
     [ "$count" -eq 1 ] # 1 matching line containing the path twice
 }

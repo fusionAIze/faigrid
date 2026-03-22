@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# fusionAIze Nexus Labs - AI-Native Deployment Wrapper
+# fusionAIze Grid - AI-Native Deployment Wrapper
 # ==============================================================================
 # This script is designed to be executed by autonomous AI agents (Codex, Claude,
 # Gemini) to orchestrate deployments across the 5-node architecture headlessly.

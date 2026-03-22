@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-echo "[nexus-worker] Updating worker components..."
+echo "[grid-worker] Updating worker components..."
 
 if [[ "$(uname -s)" == "Darwin" ]]; then
     if command -v brew &> /dev/null; then
@@ -11,4 +11,4 @@ else
     curl -fsSL https://ollama.com/install.sh | sh
 fi
 
-echo "[nexus-worker] Update complete."
+echo "[grid-worker] Update complete."

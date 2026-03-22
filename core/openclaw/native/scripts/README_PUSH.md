@@ -7,7 +7,7 @@ They only apply changes when you pass `--apply`.
 Both scripts require `sudo -n` on the server to avoid hanging.
 If `sudo -n` is not available, run once:
 
-  ssh -tt nexus-core 'sudo -v'
+  ssh -tt grid-core 'sudo -v'
 
 Then re-run the script.
 
@@ -15,20 +15,20 @@ Then re-run the script.
 
 ### 1) Config-only
 Dry-run (diff only):
-  HOST_ALIAS=nexus-core core/openclaw/native/scripts/push-prod-config-only.sh
+  HOST_ALIAS=grid-core core/openclaw/native/scripts/push-prod-config-only.sh
 
 Apply + restart:
-  HOST_ALIAS=nexus-core core/openclaw/native/scripts/push-prod-config-only.sh --apply --restart
+  HOST_ALIAS=grid-core core/openclaw/native/scripts/push-prod-config-only.sh --apply --restart
 
 ### 2) Config + Env (secrets)
 This expects a LOCAL gitignored file:
   core/openclaw/env/openclaw.providers.env
 
 Dry-run:
-  HOST_ALIAS=nexus-core core/openclaw/native/scripts/push-prod.sh
+  HOST_ALIAS=grid-core core/openclaw/native/scripts/push-prod.sh
 
 Apply + restart:
-  HOST_ALIAS=nexus-core core/openclaw/native/scripts/push-prod.sh --apply --restart
+  HOST_ALIAS=grid-core core/openclaw/native/scripts/push-prod.sh --apply --restart
 
 ## Safety
 - openclaw.json diff is sanitized (no tokens/keys shown).

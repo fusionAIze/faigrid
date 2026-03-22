@@ -2,7 +2,7 @@
 set -euo pipefail
 
 TS="$(date +%F)"
-DEST="/var/backups/nexus-core/openclaw"
+DEST="/var/backups/grid-core/openclaw"
 mkdir -p "$DEST"
 
 echo "[openclaw-native] backup -> $DEST/openclaw_${TS}.tar.gz"

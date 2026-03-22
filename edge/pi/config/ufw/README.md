@@ -1,6 +1,6 @@
-# UFW reference (nexus-edge)
+# UFW reference (grid-edge)
 
-These rules are a **reference baseline** for the `nexus-edge` role:
+These rules are a **reference baseline** for the `grid-edge` role:
 - deny incoming by default
 - allow SSH/DNS/HTTP(S) from LAN only
 - support IPv4 + IPv6 (ULA /64) for Pi-hole

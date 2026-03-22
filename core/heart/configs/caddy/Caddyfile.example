@@ -1,4 +1,4 @@
-# Example edge-side reverse proxy for a localhost-bound n8n instance on `nexus-core`.
+# Example edge-side reverse proxy for a localhost-bound n8n instance on `grid-core`.
 
 n8n.example.com {
   reverse_proxy http://127.0.0.1:5678

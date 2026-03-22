@@ -31,17 +31,17 @@ detect_pkg_manager() {
 }
 
 # ── Nexus environment config ───────────────────────────────────────────────────
-# Persistent key=value store at ~/.config/nexus/nexus.env
+# Persistent key=value store at ~/.config/faigrid/grid.env
 # Sourced automatically from ~/.bashrc after first configure run.
 
-_NEXUS_ENV_FILE="${HOME}/.config/nexus/nexus.env"
+_NEXUS_ENV_FILE="${HOME}/.config/faigrid/grid.env"
 
-# Write or update a single export in nexus.env
-nexus_write_env() {
+# Write or update a single export in grid.env
+grid_write_env() {
   local key="$1" val="$2"
   mkdir -p "$(dirname "$_NEXUS_ENV_FILE")"
   if [[ ! -f "$_NEXUS_ENV_FILE" ]]; then
-    printf '# fusionAIze Nexus Labs — Tool Environment\n# source ~/.config/nexus/nexus.env\n' \
+    printf '# fusionAIze Grid — Tool Environment\n# source ~/.config/faigrid/grid.env\n' \
       > "$_NEXUS_ENV_FILE"
     chmod 600 "$_NEXUS_ENV_FILE"
   fi
@@ -52,14 +52,14 @@ nexus_write_env() {
   chmod 600 "$_NEXUS_ENV_FILE"
 }
 
-# Read a single key from nexus.env; empty string if not set
-nexus_read_env() {
+# Read a single key from grid.env; empty string if not set
+grid_read_env() {
   local key="$1"
   grep "^export ${key}=" "$_NEXUS_ENV_FILE" 2>/dev/null | cut -d'"' -f2 || echo ""
 }
 
 # Mask a secret for safe display: first 4 chars + ****
-nexus_mask() {
+grid_mask() {
   local val="$1"
   if [[ -z "$val" ]]; then echo "(not set)"; return; fi
   if [[ ${#val} -le 8 ]]; then echo "****"; return; fi
@@ -67,14 +67,14 @@ nexus_mask() {
 }
 
 # Add source hook to ~/.bashrc if not already present
-nexus_ensure_sourced() {
+grid_ensure_sourced() {
   local rc_file="${HOME}/.bashrc"
-  if ! grep -q "nexus/nexus.env" "$rc_file" 2>/dev/null; then
+  if ! grep -q "faigrid/grid.env" "$rc_file" 2>/dev/null; then
     {
-      printf '\n# fusionAIze Nexus Labs — tool environment\n'
+      printf '\n# fusionAIze Grid — tool environment\n'
       printf '[ -f "%s" ] && source "%s"\n' "$_NEXUS_ENV_FILE" "$_NEXUS_ENV_FILE"
     } >> "$rc_file"
-    info "Added nexus.env source hook to ${rc_file}"
+    info "Added grid.env source hook to ${rc_file}"
   fi
 }
 

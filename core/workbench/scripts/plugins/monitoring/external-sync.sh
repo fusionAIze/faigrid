@@ -8,8 +8,8 @@ TOOL_MANAGED="auto"   # activated by orchestrator, not manually installable
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)"
 
 tool_install() {
-    # external-sync has no automated install — it activates when a nexus-external node is registered
-    echo "[external-sync] No automated install. Add a nexus-external node via the orchestrator to activate." >&2
+    # external-sync has no automated install — it activates when a grid-external node is registered
+    echo "[external-sync] No automated install. Add a grid-external node via the orchestrator to activate." >&2
 }
 
 tool_status() {

@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# fusionAIze Nexus Labs - Edge Node Uninstaller
+# fusionAIze Grid - Edge Node Uninstaller
 # ==============================================================================
 set -euo pipefail
 
-echo "[nexus-edge] Uninstalling Edge stack..."
+echo "[grid-edge] Uninstalling Edge stack..."
 
 if command -v caddy &> /dev/null; then
-    echo "[nexus-edge] Removing Caddy service..."
+    echo "[grid-edge] Removing Caddy service..."
     sudo systemctl stop caddy || true
     sudo apt-get remove --purge -y caddy
 fi
 
-echo "[nexus-edge] Resetting UFW..."
+echo "[grid-edge] Resetting UFW..."
 sudo ufw reset --force || true
 
-echo "[nexus-edge] Edge node uninstalled."
+echo "[grid-edge] Edge node uninstalled."

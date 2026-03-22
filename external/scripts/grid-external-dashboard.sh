@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# fusionAIze Nexus Labs - External Status Dashboard Generator
+# fusionAIze Grid - External Status Dashboard Generator
 # ==============================================================================
 set -euo pipefail
 
@@ -19,7 +19,7 @@ cat <<EOF > "${OUTPUT_FILE}"
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nexus Labs | Global Grid Status</title>
+    <title>fusionAIze Grid | Global Grid Status</title>
     <style>
         :root {
             --bg: #0f172a;
@@ -71,7 +71,7 @@ cat <<EOF > "${OUTPUT_FILE}"
     <div class="grid" id="status-grid">
         <!-- Injected by watchdog push -->
         <div class="card">
-            <div class="node-name">nexus-external</div>
+            <div class="node-name">grid-external</div>
             <div class="status">System OK</div>
             <div class="timestamp">Last local check: $(date)</div>
         </div>
@@ -80,4 +80,4 @@ cat <<EOF > "${OUTPUT_FILE}"
 </html>
 EOF
 
-echo "[nexus-external] Dashboard generated at ${OUTPUT_FILE}"
+echo "[grid-external] Dashboard generated at ${OUTPUT_FILE}"

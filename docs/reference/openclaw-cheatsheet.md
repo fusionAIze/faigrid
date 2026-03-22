@@ -1,4 +1,4 @@
-# OpenClaw Cheat Sheet (Nexus Labs)
+# OpenClaw Cheat Sheet (fusionAIze Grid)
 
 ## Server Paths (prod)
 - State dir:      /var/lib/openclaw/.openclaw-prod

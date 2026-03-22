@@ -1,22 +1,22 @@
-# AGENTS.md — fusionAIze Nexus Labs
+# AGENTS.md — fusionAIze Grid
 
 ## Project identity
 
-This repository is `fusionaize-nexus-labs`, a modular reference stack for running a secure, self-hosted **agent + automation** environment.
+This repository is `faigrid`, a modular reference stack for running a secure, self-hosted **agent + automation** environment.
 
 Its purpose is to provide a standardized, generic 4+1 Node Architecture:
-1. **nexus-edge**: Ingress, TLS, reverse proxy, optional DNS/SSO.
-2. **nexus-core**: The orchestrator and AI Workbench (n8n, OpenClaw, routing, plugins).
-3. **nexus-worker**: Local LLM execution backend (e.g., LM Studio, Ollama).
-4. **nexus-backup**: Backup targets.
-5. **nexus-external**: Public cloud extensions.
+1. **grid-edge**: Ingress, TLS, reverse proxy, optional DNS/SSO.
+2. **grid-core**: The orchestrator and AI Workbench (n8n, OpenClaw, routing, plugins).
+3. **grid-worker**: Local LLM execution backend (e.g., LM Studio, Ollama).
+4. **grid-backup**: Backup targets.
+5. **grid-external**: Public cloud extensions.
 
 ## Product priority
 
 The priority is maintaining a universal, highly secure, and easily deployable bash-driven infrastructure.
 
 Do not optimize the repository around complex web frameworks.
-Optimize it around rock-solid shell orchestration (`install.sh`), state detection (`.nexus-state`), and clean plugin registries for the Workbench.
+Optimize it around rock-solid shell orchestration (`install.sh`), state detection (`.grid-state`), and clean plugin registries for the Workbench.
 
 ## Architecture principles
 

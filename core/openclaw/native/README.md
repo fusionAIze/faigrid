@@ -1,15 +1,15 @@
-# OpenClaw (native) — nexus-core module
+# OpenClaw (native) — grid-core module
 
 Goal: run OpenClaw **natively on the host** (not inside Docker), while n8n+pg+redis run via Docker Compose.
 
 Design principles:
-- bind OpenClaw to **localhost** on nexus-core
-- expose only through **nexus-edge** (reverse proxy + SSO/2FA)
+- bind OpenClaw to **localhost** on grid-core
+- expose only through **grid-edge** (reverse proxy + SSO/2FA)
 - systemd-managed, hardened service
 - data + config separated from code
 
 Entry points:
-- `server/control-center.sh` for service lifecycle on `nexus-core`
+- `server/control-center.sh` for service lifecycle on `grid-core`
 - `scripts/push-prod.sh` and `scripts/push-prod-config-only.sh` for repo-side config sync
 - `docs/runbooks/step-02_5-openclaw-native.md`
 - `docs/reference/openclaw-native.md`

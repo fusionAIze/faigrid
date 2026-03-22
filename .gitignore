@@ -28,7 +28,7 @@ docs/local/
 .DS_Store
 
 # Local Nexus Registry
-.nexus/
+.faigrid/
 
 # OpenClaw secrets
 **/openclaw.providers.env

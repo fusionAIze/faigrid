@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-echo "[nexus-backup] Verifying backup status..."
+echo "[grid-backup] Verifying backup status..."
 
 if command -v restic &> /dev/null; then
     echo "[SUCCESS] Restic is installed."

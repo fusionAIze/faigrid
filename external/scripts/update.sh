@@ -9,7 +9,7 @@ update_component() {
     local name=$1
     local dir="${STACK_DIR}/compose/${name}"
     if [[ -d "${dir}" ]]; then
-        echo "[nexus-external] Updating ${name}..."
+        echo "[grid-external] Updating ${name}..."
         docker compose -f "${dir}/docker-compose.yml" pull
         docker compose -f "${dir}/docker-compose.yml" up -d
     fi
@@ -22,4 +22,4 @@ case "${COMPONENT}" in
     *)     echo "Unknown component: ${COMPONENT}"; exit 1 ;;
 esac
 
-echo "[nexus-external] Update complete."
+echo "[grid-external] Update complete."

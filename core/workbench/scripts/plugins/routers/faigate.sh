@@ -238,18 +238,18 @@ _faigate_api_keys() {
         local key="$1" label="$2" silent="${3:-yes}"
         local current nexus_val val hint tmp
         current=$(sudo grep "^${key}=" "$env_file" 2>/dev/null | cut -d'=' -f2- | tr -d '"' || echo "")
-        nexus_val=$(nexus_read_env "$key" 2>/dev/null || echo "")
+        nexus_val=$(grid_read_env "$key" 2>/dev/null || echo "")
         if [[ -n "$current" ]]; then
-            hint="$(nexus_mask "$current")"
+            hint="$(grid_mask "$current")"
         elif [[ -n "$nexus_val" ]]; then
-            hint="${C_DIM}from nexus.env${C_RESET}"
+            hint="${C_DIM}from grid.env${C_RESET}"
         else
             hint="${C_DIM}(not set)${C_RESET}"
         fi
         printf "  %-28s [%b]: " "$label" "$hint"
         if [[ "$silent" == "yes" ]]; then read -r -s val; echo ""; else read -r val; fi
         if [[ -z "$val" ]]; then
-            [[ -z "$current" && -n "$nexus_val" ]] && val="$nexus_val" && info "  ↳ adopted from nexus.env"
+            [[ -z "$current" && -n "$nexus_val" ]] && val="$nexus_val" && info "  ↳ adopted from grid.env"
             [[ -z "$val" ]] && return 0
         fi
         tmp=$(mktemp)

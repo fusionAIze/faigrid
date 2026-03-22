@@ -1,7 +1,7 @@
 services:
   n8n:
     image: docker.n8n.io/n8nio/n8n:latest
-    container_name: nexus-external-n8n
+    container_name: grid-external-n8n
     restart: unless-stopped
     environment:
       - TZ=${TZ:-Europe/Berlin}

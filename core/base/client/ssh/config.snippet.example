@@ -2,8 +2,8 @@
 # Copy relevant blocks into ~/.ssh/config
 # Adjust IPs/keys for your environment. Do NOT commit private keys.
 
-# --- nexus-edge (edge node) ---
-Host nexus-edge
+# --- grid-edge (edge node) ---
+Host grid-edge
   HostName 192.168.178.10
   User nexus
   IdentitiesOnly yes
@@ -12,8 +12,8 @@ Host nexus-edge
   ServerAliveCountMax 3
   Compression yes
 
-# --- nexus-core (admin/bootstrap) ---
-Host nexus-core
+# --- grid-core (admin/bootstrap) ---
+Host grid-core
   HostName 192.168.178.20
   User nexus
   IdentitiesOnly yes
@@ -22,8 +22,8 @@ Host nexus-core
   ServerAliveCountMax 3
   Compression yes
 
-# --- nexus-core (daily ops) ---
-Host nexus-core-ops
+# --- grid-core (daily ops) ---
+Host grid-core-ops
   HostName 192.168.178.20
   User nexus-ops
   IdentitiesOnly yes
@@ -33,10 +33,10 @@ Host nexus-core-ops
   Compression yes
 
 # (future) worker + backup placeholders:
-# Host nexus-worker
+# Host grid-worker
 #   HostName 192.168.178.30
 #   User nexus-ops
 #
-# Host nexus-backup
+# Host grid-backup
 #   HostName 192.168.178.40
 #   User nexus-ops

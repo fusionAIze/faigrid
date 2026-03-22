@@ -1,4 +1,4 @@
-# GEMINI.md — fusionAIze Nexus Labs
+# GEMINI.md — fusionAIze Grid
 
 **Read `AGENTS.md` first.** It contains the foundational architecture context (4+1 Node Setup) and universal rules for this repository.
 
@@ -6,12 +6,12 @@
 
 - **Domain**: Shell-driven AI Infrastructure Orchestration.
 - **Language**: Strict Bash (`set -euo pipefail`).
-- **Core Engine**: `install.sh` orchestrator with `.nexus-state` detection.
+- **Core Engine**: `install.sh` orchestrator with `.grid-state` detection.
 - **Default AI Role**: Rapid pipeline prototyping, integration modeling, and analytical documentation structure.
 
 ## Project Instruction Summary
 
-For Gemini, prioritize **speed and functionality** when generating configurations, composing Docker networks, or implementing fast plugin templates for the `nexus-core` Workbench.
+For Gemini, prioritize **speed and functionality** when generating configurations, composing Docker networks, or implementing fast plugin templates for the `grid-core` Workbench.
 
 **Gemini's specific focus:**
 - Implement and refine logic in `core/heart/compose/` (Docker networking context).
@@ -20,8 +20,8 @@ For Gemini, prioritize **speed and functionality** when generating configuration
 
 ## Operational Guardrails
 
-1. **Deny-by-default**: Ensure ports are only exposed to `localhost` or specific internal subnets unless they are explicitly meant for `nexus-edge` ingress.
-2. **State Detection First**: Acknowledge that the main `install.sh` parses `~/.nexus-state`. 
+1. **Deny-by-default**: Ensure ports are only exposed to `localhost` or specific internal subnets unless they are explicitly meant for `grid-edge` ingress.
+2. **State Detection First**: Acknowledge that the main `install.sh` parses `~/.grid-state`. 
 3. **No destructive scripts without warning**: If you write a bash script that purges volumes, you must include an explicit user prompt.
 4. **Bash 3.2 compatibility is mandatory** — macOS ships Bash 3.2; all scripts must run on it.
    Never use: `declare -A`, `declare -gA`, `mapfile`, `readarray`, `local -A`, or `${!var}` indirect expansion under `set -u`.

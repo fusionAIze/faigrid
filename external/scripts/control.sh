@@ -10,7 +10,7 @@ manage_component() {
     local name=$1
     local dir="${STACK_DIR}/compose/${name}"
     if [[ -d "${dir}" ]]; then
-        echo "[nexus-external] ${ACTION} on ${name}..."
+        echo "[grid-external] ${ACTION} on ${name}..."
         docker compose -f "${dir}/docker-compose.yml" "${ACTION}"
     fi
 }

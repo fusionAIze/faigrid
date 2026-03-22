@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-HOST_ALIAS="${HOST_ALIAS:-nexus-core-ops}"
+HOST_ALIAS="${HOST_ALIAS:-grid-core-ops}"
 
 LOCAL_PORT="${LOCAL_PORT:-19089}"
 REMOTE_HOST="${REMOTE_HOST:-127.0.0.1}"

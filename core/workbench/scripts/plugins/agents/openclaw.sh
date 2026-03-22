@@ -65,8 +65,8 @@ tool_uninstall() {
 
 # ── Configuration ──────────────────────────────────────────────────────────────
 # Called from the Workbench Configure menu (option 5).
-# _lib.sh is sourced in the subshell before this plugin, so nexus_read_env,
-# nexus_mask, info, success, warn, C_DIM, C_RESET are all available.
+# _lib.sh is sourced in the subshell before this plugin, so grid_read_env,
+# grid_mask, info, success, warn, C_DIM, C_RESET are all available.
 
 tool_configure() {
     local providers_env="/etc/openclaw/openclaw.providers.env"
@@ -82,22 +82,22 @@ tool_configure() {
     fi
 
     info "Configuring OpenClaw — ${providers_env}"
-    printf "  ${C_DIM}Press Enter to keep current. Keys already in nexus.env are offered as default.${C_RESET}\n\n"
+    printf "  ${C_DIM}Press Enter to keep current. Keys already in grid.env are offered as default.${C_RESET}\n\n"
 
     # Write one key into providers.env (silent read).
-    # If empty input and key not yet set, falls back to matching nexus.env value.
+    # If empty input and key not yet set, falls back to matching grid.env value.
     _oc_key() {
         local key="$1"
         local current nexus_val val tmp
 
         current=$(sudo grep "^${key}=" "$providers_env" 2>/dev/null \
             | cut -d'=' -f2- | tr -d '"' || echo "")
-        nexus_val=$(nexus_read_env "$key" 2>/dev/null || echo "")
+        nexus_val=$(grid_read_env "$key" 2>/dev/null || echo "")
 
         if [[ -n "$current" ]]; then
-            printf "  %-28s [%s]: " "$key" "$(nexus_mask "$current")"
+            printf "  %-28s [%s]: " "$key" "$(grid_mask "$current")"
         elif [[ -n "$nexus_val" ]]; then
-            printf "  %-28s [${C_DIM}from nexus.env${C_RESET}]: " "$key"
+            printf "  %-28s [${C_DIM}from grid.env${C_RESET}]: " "$key"
         else
             printf "  %-28s [${C_DIM}(not set)${C_RESET}]: " "$key"
         fi
@@ -105,10 +105,10 @@ tool_configure() {
         read -r -s val; echo ""
 
         if [[ -z "$val" ]]; then
-            # Empty input: adopt nexus.env value if current is not set
+            # Empty input: adopt grid.env value if current is not set
             if [[ -z "$current" && -n "$nexus_val" ]]; then
                 val="$nexus_val"
-                info "  Using ${key} from nexus.env"
+                info "  Using ${key} from grid.env"
             else
                 return 0  # keep existing
             fi

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-echo "[nexus-worker] Verifying inference engines..."
+echo "[grid-worker] Verifying inference engines..."
 
 if command -v ollama &> /dev/null; then
     if ollama list &> /dev/null; then

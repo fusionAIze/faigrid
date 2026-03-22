@@ -4,7 +4,7 @@
 # The restic repository location. 
 # Examples:
 #   Local: /opt/nexus-vault
-#   SFTP:  sftp:user@synology-ip:/volume1/nexus-backups
+#   SFTP:  sftp:user@synology-ip:/volume1/grid-backups
 #   S3:    s3:s3.amazonaws.com/bucket-name
 export RESTIC_REPOSITORY="${RESTIC_REPOSITORY:-/opt/nexus-vault}"
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# nexus-edge: apply a minimal LAN-only UFW ruleset for Pi-hole + optional HTTPS.
+# grid-edge: apply a minimal LAN-only UFW ruleset for Pi-hole + optional HTTPS.
 # - Deny incoming by default
 # - Allow SSH (22), DNS (53 tcp/udp), HTTP (80), HTTPS (443) from LAN only
 #
@@ -12,7 +12,7 @@ set -euo pipefail
 IPV4_LAN_CIDR="${IPV4_LAN_CIDR:-192.168.178.0/24}"
 IPV6_ULA_CIDR="${IPV6_ULA_CIDR:-}"
 
-echo "[nexus-edge] Applying UFW baseline..."
+echo "[grid-edge] Applying UFW baseline..."
 echo "  IPV4_LAN_CIDR=${IPV4_LAN_CIDR}"
 echo "  IPV6_ULA_CIDR=${IPV6_ULA_CIDR:-<auto-detect>}"
 
@@ -30,12 +30,12 @@ if [[ -z "${IPV6_ULA_CIDR}" ]]; then
   fi
 fi
 
-echo "[nexus-edge] Resetting UFW..."
+echo "[grid-edge] Resetting UFW..."
 sudo ufw --force reset
 sudo ufw default deny incoming
 sudo ufw default allow outgoing
 
-echo "[nexus-edge] Allow IPv4 LAN services..."
+echo "[grid-edge] Allow IPv4 LAN services..."
 sudo ufw allow from "${IPV4_LAN_CIDR}" to any port 22 proto tcp
 sudo ufw allow from "${IPV4_LAN_CIDR}" to any port 53 proto udp
 sudo ufw allow from "${IPV4_LAN_CIDR}" to any port 53 proto tcp
@@ -43,7 +43,7 @@ sudo ufw allow from "${IPV4_LAN_CIDR}" to any port 80 proto tcp
 sudo ufw allow from "${IPV4_LAN_CIDR}" to any port 443 proto tcp
 
 if [[ -n "${IPV6_ULA_CIDR}" ]]; then
-  echo "[nexus-edge] Allow IPv6 ULA LAN services..."
+  echo "[grid-edge] Allow IPv6 ULA LAN services..."
   sudo ufw allow from "${IPV6_ULA_CIDR}" to any port 22 proto tcp
   sudo ufw allow from "${IPV6_ULA_CIDR}" to any port 53 proto udp
   sudo ufw allow from "${IPV6_ULA_CIDR}" to any port 53 proto tcp
@@ -54,8 +54,8 @@ else
   echo "       Set IPV6_ULA_CIDR manually if needed."
 fi
 
-echo "[nexus-edge] Enabling UFW..."
+echo "[grid-edge] Enabling UFW..."
 sudo ufw --force enable
 sudo ufw status verbose
 
-echo "[nexus-edge] Done."
+echo "[grid-edge] Done."

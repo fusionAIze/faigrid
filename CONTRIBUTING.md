@@ -1,16 +1,16 @@
-# Contributing to fusionAIze Nexus Labs
+# Contributing to fusionAIze Grid
 
 Thank you for your interest in contributing to the Nexus architecture!
 
 This repository serves as a generic standard for a 4+1 Node AI infrastructure. When contributing, please ensure your architectural additions align with the design principles:
 
-1. **Deny-by-default**: Only `nexus-edge` should be exposed.
+1. **Deny-by-default**: Only `grid-edge` should be exposed.
 2. **Secrets never in Git**: Rely on `.env` templates.
 3. **Roles, not Hardware**: The ecosystem is built on abstract roles that can be adapted anywhere.
 
 ## Adding a new Tool to the Workbench
 
-The most common contribution is adding a new CLI, Agent, or Router to the **Workbench Control Center** on `nexus-core`.
+The most common contribution is adding a new CLI, Agent, or Router to the **Workbench Control Center** on `grid-core`.
 
 To do this, you do not need to edit the core application code. Instead, use the Plugin System:
 

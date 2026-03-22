@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# fusionAIze Nexus Labs - Workbench Plugin Uninstaller (All)
+# fusionAIze Grid - Workbench Plugin Uninstaller (All)
 # ==============================================================================
 set -euo pipefail
 

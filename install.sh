@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# fusionAIze Nexus Labs - Advanced Universal Orchestrator
+# fusionAIze Grid - Advanced Universal Orchestrator
 # Version 2.1.0
 # ==============================================================================
 
@@ -43,15 +43,23 @@ prompt_hidden() {
 _quit() {
     echo ""
     divider
-    success "Nexus Labs Orchestration Complete! 🚀"
+    success "fusionAIze Grid Orchestration Complete! 🚀"
     divider
     echo ""
     exit 0
 }
 
-STATE_FILE="$HOME/.nexus-state"
+STATE_FILE="$HOME/.grid-state"
 TOPOLOGY_FILE=".env.topology"
-LOCAL_REGISTRY=".nexus/state"
+LOCAL_REGISTRY=".faigrid/state"
+
+# --- 1.3.0 Legacy Migration Hook ---
+if [[ -f "core/heart/scripts/migrate_1.3.sh" ]]; then
+    bash core/heart/scripts/migrate_1.3.sh
+    # Refresh pointers if migration occurred
+    STATE_FILE="$HOME/.grid-state"
+    LOCAL_REGISTRY=".faigrid/state"
+fi
 # Repository root for relative path resolution
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CURRENT_ROLE="none"
@@ -143,17 +151,17 @@ inspect_state() {
         if [ -f "$STATE_FILE" ]; then
             # shellcheck disable=SC1090
             source "$STATE_FILE" || true
-            CURRENT_ROLE=${NEXUS_ROLE:-none}
-            CURRENT_VERSION=${NEXUS_VERSION:-none}
+            CURRENT_ROLE=${GRID_ROLE:-none}
+            CURRENT_VERSION=${GRID_VERSION:-none}
         fi
     elif [ "$mode" = "remote" ]; then
         # Check remote state safely
-        if ssh -q -o ConnectTimeout=3 "$ssh_target" "[ -f \"\$HOME/.nexus-state\" ]" 2>/dev/null; then
+        if ssh -q -o ConnectTimeout=3 "$ssh_target" "[ -f \"\$HOME/.grid-state\" ]" 2>/dev/null; then
             local remote_state
-            remote_state=$(ssh -q -o ConnectTimeout=3 "$ssh_target" "cat \"\$HOME/.nexus-state\"" || echo "")
+            remote_state=$(ssh -q -o ConnectTimeout=3 "$ssh_target" "cat \"\$HOME/.grid-state\"" || echo "")
             if [ -n "$remote_state" ]; then
-                CURRENT_ROLE=$(echo "$remote_state" | grep "NEXUS_ROLE" | cut -d'=' -f2 || echo "none")
-                CURRENT_VERSION=$(echo "$remote_state" | grep "NEXUS_VERSION" | cut -d'=' -f2 || echo "none")
+                CURRENT_ROLE=$(echo "$remote_state" | grep "GRID_ROLE" | cut -d'=' -f2 || echo "none")
+                CURRENT_VERSION=$(echo "$remote_state" | grep "GRID_VERSION" | cut -d'=' -f2 || echo "none")
             fi
         fi
     fi
@@ -168,8 +176,8 @@ write_state() {
     # Save to local registry first
     mkdir -p "$LOCAL_REGISTRY"
     {
-        echo "NEXUS_ROLE=$role"
-        echo "NEXUS_VERSION=latest"
+        echo "GRID_ROLE=$role"
+        echo "GRID_VERSION=latest"
         echo "INSTALL_DATE=\"$(date)\""
         echo "EXEC_MODE=$mode"
         if [ "$mode" = "remote" ]; then
@@ -179,16 +187,16 @@ write_state() {
 
     if [ "$mode" = "local" ]; then
         {
-            echo "NEXUS_ROLE=$role"
-            echo "NEXUS_VERSION=latest"
+            echo "GRID_ROLE=$role"
+            echo "GRID_VERSION=latest"
             echo "INSTALL_DATE=\"$(date)\""
         } > "$STATE_FILE"
         success "Saved state to ${STATE_FILE} (and local registry)"
     else
-        ssh -q "$ssh_target" "echo 'NEXUS_ROLE=$role' > \"\$HOME/.nexus-state\"; \
-            echo 'NEXUS_VERSION=latest' >> \"\$HOME/.nexus-state\"; \
-            echo 'INSTALL_DATE=\"$(date)\"' >> \"\$HOME/.nexus-state\"" || true
-        success "Saved remote state to ~/${ssh_target}:~/.nexus-state (and local registry)"
+        ssh -q "$ssh_target" "echo 'GRID_ROLE=$role' > \"\$HOME/.grid-state\"; \
+            echo 'GRID_VERSION=latest' >> \"\$HOME/.grid-state\"; \
+            echo 'INSTALL_DATE=\"$(date)\"' >> \"\$HOME/.grid-state\"" || true
+        success "Saved remote state to ~/${ssh_target}:~/.grid-state (and local registry)"
     fi
 }
 
@@ -307,7 +315,7 @@ echo ""
 # Start of interactive wizard
 set +e
 
-# Probe known nodes from .nexus/state for registered icons
+# Probe known nodes from .faigrid/state for registered icons
 probe_grid_status
 
 _grid_icon() {
@@ -328,13 +336,13 @@ _grid_icon() {
     fi
 }
 
-echo -e "    $(_grid_icon core)  ${BOLD}nexus-core${NC}       ${DIM}AI Workbench — n8n, OpenClaw, Postgres, Redis${NC}    ${YELLOW}[required]${NC}"
-echo -e "    $(_grid_icon edge)  ${BOLD}nexus-edge${NC}       ${DIM}TLS ingress, reverse proxy, firewall, DNS${NC}      ${DIM}[optional]${NC}"
-echo -e "    $(_grid_icon worker)  ${BOLD}nexus-worker${NC}     ${DIM}Local LLM inference — Ollama, LM Studio${NC}        ${DIM}[optional]${NC}"
-echo -e "    $(_grid_icon backup)  ${BOLD}nexus-backup${NC}     ${DIM}Offsite storage vault — Synology, S3, USB${NC}      ${DIM}[optional]${NC}"
-echo -e "    $(_grid_icon external)  ${BOLD}nexus-external${NC}   ${DIM}Cloud extension — ext. n8n, Plane PM${NC}           ${DIM}[optional]${NC}"
+echo -e "    $(_grid_icon core)  ${BOLD}grid-core${NC}       ${DIM}AI Workbench — n8n, OpenClaw, Postgres, Redis${NC}    ${YELLOW}[required]${NC}"
+echo -e "    $(_grid_icon edge)  ${BOLD}grid-edge${NC}       ${DIM}TLS ingress, reverse proxy, firewall, DNS${NC}      ${DIM}[optional]${NC}"
+echo -e "    $(_grid_icon worker)  ${BOLD}grid-worker${NC}     ${DIM}Local LLM inference — Ollama, LM Studio${NC}        ${DIM}[optional]${NC}"
+echo -e "    $(_grid_icon backup)  ${BOLD}grid-backup${NC}     ${DIM}Offsite storage vault — Synology, S3, USB${NC}      ${DIM}[optional]${NC}"
+echo -e "    $(_grid_icon external)  ${BOLD}grid-external${NC}   ${DIM}Cloud extension — ext. n8n, Plane PM${NC}           ${DIM}[optional]${NC}"
 echo ""
-echo -e "  ${DIM}Tip: Start with nexus-core. Add other nodes as your grid grows.${NC}"
+echo -e "  ${DIM}Tip: Start with grid-core. Add other nodes as your grid grows.${NC}"
 
 # ==============================================================================
 # STEP 2: WHICH NODE TO PROVISION NOW
@@ -348,11 +356,11 @@ if [[ -z "$ROLE_NAME" ]]; then
     echo ""
     echo "  Which node do you want to work on right now?"
     echo ""
-    echo -e "    ${BOLD}1)${NC}  nexus-core       ${DIM}The brain — always provision this first${NC}"
-    echo -e "    ${BOLD}2)${NC}  nexus-edge       ${DIM}Secure ingress gateway (Caddy, DNS)${NC}"
-    echo -e "    ${BOLD}3)${NC}  nexus-worker     ${DIM}Local LLM execution (MacBook, GPU server)${NC}"
-    echo -e "    ${BOLD}4)${NC}  nexus-backup     ${DIM}Restic vault (NAS, USB disk, S3 bucket)${NC}"
-    echo -e "    ${BOLD}5)${NC}  nexus-external   ${DIM}Public cloud node (VPS, agency server)${NC}"
+    echo -e "    ${BOLD}1)${NC}  grid-core       ${DIM}The brain — always provision this first${NC}"
+    echo -e "    ${BOLD}2)${NC}  grid-edge       ${DIM}Secure ingress gateway (Caddy, DNS)${NC}"
+    echo -e "    ${BOLD}3)${NC}  grid-worker     ${DIM}Local LLM execution (MacBook, GPU server)${NC}"
+    echo -e "    ${BOLD}4)${NC}  grid-backup     ${DIM}Restic vault (NAS, USB disk, S3 bucket)${NC}"
+    echo -e "    ${BOLD}5)${NC}  grid-external   ${DIM}Public cloud node (VPS, agency server)${NC}"
     echo ""
     echo -e "    ${BOLD}q)${NC}  Quit"
     echo ""
@@ -372,7 +380,7 @@ if [[ -z "$ROLE_NAME" ]]; then
     if [[ "$ROLE_NAME" == "backup" ]]; then
         echo ""
         echo -e "  ${CYAN}💡 Tip:${NC} You don't need a dedicated backup node."
-        echo -e "     Restic can run directly on ${BOLD}nexus-core${NC} or ${BOLD}nexus-external${NC},"
+        echo -e "     Restic can run directly on ${BOLD}grid-core${NC} or ${BOLD}grid-external${NC},"
         echo -e "     backing up to a Synology NAS, S3 bucket, or USB drive."
         echo ""
         prompt "Continue with a dedicated backup node anyway? (Y/n): " BACKUP_CONFIRM
@@ -485,14 +493,14 @@ echo ""
 if [[ "$CURRENT_ROLE" != "none" ]]; then
     success "Detected existing node: Role [${BOLD}${CURRENT_ROLE}${NC}], Version [${CURRENT_VERSION}]"
 else
-    info "No .nexus-state file found. Scanning target for existing services..."
+    info "No .grid-state file found. Scanning target for existing services..."
     echo ""
     discover_services "$EXEC_MODE" "$SSH_TARGET"
 
     # If services were discovered, suggest bootstrapping
     if [[ ${#DISCOVERED_SERVICES[@]} -gt 0 ]]; then
         echo -e "  ${CYAN}💡${NC}  Services are already running, but this node is ${BOLD}not registered${NC}"
-        echo -e "     with Nexus Labs. You can:"
+        echo -e "     with fusionAIze Grid. You can:"
         echo ""
         echo -e "    ${BOLD}a)${NC}  ${GREEN}Adopt${NC}     ${DIM}— Register this node as ${BOLD}${ROLE_NAME}${NC}${DIM} (keeps everything as-is)${NC}"
         echo -e "    ${BOLD}b)${NC}  Continue  ${DIM}— Proceed to action selection without registering${NC}"
@@ -556,7 +564,7 @@ if [[ -z "$ACTION_NAME" ]]; then
         if [[ "$ROLE_NAME" == "core" ]]; then
             echo -e "    ${BOLD}5)${NC}  ${YELLOW}Reinstall${NC}   ${DIM}⚠ Wipe and re-provision from scratch${NC}"
             echo -e "    ${BOLD}6)${NC}  ${YELLOW}Uninstall${NC}   ${DIM}⚠ Remove this node role entirely${NC}"
-            echo -e "    ${BOLD}7)${NC}  ${CYAN}Backup${NC}      ${DIM}Dump Postgres + n8n volume to /var/backups/nexus-core-heart${NC}"
+            echo -e "    ${BOLD}7)${NC}  ${CYAN}Backup${NC}      ${DIM}Dump Postgres + n8n volume to /var/backups/grid-core-heart${NC}"
         else
             echo -e "    ${BOLD}4)${NC}  ${YELLOW}Reinstall${NC}   ${DIM}⚠ Wipe and re-provision from scratch${NC}"
             echo -e "    ${BOLD}5)${NC}  ${YELLOW}Uninstall${NC}   ${DIM}⚠ Remove this node role entirely${NC}"
@@ -867,7 +875,7 @@ if _is_loopable "$ACTION_NAME"; then
         if [[ "$ROLE_NAME" == "core" ]]; then
             echo -e "    ${BOLD}5)${NC}  ${YELLOW}Reinstall${NC}   ${DIM}⚠ Wipe and re-provision from scratch${NC}"
             echo -e "    ${BOLD}6)${NC}  ${YELLOW}Uninstall${NC}   ${DIM}⚠ Remove this node role entirely${NC}"
-            echo -e "    ${BOLD}7)${NC}  ${CYAN}Backup${NC}      ${DIM}Dump Postgres + n8n volume to /var/backups/nexus-core-heart${NC}"
+            echo -e "    ${BOLD}7)${NC}  ${CYAN}Backup${NC}      ${DIM}Dump Postgres + n8n volume to /var/backups/grid-core-heart${NC}"
         else
             echo -e "    ${BOLD}4)${NC}  ${YELLOW}Reinstall${NC}   ${DIM}⚠ Wipe and re-provision from scratch${NC}"
             echo -e "    ${BOLD}5)${NC}  ${YELLOW}Uninstall${NC}   ${DIM}⚠ Remove this node role entirely${NC}"
@@ -961,6 +969,6 @@ fi
 
 echo ""
 divider
-success "Nexus Labs Orchestration Complete! 🚀"
+success "fusionAIze Grid Orchestration Complete! 🚀"
 divider
 echo ""

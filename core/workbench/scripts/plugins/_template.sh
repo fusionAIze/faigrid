@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Plugin Template for nexus-core Workbench
+# Plugin Template for grid-core Workbench
 # ─────────────────────────────────────────────────────────────────────────────
 # TOOL_CATEGORY: clis | routers | memory | agents | automation | wrappers
 # TOOL_TYPE:     npm | apt|dnf | pipx | git | binary | docker | tbd
@@ -99,20 +99,20 @@ tool_uninstall() {
 
 # ── Optional: interactive configuration ───────────────────────────────────────
 # Called from the Workbench "Configure" menu (option 5).
-# _lib.sh is sourced before this plugin in the subshell, so nexus_write_env,
-# nexus_read_env, nexus_mask, nexus_ensure_sourced, info, success, warn are
+# _lib.sh is sourced before this plugin in the subshell, so grid_write_env,
+# grid_read_env, grid_mask, grid_ensure_sourced, info, success, warn are
 # all available here.
 #
 # API-key pattern (most CLI tools):
 #
 # tool_configure() {
 #     local current
-#     current=$(nexus_read_env "EXAMPLE_API_KEY")
-#     printf "  EXAMPLE_API_KEY [%s]: " "$(nexus_mask "$current")"
+#     current=$(grid_read_env "EXAMPLE_API_KEY")
+#     printf "  EXAMPLE_API_KEY [%s]: " "$(grid_mask "$current")"
 #     read -r -s api_key; echo ""
 #     [[ -z "$api_key" && -n "$current" ]] && { info "Kept existing key."; return 0; }
 #     [[ -z "$api_key" ]] && { warn "No key provided. Skipping."; return 0; }
-#     nexus_write_env "EXAMPLE_API_KEY" "$api_key"
-#     nexus_ensure_sourced
-#     success "EXAMPLE_API_KEY saved to ~/.config/nexus/nexus.env"
+#     grid_write_env "EXAMPLE_API_KEY" "$api_key"
+#     grid_ensure_sourced
+#     success "EXAMPLE_API_KEY saved to ~/.config/faigrid/grid.env"
 # }

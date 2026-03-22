@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# fusionAIze Nexus Labs - Troubleshooting Gateway (Messenger Bridge)
+# fusionAIze Grid - Troubleshooting Gateway (Messenger Bridge)
 # ==============================================================================
 # This template defines how OpenClaw agents can interact with external gateways
 # (Telegram, Discord) to report issues and receive remote commands.

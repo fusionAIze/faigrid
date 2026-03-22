@@ -6,15 +6,15 @@ Exposing local LLM endpoints publicly to the internet is dangerous. Instead, we 
 
 ## Method 1: SSH Reverse Tunnels
 
-If you have SSH access to your `nexus-core` server, you can map your local `LM Studio` port (default `1234`) or `Ollama` port (default `11434`) backwards to a port on the Core server.
+If you have SSH access to your `grid-core` server, you can map your local `LM Studio` port (default `1234`) or `Ollama` port (default `11434`) backwards to a port on the Core server.
 
 ### On your Worker (MacBook):
 ```bash
 # For LM Studio (port 1234)
-ssh -N -R 127.0.0.1:1234:127.0.0.1:1234 user@nexus-core.example.com
+ssh -N -R 127.0.0.1:1234:127.0.0.1:1234 user@grid-core.example.com
 
 # For Ollama (port 11434)
-ssh -N -R 127.0.0.1:11434:127.0.0.1:11434 user@nexus-core.example.com
+ssh -N -R 127.0.0.1:11434:127.0.0.1:11434 user@grid-core.example.com
 ```
 *Tip: Use `autossh` in a background daemon to keep this tunnel persistently alive across network drops.*
 

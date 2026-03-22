@@ -1,6 +1,6 @@
-# Core Onboarding & Lab Setup (nexus-core)
+# Core Onboarding & Lab Setup (grid-core)
 
-The `nexus-core` instance is the heart of your automation and AI capabilities. It acts as an **AI Workbench** and **Routing Node** for your various tools, internal processes, and virtual agents.
+The `grid-core` instance is the heart of your automation and AI capabilities. It acts as an **AI Workbench** and **Routing Node** for your various tools, internal processes, and virtual agents.
 
 This document serves as an onboarding guide to understand the scope of the core environment, what tools are supported, and how configuration is completely decoupled from the codebase.
 
@@ -19,11 +19,11 @@ This separation ensures the repo acts as a structural reference, while deploymen
 The core instance integrates several critical components acting as your central AI nervous system.
 
 ### Automation
-- **Internal n8n**: The core automation and workflow engine. Built primarily for internal processes and integrations. It is *not* exposed to the public internet. External requests route either through `nexus-edge` or from your `nexus-external` cloud instance.
+- **Internal n8n**: The core automation and workflow engine. Built primarily for internal processes and integrations. It is *not* exposed to the public internet. External requests route either through `grid-edge` or from your `grid-external` cloud instance.
 
 ### Orchestration & Routing
 - **OpenClaw**: The host-native agent dispatcher running on the system, used to map and control deployed AI agents.
-- **FoundryGate / ICM / RTK**: Internal router layers responsible for token-consumption optimization, context-memory management, and distributing inference tasks to either local models (`nexus-worker`) or cloud models.
+- **FoundryGate / ICM / RTK**: Internal router layers responsible for token-consumption optimization, context-memory management, and distributing inference tasks to either local models (`grid-worker`) or cloud models.
 
 ### CLI Agents & Toolkits
 The Core host provides a lab environment for cutting-edge agentic workflows:
@@ -36,7 +36,7 @@ The Core host provides a lab environment for cutting-edge agentic workflows:
 
 ## 3. Onboarding Steps
 
-When bringing a new `nexus-core` instance online, follow these high-level steps:
+When bringing a new `grid-core` instance online, follow these high-level steps:
 
 1. **Deploy the Base System**: Complete the SSH hardening and basic user setup defined in `step-02-core-base-setup.md`.
 2. **Install Core Services**: Instantiate the Postgres, Redis (queue), and n8n stack defined in `core/heart/compose`. Ensure all `.env` credentials are securely generated.

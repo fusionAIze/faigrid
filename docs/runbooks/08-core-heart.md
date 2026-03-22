@@ -1,17 +1,17 @@
 # Step 03 — Core Heart Stack (n8n + Postgres + Redis + OpenClaw placeholder)
 
-Goal: Bring `nexus-core` into productive state with secure-by-default local services.
+Goal: Bring `grid-core` into productive state with secure-by-default local services.
 Only SSH (LAN) is open. n8n binds to localhost and will later be exposed via the edge gate (SSO/2FA).
 
 ## 0) Preconditions
 - Step 02 (base) done: users, SSH hardening, VNC optional
-- `nexus` can SSH into `nexus-core`
-- Repo cloned on `nexus-core`:
-  - `git clone https://github.com/<you>/fusionaize-nexus-labs.git`
+- `nexus` can SSH into `grid-core`
+- Repo cloned on `grid-core`:
+  - `git clone https://github.com/<you>/faigrid.git`
 
 ## 1) Copy stack to /opt
-On `nexus-core` as user `nexus`:
-- `cd ~/fusionaize-nexus-labs`
+On `grid-core` as user `nexus`:
+- `cd ~/faigrid`
 - `bash core/heart/scripts/install.sh`
 
 Then:
@@ -32,7 +32,7 @@ Restart stack:
 - no external exposure on core
 
 ## 4) Next steps (Step 04)
-- Put `nexus-edge` in front:
+- Put `grid-edge` in front:
   - reverse proxy to core n8n
   - add SSO/2FA (Authentik/Authelia)
   - add CrowdSec

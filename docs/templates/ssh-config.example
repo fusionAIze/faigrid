@@ -2,7 +2,7 @@
 # Copy the blocks you need into your local ~/.ssh/config
 # Never commit private keys.
 
-Host nexus-edge
+Host grid-edge
   HostName 192.168.178.10
   User nexus
   IdentitiesOnly yes
@@ -10,7 +10,7 @@ Host nexus-edge
   ServerAliveInterval 30
   ServerAliveCountMax 3
 
-Host nexus-core
+Host grid-core
   HostName 192.168.178.20
   User nexus
   IdentitiesOnly yes
@@ -19,7 +19,7 @@ Host nexus-core
   ServerAliveCountMax 3
 
 # Daily ops user (core)
-Host nexus-core-ops
+Host grid-core-ops
   HostName 192.168.178.20
   User nexus-ops
   IdentitiesOnly yes

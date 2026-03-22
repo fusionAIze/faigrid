@@ -22,14 +22,14 @@ setup() {
     [[ "$output" == *"[INFO]"*"Test Message"* ]]
 }
 
-@test "Workbench Lib - nexus_mask() hides secrets securely" {
+@test "Workbench Lib - grid_mask() hides secrets securely" {
     source "${CORE_ROOT}/workbench/scripts/_lib.sh"
     
-    run nexus_mask "shrtkey"
+    run grid_mask "shrtkey"
     [ "$status" -eq 0 ]
     [ "$output" == "****" ] # less than 8 chars is fully masked
 
-    run nexus_mask "sk-antsk01-XXXXXXXXXXXXXXXXXXX"
+    run grid_mask "sk-antsk01-XXXXXXXXXXXXXXXXXXX"
     [ "$status" -eq 0 ]
     [ "$output" == "sk-a****" ]
 }

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-BACKUP_DIR="/var/backups/nexus-core-heart"
+BACKUP_DIR="/var/backups/grid-core-heart"
 TS="$(date +%F_%H%M%S)"
 mkdir -p "${BACKUP_DIR}"
 

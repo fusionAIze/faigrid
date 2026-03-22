@@ -1,4 +1,4 @@
-# Example target paths on nexus-core (adjust if needed)
+# Example target paths on grid-core (adjust if needed)
 
 INSTALL_DIR=/opt/openclaw
 DATA_DIR=/var/lib/openclaw

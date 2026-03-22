@@ -24,12 +24,12 @@ tool_uninstall() { pipx uninstall mem0ai 2>/dev/null || true; }
 
 tool_configure() {
     local current
-    current=$(nexus_read_env "MEM0_API_KEY")
-    printf "  MEM0_API_KEY [%s]: " "$(nexus_mask "$current")"
+    current=$(grid_read_env "MEM0_API_KEY")
+    printf "  MEM0_API_KEY [%s]: " "$(grid_mask "$current")"
     read -r -s api_key; echo ""
     [[ -z "$api_key" && -n "$current" ]] && { info "Kept existing key."; return 0; }
     [[ -z "$api_key" ]] && { warn "No key provided. Skipping."; return 0; }
-    nexus_write_env "MEM0_API_KEY" "$api_key"
-    nexus_ensure_sourced
-    success "MEM0_API_KEY saved to ~/.config/nexus/nexus.env"
+    grid_write_env "MEM0_API_KEY" "$api_key"
+    grid_ensure_sourced
+    success "MEM0_API_KEY saved to ~/.config/faigrid/grid.env"
 }

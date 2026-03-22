@@ -1,11 +1,11 @@
 # SSH hosts (client-side)
 
-This document maps the Nexus Labs host aliases to roles and default users.
+This document maps the fusionAIze Grid host aliases to roles and default users.
 
 ## Current (Step 01 + Step 02)
-- `nexus-edge`      -> edge node (DNS / Pi-hole / ingress), user: `nexus`
-- `nexus-core`      -> core node (automation/apps), user: `nexus`
-- `nexus-core-ops`  -> core node (daily ops), user: `nexus-ops`
+- `grid-edge`      -> edge node (DNS / Pi-hole / ingress), user: `nexus`
+- `grid-core`      -> core node (automation/apps), user: `nexus`
+- `grid-core-ops`  -> core node (daily ops), user: `nexus-ops`
 
 ## Why separate users?
 - `nexus` is the bootstrap/admin user (sudo, setup work)

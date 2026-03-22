@@ -1,5 +1,5 @@
 [Unit]
-Description=fusionAIze Nexus Labs Health Watchdog
+Description=fusionAIze Grid Health Watchdog
 After=network.target
 
 [Service]

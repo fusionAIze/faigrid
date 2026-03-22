@@ -24,13 +24,13 @@ tool_uninstall() { sudo npm uninstall -g @kilocode/cli; }
 
 tool_configure() {
     local current
-    current=$(nexus_read_env "ANTHROPIC_API_KEY")
+    current=$(grid_read_env "ANTHROPIC_API_KEY")
     info "Kilo Code uses the Anthropic API by default."
-    printf "  ANTHROPIC_API_KEY [%s]: " "$(nexus_mask "$current")"
+    printf "  ANTHROPIC_API_KEY [%s]: " "$(grid_mask "$current")"
     read -r -s api_key; echo ""
     [[ -z "$api_key" && -n "$current" ]] && { info "Kept existing key."; return 0; }
     [[ -z "$api_key" ]] && { warn "No key provided. Skipping."; return 0; }
-    nexus_write_env "ANTHROPIC_API_KEY" "$api_key"
-    nexus_ensure_sourced
-    success "ANTHROPIC_API_KEY saved to ~/.config/nexus/nexus.env"
+    grid_write_env "ANTHROPIC_API_KEY" "$api_key"
+    grid_ensure_sourced
+    success "ANTHROPIC_API_KEY saved to ~/.config/faigrid/grid.env"
 }

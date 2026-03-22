@@ -1,5 +1,5 @@
 # ==============================================================================
-# Nexus Labs - Edge Abuse Protection (CrowdSec Example)
+# fusionAIze Grid - Edge Abuse Protection (CrowdSec Example)
 # ==============================================================================
 # Requires the Caddy Crowdsec module (caddy add-package github.com/hslatman/caddy-crowdsec-bouncer/http)
 # This intercepts malicious IPs before they hit your internal Core.

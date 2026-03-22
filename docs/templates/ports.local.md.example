@@ -6,13 +6,13 @@ This file is a local operator note. Copy to:
 ## Example
 - Public domain: https://example.myfritz.link
 - Fritzbox port forwards:
-  - WAN 443 -> nexus-edge:443
-  - WAN 80  -> nexus-edge:80 (optional / ACME)
-- Edge (nexus-edge):
+  - WAN 443 -> grid-edge:443
+  - WAN 80  -> grid-edge:80 (optional / ACME)
+- Edge (grid-edge):
   - 443/80 public
   - 22 LAN-only
   - 53 LAN-only (Pi-hole)
-- Core (nexus-core):
+- Core (grid-core):
   - 22 LAN-only
   - n8n: 127.0.0.1:5678 (NOT exposed)
   - openclaw: 127.0.0.1:PORT (NOT exposed)

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# fusionAIze Nexus Labs - Control Center Dashboard
+# fusionAIze Grid - Control Center Dashboard
 # ==============================================================================
 # Renders a terminal ASCII dashboard and/or a static HTML page showing node telemetry.
 set -euo pipefail
@@ -50,7 +50,7 @@ if [[ "$MODE" == "shell" ]]; then
     get_telemetry
     
     echo "============================================================"
-    echo "           fusionAIze Nexus Labs - Control Center           "
+    echo "           fusionAIze Grid - Control Center           "
     echo "============================================================"
     echo " UPTIME : ${UPTIME}"
     echo " CPU    : ${CPU}"
@@ -88,7 +88,7 @@ elif [[ "$MODE" == "html" ]]; then
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="refresh" content="30">
-    <title>Nexus Labs Dashboard</title>
+    <title>fusionAIze Grid Dashboard</title>
     <style>
         body { font-family: 'Courier New', Courier, monospace; background-color: #0f172a; color: #38bdf8; padding: 20px; line-height: 1.6; }
         .card { background-color: #1e293b; padding: 25px; border-radius: 8px; margin-bottom: 20px; }
@@ -101,7 +101,7 @@ elif [[ "$MODE" == "html" ]]; then
     </style>
 </head>
 <body>
-    <h1>fusionAIze Nexus Labs</h1>
+    <h1>fusionAIze Grid</h1>
     
     <div class="card">
         <h2>Hardware Telemetry</h2>

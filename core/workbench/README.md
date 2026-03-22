@@ -1,6 +1,6 @@
 # Core Workbench
 
-This module houses the **Terminal Control Center** and **Plugin Registry** for the `nexus-core` AI environment. 
+This module houses the **Terminal Control Center** and **Plugin Registry** for the `grid-core` AI environment. 
 
 It provides a single unified interface to discover, install, update, and manage the various CLI toolkits, memory stores, routing layers, and agents running on your core instance.
 

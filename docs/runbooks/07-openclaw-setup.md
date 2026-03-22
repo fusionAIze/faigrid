@@ -1,4 +1,4 @@
-# Step 03.2 — OpenClaw (native on nexus-core)
+# Step 03.2 — OpenClaw (native on grid-core)
 
 This document is kept for compatibility with the original scaffold naming.
 The canonical OpenClaw native workflow now lives under `core/openclaw/native/`.

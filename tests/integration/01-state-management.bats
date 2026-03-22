@@ -10,8 +10,8 @@ setup() {
     export HOME="${BATS_TEST_TMPDIR}/home"
     mkdir -p "$HOME"
     
-    export STATE_FILE="$HOME/.nexus-state"
-    export LOCAL_REGISTRY="${BATS_TEST_TMPDIR}/.nexus/state"
+    export STATE_FILE="$HOME/.grid-state"
+    export LOCAL_REGISTRY="${BATS_TEST_TMPDIR}/.faigrid/state"
     
     # We must mock output functions missing since we only source parts of the script
     # or if we source install.sh, we might hit execution. 

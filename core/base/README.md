@@ -1,6 +1,6 @@
 # Core Base
 
-This module contains the Debian baseline for `nexus-core`:
+This module contains the Debian baseline for `grid-core`:
 
 - `scripts/ssh-hardening-apply.sh`
 - `scripts/vnc-install.sh`

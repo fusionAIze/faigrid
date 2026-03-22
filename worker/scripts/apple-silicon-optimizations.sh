@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# fusionAIze Nexus Labs - macOS "Inference Mode" Optimizer
+# fusionAIze Grid - macOS "Inference Mode" Optimizer
 # ==============================================================================
 # Focus: Freeing up Unified Memory for 8GB M2/M3 hardware.
 set -euo pipefail

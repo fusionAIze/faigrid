@@ -55,17 +55,17 @@ tool_configure() {
     info "Press Enter to keep an existing value."
 
     # Read a value and patch a key in the .env file.
-    # Falls back to nexus.env if the key is absent from the .env file.
+    # Falls back to grid.env if the key is absent from the .env file.
     _fg_set_key() {
         local key="$1" label="$2" silent="${3:-no}"
         local current nexus_val val hint tmp
         current=$(sudo grep "^${key}=" "$env_file" 2>/dev/null | cut -d'=' -f2- | tr -d '"' || echo "")
-        nexus_val=$(nexus_read_env "$key" 2>/dev/null || echo "")
+        nexus_val=$(grid_read_env "$key" 2>/dev/null || echo "")
         if [[ "$silent" == "yes" ]]; then
             if [[ -n "$current" ]]; then
-                hint="$(nexus_mask "$current")"
+                hint="$(grid_mask "$current")"
             elif [[ -n "$nexus_val" ]]; then
-                hint="nexus: $(nexus_mask "$nexus_val")"
+                hint="nexus: $(grid_mask "$nexus_val")"
             else
                 hint="not set"
             fi
@@ -85,7 +85,7 @@ tool_configure() {
         if [[ -z "$val" ]]; then
             if [[ -z "$current" ]] && [[ -n "$nexus_val" ]]; then
                 val="$nexus_val"
-                info "  ↳ adopted from nexus.env"
+                info "  ↳ adopted from grid.env"
             else
                 return 0
             fi

@@ -1,13 +1,13 @@
 # Core Workbench Control Center
 
-The `nexus-core` instance introduces an extensible **Workbench Control Center**, serving as a terminal-based UI and plugin registry for managing the various CLI tools, routing agents, and memory stores.
+The `grid-core` instance introduces an extensible **Workbench Control Center**, serving as a terminal-based UI and plugin registry for managing the various CLI tools, routing agents, and memory stores.
 
 ## Architectural Goal
 Instead of manually hunting down `npm install`, `pipx upgrade`, or `git pull` commands for different tools, the Control Center unifies them. It scans the `plugins/` registry, groups them by categories (CLIs, Routers, Agents, Memory), and offers a single interface.
 
 ## Launching the Control Center
 
-Execute the main script via SSH on your `nexus-core` instance:
+Execute the main script via SSH on your `grid-core` instance:
 
 ```bash
 bash core/workbench/scripts/control-center.sh

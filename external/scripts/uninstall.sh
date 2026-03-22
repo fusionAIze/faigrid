@@ -9,7 +9,7 @@ uninstall_component() {
     local name=$1
     local dir="${STACK_DIR}/compose/${name}"
     if [[ -d "${dir}" ]]; then
-        echo "[nexus-external] Uninstalling ${name}..."
+        echo "[grid-external] Uninstalling ${name}..."
         docker compose -f "${dir}/docker-compose.yml" down -v || true
     fi
 }
@@ -21,4 +21,4 @@ case "${COMPONENT}" in
     *)     echo "Unknown component: ${COMPONENT}"; exit 1 ;;
 esac
 
-echo "[nexus-external] Uninstallation complete."
+echo "[grid-external] Uninstallation complete."

@@ -6,7 +6,7 @@ ACTION="${1:-}"
 case "$ACTION" in
   start|stop|restart|status)
     if command -v ollama &> /dev/null; then
-        echo "[nexus-worker] Managing Ollama..."
+        echo "[grid-worker] Managing Ollama..."
         # On macOS, Ollama is usually an app or brew service
         if [[ "$(uname -s)" == "Darwin" ]]; then
             brew services "$ACTION" ollama || echo "Ollama not managed by brew services. Please use the Ollama App."
@@ -15,7 +15,7 @@ case "$ACTION" in
         fi
     fi
     if command -v lms &> /dev/null; then
-        echo "[nexus-worker] LM Studio (lms) status check..."
+        echo "[grid-worker] LM Studio (lms) status check..."
         lms status || true
     fi
     ;;

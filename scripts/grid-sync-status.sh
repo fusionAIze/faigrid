@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# fusionAIze Nexus Labs - Core to External Status Sync
+# fusionAIze Grid - Core to External Status Sync
 # ==============================================================================
 set -euo pipefail
 
@@ -24,7 +24,7 @@ if [[ -f "$LOCAL_STATUS" ]]; then
     scp -q "$LOCAL_STATUS" "${REMOTE_TARGET}:/var/www/nexus/grid-status.json"
     
     # Trigger dashboard refresh on remote
-    ssh -q "$REMOTE_TARGET" "bash /tmp/nexus-install/external/scripts/nexus-external-dashboard.sh"
+    ssh -q "$REMOTE_TARGET" "bash /tmp/nexus-install/external/scripts/grid-external-dashboard.sh"
 else
     echo "[nexus-sync] Local status file not found: ${LOCAL_STATUS}"
 fi

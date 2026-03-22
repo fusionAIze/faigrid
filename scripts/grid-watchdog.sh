@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# fusionAIze Nexus Labs - System Watchdog
+# fusionAIze Grid - System Watchdog
 # ==============================================================================
 # Triggered via systemd timer to ping Edge, Core, and Database services.
 # Emits standardized telemetry to the Centralized Logging endpoint.

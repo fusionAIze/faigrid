@@ -1,6 +1,6 @@
-# fusionAIze Nexus Labs — Architecture
+# fusionAIze Grid — Architecture
 
-fusionAIze Nexus Labs is a modular reference stack for running a secure, self-hosted **agent + automation** environment.
+fusionAIze Grid is a modular reference stack for running a secure, self-hosted **agent + automation** environment.
 
 The architecture is organized around **roles** (what a node does), not specific hardware (what a node is).
 Any role can run on many types of hosts (Raspberry Pi, mini PC, VM, VPS, cloud).
@@ -17,7 +17,7 @@ Any role can run on many types of hosts (Raspberry Pi, mini PC, VM, VPS, cloud).
 
 ## Roles (hardware-agnostic)
 
-### 1) nexus-edge (ingress + optional LAN DNS)
+### 1) grid-edge (ingress + optional LAN DNS)
 
 Responsibilities:
 - TLS termination + reverse proxy (Caddy/Traefik/Nginx)
@@ -31,7 +31,7 @@ Typical exposure:
 - 53 (DNS, LAN-only if enabled)
 - 22 (SSH, LAN-only)
 
-### 2) nexus-core (orchestrator + AI Workbench)
+### 2) grid-core (orchestrator + AI Workbench)
 
 Responsibilities:
 - Internal n8n (automation backbone, not exposed externally)
@@ -41,19 +41,19 @@ Responsibilities:
 - State & Queue (Postgres + Redis)
 
 Typical exposure:
-- ideally **not** exposed directly; accessed via `nexus-edge` reverse proxy Layer or VPN
+- ideally **not** exposed directly; accessed via `grid-edge` reverse proxy Layer or VPN
 
-### 3) nexus-worker (LLM execution backend)
+### 3) grid-worker (LLM execution backend)
 
 Responsibilities:
 - local model serving (LM Studio / Ollama / vLLM) and/or routing to cloud LLMs
-- access restricted to LAN/VPN and allowlisted callers (e.g., `nexus-core`)
+- access restricted to LAN/VPN and allowlisted callers (e.g., `grid-core`)
 - cost-optimized coding/review tasks and offline/low-cost inference
 
 Typical exposure:
 - LAN/VPN only (HTTP API)
 
-### 4) nexus-backup (backup target)
+### 4) grid-backup (backup target)
 
 Responsibilities:
 - backup target for configs, DB dumps, and artifacts
@@ -63,12 +63,12 @@ Responsibilities:
 Targets can be:
 - NAS, external disk, S3-compatible object storage, rsync target, etc.
 
-### 5) nexus-external (public cloud extension)
+### 5) grid-external (public cloud extension)
 
 Responsibilities:
 - Hosting external-facing collaboration tools (e.g. Agency-PM / Plane)
 - External Workflow Automation (external-n8n)
-- Securely communicating inward with the internal `nexus-core` n8n
+- Securely communicating inward with the internal `grid-core` n8n
 
 Typical exposure:
 - Publicly accessible via internet (Standard web ports 80/443)
@@ -79,19 +79,19 @@ For a standard 4+1 home or lab deployment, we recommendation assigning static IP
 
 | Node | Role | Recommended IP |
 |---|---|---|
-| **nexus-edge** | Ingress, DNS, TLS | `192.168.178.10` |
-| **nexus-core** | AI Workbench, n8n | `192.168.178.20` |
-| **nexus-worker** | LLM Inference (Mac, GPU) | `192.168.178.30` |
-| **nexus-backup** | Restic Vault, NAS | `192.168.178.40` |
-| **nexus-external** | Cloud PM, External n8n | *Cloud Dynamic / Public IP* |
+| **grid-edge** | Ingress, DNS, TLS | `192.168.178.10` |
+| **grid-core** | AI Workbench, n8n | `192.168.178.20` |
+| **grid-worker** | LLM Inference (Mac, GPU) | `192.168.178.30` |
+| **grid-backup** | Restic Vault, NAS | `192.168.178.40` |
+| **grid-external** | Cloud PM, External n8n | *Cloud Dynamic / Public IP* |
 
 > [!TIP]
 > Use these IPs to pre-configure your `.env.topology` or simply follow the prompts in `install.sh`.
 
 ## Execution model (recommended)
 
-- Webhooks enter via **nexus-edge** or **nexus-external**
-- Workflows run in **n8n** on **nexus-core**
+- Webhooks enter via **grid-edge** or **grid-external**
+- Workflows run in **n8n** on **grid-core**
 - Routing and model dispatching runs via **FoundryGate/RTK**
 - Actions execute via isolated runner CLIs (codex, paperclip) or **OpenClaw** agents
 - Everything is logged and backed up

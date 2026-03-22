@@ -3,7 +3,7 @@
 Use this as a "done list" + expected outputs.
 
 ## A) Identity
-- [ ] Hostname is `nexus-core`
+- [ ] Hostname is `grid-core`
   - `hostname`
 
 - [ ] Core has expected IPv4 (example: `192.168.178.20`)
@@ -67,10 +67,10 @@ Expected:
 - `Active: active (running)`
 
 ## H) Client (macOS) SSH aliases
-- [ ] `~/.ssh/config` contains at least: `nexus-edge`, `nexus-core`, `nexus-core-ops`
+- [ ] `~/.ssh/config` contains at least: `grid-edge`, `grid-core`, `grid-core-ops`
 - [ ] SSH works:
-  - `ssh nexus-core`
-  - `ssh nexus-core-ops`
+  - `ssh grid-core`
+  - `ssh grid-core-ops`
 
 ## I) Client (macOS) VNC tunnel
 - [ ] tunnel script runs and opens VNC viewer (or at least keeps tunnel up)

@@ -1,4 +1,4 @@
-# CODEX.md — fusionAIze Nexus Labs
+# CODEX.md — fusionAIze Grid
 
 **Read `AGENTS.md` first.** It contains the foundational architecture context (4+1 Node Setup) and universal rules for this repository.
 
@@ -6,7 +6,7 @@
 
 - **Domain**: Shell-driven AI Infrastructure Orchestration.
 - **Language**: Strict Bash (`set -euo pipefail`).
-- **Core Engine**: `install.sh` orchestrator with `.nexus-state` detection.
+- **Core Engine**: `install.sh` orchestrator with `.grid-state` detection.
 - **Default AI Role**: Codex is meant to be a rapid terminal executor, operating heavily on shell pipelines and local system automation tasks.
 
 ## Project Instruction Summary

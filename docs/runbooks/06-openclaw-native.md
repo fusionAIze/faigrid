@@ -1,9 +1,9 @@
-# Step 02.5 — OpenClaw (native on nexus-core)
+# Step 02.5 — OpenClaw (native on grid-core)
 
 ## Target outcome
-- OpenClaw runs as a **native systemd service** on `nexus-core`
+- OpenClaw runs as a **native systemd service** on `grid-core`
 - bound to `127.0.0.1:18789`
-- later exposed via `nexus-edge` (reverse proxy + SSO/2FA)
+- later exposed via `grid-edge` (reverse proxy + SSO/2FA)
 
 ## Repo locations
 - Module: `core/openclaw/native/`
@@ -12,14 +12,14 @@
 - Example systemd: `core/openclaw/native/server/openclaw.service`
 - Control-center: `core/openclaw/native/server/control-center.sh`
 
-## Host-side planned paths (nexus-core)
+## Host-side planned paths (grid-core)
 - CLI: `/usr/local/bin/openclaw`
 - Env dir: `/etc/openclaw/openclaw.env`  (not in git)
 - Token env: `/etc/openclaw/openclaw.token.env`  (not in git)
 - Token secret: `/etc/openclaw/secret/gateway.token`
 - State dir: `/var/lib/openclaw/.openclaw`
 
-## Install plan (to execute later on nexus-core)
+## Install plan (to execute later on grid-core)
 1) Ensure Node 22+ + npm present
 2) Create service user `openclaw`
 3) Install `openclaw@<version>` globally via npm

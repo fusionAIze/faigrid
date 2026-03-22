@@ -16,7 +16,7 @@ trap '_quit' INT TERM
 _quit() {
   echo ""
   divider
-  success "Nexus Labs Orchestration Complete! 🚀"
+  success "fusionAIze Grid Orchestration Complete! 🚀"
   divider
   echo ""
   exit 0
@@ -391,14 +391,14 @@ _configure_via_faigate_template() {
   echo ""
   divider
   printf "  ${C_BOLD}Apply faigate routing for %s?${C_RESET}\n" "$name"
-  printf "  ${C_DIM}This writes OPENAI_BASE_URL + FAIGATE_CLIENT to nexus.env.${C_RESET}\n"
+  printf "  ${C_DIM}This writes OPENAI_BASE_URL + FAIGATE_CLIENT to grid.env.${C_RESET}\n"
   printf "  ${C_DIM}Your existing tool config is NOT overwritten.${C_RESET}\n\n"
   read -r -p "  ▸ Apply? [y/N]: " apply_choice
   if [[ "${apply_choice:-N}" =~ ^[Yy]$ ]]; then
     (
       source "${HERE}/_lib.sh"
-      nexus_write_env "OPENAI_BASE_URL" "http://127.0.0.1:8090/v1"
-      nexus_write_env "OPENAI_API_KEY"  "local"
+      grid_write_env "OPENAI_BASE_URL" "http://127.0.0.1:8090/v1"
+      grid_write_env "OPENAI_API_KEY"  "local"
     )
     success "${name} will route via fusionAIze Gate (OPENAI_BASE_URL=http://127.0.0.1:8090/v1)."
     info "Set ${C_BOLD}X-faigate-Client: ${client}${C_RESET} in ${name}'s request headers for per-client routing."
@@ -458,7 +458,7 @@ _configure_faigate_wizard_for_client() {
 
 cmd_configure() {
   wb_header "Configure Tool"
-  printf "  ${C_DIM}Set API keys and settings. Values persist in${C_RESET} ${C_BOLD}~/.config/nexus/nexus.env${C_RESET}\n\n"
+  printf "  ${C_DIM}Set API keys and settings. Values persist in${C_RESET} ${C_BOLD}~/.config/faigrid/grid.env${C_RESET}\n\n"
 
   local plugin_list=()
   local i=1
@@ -557,7 +557,7 @@ cmd_configure() {
     esac
 
     echo ""
-    ( source "${HERE}/_lib.sh" && nexus_ensure_sourced ) 2>/dev/null || true
+    ( source "${HERE}/_lib.sh" && grid_ensure_sourced ) 2>/dev/null || true
   else
     error "Invalid selection."
   fi
@@ -780,7 +780,7 @@ show_menu() {
   while true; do
     echo ""
     divider
-    printf "  ${C_BOLD}Workbench Control Center${C_RESET}  ${C_DIM}nexus-core${C_RESET}\n"
+    printf "  ${C_BOLD}Workbench Control Center${C_RESET}  ${C_DIM}grid-core${C_RESET}\n"
     divider
     echo ""
     printf "    ${C_BOLD}1)${C_RESET}  ${C_GREEN}Status${C_RESET}       ${C_DIM}Registry overview — installed tools and versions${C_RESET}\n"

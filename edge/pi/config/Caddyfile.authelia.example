@@ -1,5 +1,5 @@
 # ==============================================================================
-# Nexus Labs - Edge SSO Configuration (Authelia / Authentik Example)
+# fusionAIze Grid - Edge SSO Configuration (Authelia / Authentik Example)
 # ==============================================================================
 # This is a snippet demonstrating how to place your Nexus Core (n8n, OpenClaw) 
 # behind a centralized identity provider using Caddy's forward_auth directive.

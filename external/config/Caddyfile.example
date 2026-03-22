@@ -4,7 +4,7 @@
 
 # n8n External Node
 ${N8N_HOST} {
-    reverse_proxy nexus-external-n8n:5678
+    reverse_proxy grid-external-n8n:5678
 }
 
 # Plane.so External Node

@@ -1,10 +1,10 @@
 # Naming conventions
 
 ## Hosts
-- `nexus-edge`  = edge node (secure ingress + DNS)
-- `nexus-core`  = core node (automation/apps)
-- `nexus-worker` = compute/runners
-- `nexus-backup` = backup storage/target
+- `grid-edge`  = edge node (secure ingress + DNS)
+- `grid-core`  = core node (automation/apps)
+- `grid-worker` = compute/runners
+- `grid-backup` = backup storage/target
 
 ## Users
 - `nexus`      = admin/bootstrap user (sudo)

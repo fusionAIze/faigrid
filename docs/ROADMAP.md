@@ -1,4 +1,4 @@
-# Roadmap: fusionAIze Grid (formerly Nexus Labs)
+# Roadmap: fusionAIze Grid (formerly fusionAIze Grid)
 
 This roadmap outlines the path from the current structured orchestrator base towards the fully-fledged, production-ready **fusionAIze Grid**. 
 
@@ -30,7 +30,7 @@ The Grid is built on abstraction rather than hardware coupling. It provisions an
 ## 📈 Versioning & Migration Strategy
 
 We build upon standard Semantic Versioning, with **`v1.3.0` forming the bridging milestone.**
-Only after reaching the solid `v1.3.0` checkpoint will this repository undergo a complete rename and strict decoupling from its historical "Nexus Labs" identity.
+Only after reaching the solid `v1.3.0` checkpoint will this repository undergo a complete rename and strict decoupling from its historical "fusionAIze Grid" identity.
 
 - **Current Status:** Consolidating UX loops, CLI registry patterns, and `faigate` template ingestion.
 - **Next Horizon:** Reaching `v1.3.0-dev` stabilization.
@@ -52,13 +52,13 @@ We are adopting a **Hybrid Framework** balancing *wide developer adoption* with 
 - [x] Integrate **fusionAIze Gate** into the orchestration wizard.
 - [x] Standardize interactive installer with specific pipx-bootstrapping and local node detection logic.
 - [ ] Stabilize and align plugin ecosystem for memory (mem0), routers (openrouter), and agents (openclaw).
-- [ ] Solidify `.nexus-state` into `.grid-state` mapping.
+- [ ] Solidify `.grid-state` into `.grid-state` mapping.
 - [ ] Prepare repository for clean git decoupling.
 
 ### Phase 2: Complete Rebrand to *fusionAIze Grid* 
 *The naming and identity shift (Post-1.3.0)*
-- Execution of the deep repository rename: `typelicious/fusionaize-nexus-labs` → `fusionAIze/faigrid` (Manual transfer, then full string replacement).
-- Systematic removal of legacy `Nexus Labs` phrasing outside of necessary architectural roles (`nexus-edge`, `nexus-core`).
+- Execution of the deep repository rename: `typelicious/faigrid` → `fusionAIze/faigrid` (Manual transfer, then full string replacement).
+- Systematic removal of legacy `fusionAIze Grid` phrasing outside of necessary architectural roles (`grid-edge`, `grid-core`).
 - Establishing the `brew install faigrid` installer pipeline for frictionless macOS and Linux setups.
 - Deep alignment of UI terminal structures with `faigate` for matching operational UX.
 

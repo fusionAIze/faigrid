@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# fusionAIze Nexus Labs - Interactive Restore Navigator
+# fusionAIze Grid - Interactive Restore Navigator
 # ==============================================================================
 set -euo pipefail
 
@@ -16,7 +16,7 @@ fi
 source "$CONFIG_FILE"
 
 echo "============================================================"
-echo "          Nexus Labs - Snapshot Restore Navigator           "
+echo "          fusionAIze Grid - Snapshot Restore Navigator           "
 echo "============================================================"
 
 # List snapshots

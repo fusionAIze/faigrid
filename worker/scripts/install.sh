@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# fusionAIze Nexus Labs - Worker Node Installer (Inference)
+# fusionAIze Grid - Worker Node Installer (Inference)
 # ==============================================================================
 # Optimized for macOS (MacBook) and inference-heavy environments.
 set -euo pipefail
 
-echo "[nexus-worker] Detecting environment..."
+echo "[grid-worker] Detecting environment..."
 OS_TYPE="$(uname -s)"
 ARCH_TYPE="$(uname -m)"
 
 if [[ "$OS_TYPE" == "Darwin" ]]; then
-    echo "[nexus-worker] macOS detected (Architecture: ${ARCH_TYPE})."
+    echo "[grid-worker] macOS detected (Architecture: ${ARCH_TYPE})."
     
     # 1. Check for Homebrew
     if ! command -v brew &> /dev/null; then
@@ -36,16 +36,16 @@ if [[ "$OS_TYPE" == "Darwin" ]]; then
 
     # 4. Secure Tunneling (Tailscale)
     if ! command -v tailscale &> /dev/null; then
-        echo "[INFO] Tailscale not detected. Highly recommended for 'nexus-worker' -> 'nexus-core' tunnels."
+        echo "[INFO] Tailscale not detected. Highly recommended for 'grid-worker' -> 'grid-core' tunnels."
         echo "       Install: brew install tailscale"
     fi
 
 else
-    echo "[nexus-worker] Linux detected. Standardizing packages..."
+    echo "[grid-worker] Linux detected. Standardizing packages..."
     sudo apt-get update -y && sudo apt-get install -y curl jq
     
     if ! command -v ollama &> /dev/null; then
-        echo "[nexus-worker] Installing Ollama for Linux..."
+        echo "[grid-worker] Installing Ollama for Linux..."
         curl -fsSL https://ollama.com/install.sh | sh
     fi
 fi
@@ -60,9 +60,9 @@ echo "  - Context: Limit to 4096 (Ollama: num_ctx 4096)"
 echo "  - Engine: Ollama (Metal) is highly recommended for 8GB."
 echo "============================================================"
 echo ""
-echo "[nexus-worker] Configuration Note:"
+echo "[grid-worker] Configuration Note:"
 echo "  To bridge this MacBook to Nexus Core, please consult docs/runbooks/tunneling.md"
-echo "  For LM Studio: ssh -R 1234:localhost:1234 user@nexus-core-ip"
-echo "  For Ollama:    ssh -R 11434:localhost:11434 user@nexus-core-ip"
+echo "  For LM Studio: ssh -R 1234:localhost:1234 user@grid-core-ip"
+echo "  For Ollama:    ssh -R 11434:localhost:11434 user@grid-core-ip"
 echo ""
-echo "[nexus-worker] Worker node provisioning complete."
+echo "[grid-worker] Worker node provisioning complete."

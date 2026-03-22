@@ -1,16 +1,16 @@
-# fusionAIze Nexus Labs
+# fusionAIze Grid
 
-[![repo-safety](https://github.com/typelicious/fusionaize-nexus-labs/actions/workflows/repo-safety.yml/badge.svg)](https://github.com/typelicious/fusionaize-nexus-labs/actions/workflows/repo-safety.yml) [![Lint](https://github.com/typelicious/fusionaize-nexus-labs/actions/workflows/lint.yml/badge.svg)](https://github.com/typelicious/fusionaize-nexus-labs/actions/workflows/lint.yml) [![Test](https://github.com/typelicious/fusionaize-nexus-labs/actions/workflows/test.yml/badge.svg)](https://github.com/typelicious/fusionaize-nexus-labs/actions/workflows/test.yml) [![Release](https://img.shields.io/github/v/release/typelicious/fusionaize-nexus-labs?display_name=tag)](https://github.com/typelicious/fusionaize-nexus-labs/releases) [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![repo-safety](https://github.com/typelicious/faigrid/actions/workflows/repo-safety.yml/badge.svg)](https://github.com/typelicious/faigrid/actions/workflows/repo-safety.yml) [![Lint](https://github.com/typelicious/faigrid/actions/workflows/lint.yml/badge.svg)](https://github.com/typelicious/faigrid/actions/workflows/lint.yml) [![Test](https://github.com/typelicious/faigrid/actions/workflows/test.yml/badge.svg)](https://github.com/typelicious/faigrid/actions/workflows/test.yml) [![Release](https://img.shields.io/github/v/release/typelicious/faigrid?display_name=tag)](https://github.com/typelicious/faigrid/releases) [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![OpenClaw-friendly](https://img.shields.io/badge/OpenClaw-friendly-111827.svg)](https://openclaw.ai/) [![n8n-automated](https://img.shields.io/badge/n8n-automated-ea4b71.svg?logo=n8n&logoColor=white)](https://n8n.io/) [![Docker-ready](https://img.shields.io/badge/docker-ready-2496ED?logo=docker&logoColor=white)](https://www.docker.com/) [![Bash-powered](https://img.shields.io/badge/Language-Bash-4EAA25.svg)](https://www.gnu.org/software/bash/)
 
-# fusionAIze Nexus Labs (v1.0.0 GA)
+# fusionAIze Grid (v1.0.0 GA)
 
-**fusionAIze Nexus Labs** is a professional, secure, and modular reference stack for building a sovereign, self-hosted **Agent & Automation** environment. It embraces a strict "deny-by-default" security philosophy, decoupling untrusted ingress (Edge) from critical orchestration (Core) and heavy LLM inference (Workers). Now fully localized and cloud-ready for institutional and private use.
+**fusionAIze Grid** is a professional, secure, and modular reference stack for building a sovereign, self-hosted **Agent & Automation** environment. It embraces a strict "deny-by-default" security philosophy, decoupling untrusted ingress (Edge) from critical orchestration (Core) and heavy LLM inference (Workers). Now fully localized and cloud-ready for institutional and private use.
 
 ---
 
 ### Navigation
-[Why Nexus Labs?](#why-nexus-labs) • 
+[Why fusionAIze Grid?](#why-nexus-labs) • 
 [Architecture](#architecture) • 
 [Quick Start](#quick-start) • 
 [Troubleshooting](#troubleshooting) • 
@@ -20,9 +20,9 @@
 
 ---
 
-## Why Nexus Labs?
+## Why fusionAIze Grid?
 
-Rather than relying on heavy, black-box frameworks, Nexus Labs utilizes pure Bash orchestration, robust Systemd services, and well-understood Docker topologies to provide a transparent and resilient AI workbench. It decouples orchestration from execution to ensure that your private data and models stay under your control.
+Rather than relying on heavy, black-box frameworks, fusionAIze Grid utilizes pure Bash orchestration, robust Systemd services, and well-understood Docker topologies to provide a transparent and resilient AI workbench. It decouples orchestration from execution to ensure that your private data and models stay under your control.
 
 ---
 
@@ -62,7 +62,7 @@ Get your Nexus infrastructure live in 2 steps:
 
 ```bash
 # 1. Clone & Provision (Detects macOS/Linux automatically)
-git clone https://github.com/typelicious/fusionaize-nexus-labs.git nexus
+git clone https://github.com/typelicious/faigrid.git nexus
 cd nexus && bash install.sh
 
 # 2. Deploy your first node (e.g. Core Workbench)
@@ -95,11 +95,11 @@ tail -f /var/log/nexus/nexus-system.log
 
 The Nexus framework is logically segmented into specialized operational roles:
 
-- **nexus-edge**: The gatekeeper. Handles TLS termination (Caddy), CrowdSec bouncers, and identity providers (Authelia/Authentik). Exposed to the internet.
-- **nexus-core**: The orchestrator. Contains the AI Workbench including n8n, further AI routing logic natively managed by OpenClaw, Redis distributed queues, and system telemetry watchdogs. Strictly internal.
-- **nexus-worker**: The execution engine. Dedicated hardware running local LLMs (e.g., LM Studio/Ollama) routed securely to the Core via Tailscale or reverse SSH tunnels.
-- **nexus-backup**: The safety net. Automated, immutable offline backup pipelines targeting dedicated local network attached storage.
-- **nexus-external** *(optional)*: The global bridge. Distributed extension nodes for public-facing automated workflows (n8n) and project management (Plane.so), syncing back to the primary local grid.
+- **grid-edge**: The gatekeeper. Handles TLS termination (Caddy), CrowdSec bouncers, and identity providers (Authelia/Authentik). Exposed to the internet.
+- **grid-core**: The orchestrator. Contains the AI Workbench including n8n, further AI routing logic natively managed by OpenClaw, Redis distributed queues, and system telemetry watchdogs. Strictly internal.
+- **grid-worker**: The execution engine. Dedicated hardware running local LLMs (e.g., LM Studio/Ollama) routed securely to the Core via Tailscale or reverse SSH tunnels.
+- **grid-backup**: The safety net. Automated, immutable offline backup pipelines targeting dedicated local network attached storage.
+- **grid-external** *(optional)*: The global bridge. Distributed extension nodes for public-facing automated workflows (n8n) and project management (Plane.so), syncing back to the primary local grid.
 
 > **Security Note:** This repository is intrinsically designed for autonomous deployments. It utilizes dynamic state and `.env.topology` generation. **Never commit secrets**.
 

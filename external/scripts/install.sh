@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# fusionAIze Nexus Labs - External Role Installer (Cloud)
+# fusionAIze Grid - External Role Installer (Cloud)
 # ==============================================================================
 set -euo pipefail
 
@@ -8,21 +8,21 @@ COMPONENT="${1:-all}" # n8n, plane, or all
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd || exit 1)"
 STACK_DIR="$(cd "${SCRIPT_DIR}/.." && pwd || exit 1)"
 
-echo "[nexus-external] Initializing cloud stack (Component: ${COMPONENT})..."
+echo "[grid-external] Initializing cloud stack (Component: ${COMPONENT})..."
 
 # 1. Ensure global external network and web root exists
 if ! docker network ls | grep -q "nexus_external_net"; then
-    echo "[nexus-external] Creating global external network..."
+    echo "[grid-external] Creating global external network..."
     docker network create nexus_external_net
 fi
 
-echo "[nexus-external] Ensuring dashboard web root exists..."
+echo "[grid-external] Ensuring dashboard web root exists..."
 sudo mkdir -p /var/www/nexus
 sudo chown -R "$(id -u):$(id -g)" /var/www/nexus
 
 # 2. Component Installation
 install_n8n() {
-    echo "[nexus-external] Installing n8n..."
+    echo "[grid-external] Installing n8n..."
     local n8n_dir="${STACK_DIR}/compose/n8n"
     if [[ ! -f "${n8n_dir}/.env" ]]; then
         cp "${n8n_dir}/.env.example" "${n8n_dir}/.env" || echo "Please create ${n8n_dir}/.env"
@@ -31,7 +31,7 @@ install_n8n() {
 }
 
 install_plane() {
-    echo "[nexus-external] Installing Plane.so..."
+    echo "[grid-external] Installing Plane.so..."
     local plane_dir="${STACK_DIR}/compose/plane"
     if [[ ! -f "${plane_dir}/.env" ]]; then
         echo "PLANE_DB_PASSWORD=$(openssl rand -hex 16)" > "${plane_dir}/.env"
@@ -48,8 +48,8 @@ case "${COMPONENT}" in
 esac
 
 # 3. Finalize Dashboard
-if [[ -f "${SCRIPT_DIR}/nexus-external-dashboard.sh" ]]; then
-    bash "${SCRIPT_DIR}/nexus-external-dashboard.sh"
+if [[ -f "${SCRIPT_DIR}/grid-external-dashboard.sh" ]]; then
+    bash "${SCRIPT_DIR}/grid-external-dashboard.sh"
 fi
 
-echo "[nexus-external] Installation phase complete."
+echo "[grid-external] Installation phase complete."

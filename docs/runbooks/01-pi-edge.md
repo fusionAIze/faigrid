@@ -1,8 +1,8 @@
-# Step 01 — nexus-edge (Headless) Fresh Setup (Reference: Raspberry Pi OS Lite)
+# Step 01 — grid-edge (Headless) Fresh Setup (Reference: Raspberry Pi OS Lite)
 
-This runbook sets up the **nexus-edge** role as a small, hardened edge appliance.
+This runbook sets up the **grid-edge** role as a small, hardened edge appliance.
 
-Important: nexus-edge is a **role**, not a device.
+Important: grid-edge is a **role**, not a device.
 Raspberry Pi OS Lite (64-bit) is used here as a reference implementation, but the same steps apply to any minimal Debian-based host (Pi, mini PC, VM, VPS).
 
 ## Goal state
@@ -35,7 +35,7 @@ Record these values:
 
 Use Raspberry Pi Imager and enable:
 
-- Hostname: nexus-edge
+- Hostname: grid-edge
 - SSH: enabled (prefer SSH key auth)
 - User + password
 - Locale/timezone
@@ -192,8 +192,8 @@ Verify:
 
 Create a local config backup:
 
-    sudo mkdir -p /var/backups/nexus-edge/pihole
-    sudo tar -czf /var/backups/nexus-edge/pihole/etc-pihole_$(date +%F).tar.gz /etc/pihole /etc/dnsmasq.d
+    sudo mkdir -p /var/backups/grid-edge/pihole
+    sudo tar -czf /var/backups/grid-edge/pihole/etc-pihole_$(date +%F).tar.gz /etc/pihole /etc/dnsmasq.d
 
 Recommended additional export (easy restore):
 - Pi-hole UI -> Settings -> Teleporter -> Export

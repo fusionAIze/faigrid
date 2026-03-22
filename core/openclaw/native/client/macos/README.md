@@ -18,6 +18,6 @@ nexus-openclaw-ui-stop
 ```
 
 ## Requirements
-- SSH host alias exists on the Mac (e.g. `nexus-core-ops`)
+- SSH host alias exists on the Mac (e.g. `grid-core-ops`)
 - On core: `/etc/openclaw/secret/gateway.token` readable either directly or via sudo allowlist
 - OpenClaw gateway bound to loopback on core port `18789`

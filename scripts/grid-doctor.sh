@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# fusionAIze Nexus Labs - Nexus Doctor (Diagnostics)
+# fusionAIze Grid - Nexus Doctor (Diagnostics)
 # ==============================================================================
 # Comprehensive sanity checks for the 5-node architecture.
 # Usage: ./nexus-doctor.sh
@@ -64,11 +64,11 @@ else
 fi
 
 # 4. State Verification
-if [[ -f "$HOME/.nexus-state" ]]; then
-    CURRENT_ROLE=$(grep "ROLE=" "$HOME/.nexus-state" | cut -d= -f2 || echo "unknown")
+if [[ -f "$HOME/.grid-state" ]]; then
+    CURRENT_ROLE=$(grep "ROLE=" "$HOME/.grid-state" | cut -d= -f2 || echo "unknown")
     success "Node identity verified: Role is [${CURRENT_ROLE}]."
 else
-    warn "No state file (~/.nexus-state) found. This node may be unprovisioned."
+    warn "No state file (~/.grid-state) found. This node may be unprovisioned."
 fi
 
 # 5. Log Health

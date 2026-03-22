@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# fusionAIze Nexus Labs - Centralized Backup Orchestrator
+# fusionAIze Grid - Centralized Backup Orchestrator
 # ==============================================================================
 set -euo pipefail
 
@@ -10,7 +10,7 @@ PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd || exit 1)"
 # 1. Load Config
 CONFIG_FILE="${SCRIPT_DIR}/_backup_config.sh"
 if [[ ! -f "$CONFIG_FILE" ]]; then
-    echo "[nexus-backup] [ERROR] Configuration file missing: ${CONFIG_FILE}"
+    echo "[grid-backup] [ERROR] Configuration file missing: ${CONFIG_FILE}"
     echo "Please copy _backup_config.sh.template to _backup_config.sh and configure it."
     exit 1
 fi
@@ -44,7 +44,7 @@ log "INFO" "Initiating Restic snapshot..."
 BACKUP_PATHS=(
     "${PROJECT_ROOT}"
     "/etc/nexus"
-    "$HOME/.nexus-state"
+    "$HOME/.grid-state"
 )
 
 # Filter existing paths

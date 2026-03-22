@@ -1,6 +1,6 @@
 # AI-Native Deployment Schema (`ai-topology.json`)
 
-To orchestrate the **fusionAIze Nexus Labs** autonomously, an AI Agent (Codex, Claude, etc.) should construct a `topology.json` file and pass it to the `scripts/nexus-deploy.sh` executable.
+To orchestrate the **fusionAIze Grid** autonomously, an AI Agent (Codex, Claude, etc.) should construct a `topology.json` file and pass it to the `scripts/nexus-deploy.sh` executable.
 
 ## Execution Pattern
 

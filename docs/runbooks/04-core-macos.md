@@ -12,8 +12,8 @@ Paste into:
 - `~/.ssh/config`
 
 Test:
-- `ssh nexus-core`
-- `ssh nexus-core-ops`
+- `ssh grid-core`
+- `ssh grid-core-ops`
 
 ## 2) VNC tunnel scripts (recommended)
 We keep VNC bound to localhost on the server and tunnel it from macOS.

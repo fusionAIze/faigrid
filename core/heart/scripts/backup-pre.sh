@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# fusionAIze Nexus Labs - Core Heart Pre-Backup Hook
+# fusionAIze Grid - Core Heart Pre-Backup Hook
 # ==============================================================================
 set -euo pipefail
 
 # This script is triggered by the central backup orchestrator.
 # It dumps databases and prepares volume snapshots before the main restic run.
 
-DUMP_DIR="/var/backups/nexus-core"
+DUMP_DIR="/var/backups/grid-core"
 sudo mkdir -p "${DUMP_DIR}"
 sudo chmod 700 "${DUMP_DIR}"
 

@@ -2,7 +2,7 @@
 
 ## Supported Versions
 
-Currently, the `fusionaize-nexus-labs` infrastructure templates are rolling releases. Please ensure you are running the latest commit of the repository on your Core and Edge nodes.
+Currently, the `faigrid` infrastructure templates are rolling releases. Please ensure you are running the latest commit of the repository on your Core and Edge nodes.
 
 ## Reporting a Vulnerability
 

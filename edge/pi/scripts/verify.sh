@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# nexus-edge: verify.sh — Read-only health check for the Edge node
+# grid-edge: verify.sh — Read-only health check for the Edge node
 # Caddy is OPTIONAL on edge (used as internal LAN proxy; not required if
-# all external traffic is handled by nexus-external).
+# all external traffic is handled by grid-external).
 set -euo pipefail
 
 YELLOW='\033[1;33m'
@@ -15,7 +15,7 @@ warn() { echo -e "  ${YELLOW}⚠${NC}  $1"; }
 fail() { echo -e "  ${RED}✘${NC}  $1"; }
 section() { echo ""; echo -e "${DIM}── $1 ──${NC}"; }
 
-section "nexus-edge / Services"
+section "grid-edge / Services"
 
 # --- Pi-hole ---
 if command -v pihole &>/dev/null; then
@@ -46,7 +46,7 @@ else
 fi
 
 # --- UFW Firewall ---
-section "nexus-edge / Firewall (UFW)"
+section "grid-edge / Firewall (UFW)"
 if command -v ufw &>/dev/null; then
     if sudo ufw status 2>/dev/null | grep -q "Status: active"; then
         ok "UFW: active"
@@ -59,19 +59,19 @@ else
 fi
 
 # --- Network ---
-section "nexus-edge / Listening Ports"
+section "grid-edge / Listening Ports"
 echo -e "  ${DIM}Expecting: 22 (SSH), 53 (DNS), 80/443 (optional Caddy)${NC}"
 sudo ss -tulpn 2>/dev/null | grep -E ':22|:53|:80|:443' || echo "  (none of the expected ports are listening)"
 
 # --- Disk ---
-section "nexus-edge / Disk Usage"
+section "grid-edge / Disk Usage"
 df -h / | tail -n 1
 
 # --- System ---
-section "nexus-edge / System"
+section "grid-edge / System"
 echo "  Hostname : $(hostname)"
 echo "  Uptime   : $(uptime -p 2>/dev/null || uptime)"
 echo "  OS       : $(grep PRETTY_NAME /etc/os-release 2>/dev/null | cut -d'"' -f2 || uname -sr)"
 
 echo ""
-ok "nexus-edge verify complete"
+ok "grid-edge verify complete"
