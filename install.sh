@@ -170,7 +170,7 @@ write_state() {
     {
         echo "NEXUS_ROLE=$role"
         echo "NEXUS_VERSION=latest"
-        echo "INSTALL_DATE=$(date)"
+        echo "INSTALL_DATE=\"$(date)\""
         echo "EXEC_MODE=$mode"
         if [ "$mode" = "remote" ]; then
             echo "SSH_TARGET=$ssh_target"
@@ -181,13 +181,13 @@ write_state() {
         {
             echo "NEXUS_ROLE=$role"
             echo "NEXUS_VERSION=latest"
-            echo "INSTALL_DATE=$(date)"
+            echo "INSTALL_DATE=\"$(date)\""
         } > "$STATE_FILE"
         success "Saved state to ${STATE_FILE} (and local registry)"
     else
         ssh -q "$ssh_target" "echo 'NEXUS_ROLE=$role' > \"\$HOME/.nexus-state\"; \
             echo 'NEXUS_VERSION=latest' >> \"\$HOME/.nexus-state\"; \
-            echo 'INSTALL_DATE=$(date)' >> \"\$HOME/.nexus-state\"" || true
+            echo 'INSTALL_DATE=\"$(date)\"' >> \"\$HOME/.nexus-state\"" || true
         success "Saved remote state to ~/${ssh_target}:~/.nexus-state (and local registry)"
     fi
 }
