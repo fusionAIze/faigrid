@@ -1,18 +1,33 @@
-name: Test
+name: fusionAIze Grid Test Suite
 
 on:
   push:
-    branches: [ main ]
+    branches: [ "main", "feat/*" ]
   pull_request:
-    branches: [ main ]
+    branches: [ "main" ]
 
 jobs:
   test:
-    name: Run Bash Tests
-    runs-on: ubuntu-latest
+    name: Run Bats Tests
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+
     steps:
-      - uses: actions/checkout@v4
-      - name: Make executable
-        run: chmod +x tests/test_workbench.sh
-      - name: Run Tests
-        run: ./tests/test_workbench.sh
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Make Scripts Executable
+        run: |
+          chmod +x install.sh
+          find tests -type f -name "*.sh" -exec chmod +x {} \;
+
+      - name: Run Unit Tests
+        run: tests/run_tests.sh --unit
+
+      - name: Run Functional Tests
+        run: tests/run_tests.sh --functional
+
+      - name: Run Smoke Tests
+        run: tests/run_tests.sh --smoke

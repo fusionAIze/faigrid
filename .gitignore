@@ -36,3 +36,4 @@ docs/local/
 **/openclaw.token.env
 **/.env
 **/.env.local
+tests/.libs/
