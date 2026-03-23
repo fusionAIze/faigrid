@@ -2,8 +2,8 @@
 set -euo pipefail
 
 HOST_IP="192.168.178.20"
-SSH_USER="nexus-ops"
-SSH_KEY="$HOME/.ssh/nexus_core_backup_ed25519"
+SSH_USER="grid-ops"
+SSH_KEY="$HOME/.ssh/grid_core_backup_ed25519"
 
 LOCAL_PORT=5901
 REMOTE_PORT=5901

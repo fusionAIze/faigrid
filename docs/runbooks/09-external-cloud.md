@@ -10,10 +10,10 @@ This runbook describes how to set up the **grid-external** role on a public VPS 
 
 ## 1) Prepare the Cloud Server
 - Provision a minimal Ubuntu/Debian VPS.
-- Add your SSH key for the `nexus` user (or your primary user).
+- Add your SSH key for the `grid` user (or your primary user).
 - Install Docker and Docker Compose.
 
-## 2) Deploy via Nexus Orchestrator
+## 2) Deploy via Grid Orchestrator
 From your local machine:
 
 ```bash

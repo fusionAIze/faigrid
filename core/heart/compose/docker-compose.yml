@@ -1,7 +1,7 @@
 services:
   postgres:
     image: postgres:16
-    container_name: nexus-postgres
+    container_name: grid-postgres
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
@@ -10,22 +10,22 @@ services:
       TZ: ${TZ}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    networks: [nexus_net]
+    networks: [grid_net]
 
   redis:
     image: redis:7-alpine
-    container_name: nexus-redis
+    container_name: grid-redis
     restart: unless-stopped
     command: ["redis-server", "--appendonly", "yes"]
     volumes:
       - redis_data:/data
     security_opt:
       - no-new-privileges:true
-    networks: [nexus_net]
+    networks: [grid_net]
 
   n8n:
     image: docker.n8n.io/n8nio/n8n:latest
-    container_name: nexus-n8n
+    container_name: grid-core-n8n
     restart: unless-stopped
     depends_on:
       - postgres
@@ -47,7 +47,7 @@ services:
 
       # Active security guard
       N8N_BASIC_AUTH_ACTIVE: ${N8N_BASIC_AUTH_ACTIVE:-true}
-      N8N_BASIC_AUTH_USER: ${N8N_BASIC_AUTH_USER:-nexus}
+      N8N_BASIC_AUTH_USER: ${N8N_BASIC_AUTH_USER:-grid}
       N8N_BASIC_AUTH_PASSWORD: ${N8N_BASIC_AUTH_PASSWORD}
 
       # Queue mode activated for Agentic Grid processing
@@ -59,11 +59,11 @@ services:
       - n8n_data:/home/node/.n8n
     ports:
       - "${N8N_BIND_IP:-127.0.0.1}:5678:5678"   # configurable bind (default secure to localhost)
-    networks: [nexus_net]
+    networks: [grid_net]
 
   n8n-worker:
     image: docker.n8n.io/n8nio/n8n:latest
-    container_name: nexus-n8n-worker
+    container_name: grid-core-n8n-worker
     restart: unless-stopped
     command: worker
     depends_on:
@@ -81,10 +81,10 @@ services:
       EXECUTIONS_MODE: queue
       QUEUE_BULL_REDIS_HOST: ${REDIS_HOST:-redis}
       QUEUE_BULL_REDIS_PORT: ${REDIS_PORT:-6379}
-    networks: [nexus_net]
+    networks: [grid_net]
 
 networks:
-  nexus_net:
+  grid_net:
 
 volumes:
   postgres_data:

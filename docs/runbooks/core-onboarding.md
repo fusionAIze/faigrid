@@ -10,7 +10,7 @@ To maintain a secure, generic, and reproducible infrastructure, **no secrets or 
 
 - Configuration relies purely on environment variables (`.env`).
 - Example configuration templates (e.g., `.env.example`) provide generic placeholders.
-- The actual state of the core logic, API keys, database credentials, and routing rules live purely on the server in protected `.env` files (e.g., `/opt/fusionaize-nexus/core-heart/.env`).
+- The actual state of the core logic, API keys, database credentials, and routing rules live purely on the server in protected `.env` files (e.g., `/opt/faigrid/core-heart/.env`).
 
 This separation ensures the repo acts as a structural reference, while deployment remains flexible—whether bare-metal on a Mini-PC, virtualized, or in the cloud.
 
@@ -42,5 +42,5 @@ When bringing a new `grid-core` instance online, follow these high-level steps:
 2. **Install Core Services**: Instantiate the Postgres, Redis (queue), and n8n stack defined in `core/heart/compose`. Ensure all `.env` credentials are securely generated.
 3. **Establish Routing**: Deploy FoundryGate and RTK via Docker or node as defined in their independent configurations, exposing them locally on the internal Docker network or `127.0.0.1`.
 4. **Deploy OpenClaw**: Follow the native service installation via `core/openclaw/native/server/control-center.sh` and bind it to specific router endpoints.
-5. **Install CLI Tools**: System-wide installation of the required agent CLI toolkits (e.g., Python `pipx` installs or NPM global installs) into the execution user’s environment (`nexus-runner`).
+5. **Install CLI Tools**: System-wide installation of the required agent CLI toolkits (e.g., Python `pipx` installs or NPM global installs) into the execution user’s environment (`grid-runner`).
 6. **Connect the Edge**: Update the Pi Edge (Caddy) to create secure, SSO-gated tunnels for dashboard access to n8n and OpenClaw.

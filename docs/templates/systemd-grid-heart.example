@@ -1,14 +1,14 @@
 [Unit]
-Description=fusionAIze Nexus Heart compose stack
+Description=fusionAIze Grid Heart compose stack
 After=docker.service network-online.target
 Wants=docker.service network-online.target
 
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-WorkingDirectory=/opt/fusionaize-nexus/core-heart/compose
-ExecStart=/usr/bin/docker compose --env-file /opt/fusionaize-nexus/core-heart/.env up -d
-ExecStop=/usr/bin/docker compose --env-file /opt/fusionaize-nexus/core-heart/.env down
+WorkingDirectory=/opt/faigrid/core-heart/compose
+ExecStart=/usr/bin/docker compose --env-file /opt/faigrid/core-heart/.env up -d
+ExecStop=/usr/bin/docker compose --env-file /opt/faigrid/core-heart/.env down
 
 [Install]
 WantedBy=multi-user.target

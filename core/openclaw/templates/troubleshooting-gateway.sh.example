@@ -16,7 +16,7 @@ fi
 # 2. Command fulfillment
 case "$COMMAND" in
     "status")
-        msg="🛰️ *Nexus Status Check*\nGrid: OK\nDashboard: https://${N8N_HOST}/stats"
+        msg="🛰️ *Grid Status Check*\nGrid: OK\nDashboard: https://${N8N_HOST}/stats"
         # Send via Telegram API or Discord Webhook
         ;;
     "reboot-service")
@@ -25,8 +25,8 @@ case "$COMMAND" in
         # Execution logic: ssh core-ip "bash install.sh --action control --component ${service_name} --action restart"
         ;;
     *)
-        msg="❓ Unknown Nexus command."
+        msg="❓ Unknown Grid command."
         ;;
 esac
 
-echo "[nexus-gateway] Command '${COMMAND}' via ${GATEWAY_TYPE} queued."
+echo "[grid-gateway] Command '${COMMAND}' via ${GATEWAY_TYPE} queued."

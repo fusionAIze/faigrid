@@ -1,6 +1,6 @@
 # Contributing to fusionAIze Grid
 
-Thank you for your interest in contributing to the Nexus architecture!
+Thank you for your interest in contributing to the Grid architecture!
 
 This repository serves as a generic standard for a 4+1 Node AI infrastructure. When contributing, please ensure your architectural additions align with the design principles:
 

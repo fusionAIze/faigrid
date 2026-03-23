@@ -47,7 +47,7 @@ tool_install() {
     # Single-env examples:
     #   npm:   sudo npm install -g example-cli
     #   pipx:  _bootstrap_pipx && pipx install example-cli
-    #   git:   sudo git clone https://github.com/org/example /opt/fusionaize-nexus/example
+    #   git:   sudo git clone https://github.com/org/example /opt/faigrid/example
     #   curl:  curl -fsSL https://example.com/install.sh | sh
     #
     # Multi-env example:
@@ -64,7 +64,7 @@ tool_install() {
 tool_update() {
     # npm:   sudo npm update -g example-cli
     # pipx:  pipx upgrade example-cli
-    # git:   ( cd /opt/fusionaize-nexus/example && sudo git pull )
+    # git:   ( cd /opt/faigrid/example && sudo git pull )
     # apt:   sudo apt-get install -y --only-upgrade example
     # dnf:   sudo dnf upgrade -y example
     echo "Updating ${TOOL_NAME}..."
@@ -91,7 +91,7 @@ tool_status() {
 tool_uninstall() {
     # npm:   sudo npm uninstall -g example-cli
     # pipx:  pipx uninstall example-cli 2>/dev/null || true
-    # git:   sudo rm -rf /opt/fusionaize-nexus/example
+    # git:   sudo rm -rf /opt/faigrid/example
     # apt:   sudo apt-get remove -y example && sudo rm -f /etc/apt/sources.list.d/example.list
     # dnf:   sudo dnf remove -y example && sudo rm -f /etc/yum.repos.d/example.repo
     echo "Uninstalling ${TOOL_NAME}..."

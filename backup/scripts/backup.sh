@@ -18,7 +18,7 @@ fi
 source "$CONFIG_FILE"
 
 # 2. Setup Logging
-LOG_DIR="/var/log/nexus"
+LOG_DIR="/var/log/faigrid"
 sudo mkdir -p "$LOG_DIR" 2>/dev/null || true
 LOG_FILE="${LOG_DIR}/backup.log"
 
@@ -43,7 +43,7 @@ log "INFO" "Initiating Restic snapshot..."
 # Paths to include
 BACKUP_PATHS=(
     "${PROJECT_ROOT}"
-    "/etc/nexus"
+    "/etc/grid"
     "$HOME/.grid-state"
 )
 
@@ -56,8 +56,8 @@ for p in "${BACKUP_PATHS[@]}"; do
 done
 
 restic backup "${VALID_PATHS[@]}" \
-    --header "X-Nexus-Backup: true" \
-    --tag "nexus-labs" \
+    --header "X-Grid-Backup: true" \
+    --tag "grid-labs" \
     --host "$(hostname)" \
     --exclude-file "${SCRIPT_DIR}/.backup_ignore" 2>&1 | tee -a "$LOG_FILE"
 

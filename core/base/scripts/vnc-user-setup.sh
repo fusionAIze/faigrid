@@ -6,7 +6,7 @@ DISPLAY_NUM="${2:-}"
 
 if [[ -z "${USER_NAME}" || -z "${DISPLAY_NUM}" ]]; then
   echo "Usage: $0 <user> <display>"
-  echo "Example: $0 nexus-ops 1"
+  echo "Example: $0 grid-ops 1"
   exit 1
 fi
 

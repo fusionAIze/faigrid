@@ -60,17 +60,17 @@ sudo ./uninstall.sh --wipe-state
 ## Client (macOS) — UI helper via SSH tunnel
 Install:
 ```bash
-cp core/openclaw/native/client/macos/nexus-openclaw-ui.example ~/bin/nexus-openclaw-ui
-cp core/openclaw/native/client/macos/nexus-openclaw-ui-stop.example ~/bin/nexus-openclaw-ui-stop
-chmod +x ~/bin/nexus-openclaw-ui ~/bin/nexus-openclaw-ui-stop
+cp core/openclaw/native/client/macos/grid-openclaw-ui.example ~/bin/grid-openclaw-ui
+cp core/openclaw/native/client/macos/grid-openclaw-ui-stop.example ~/bin/grid-openclaw-ui-stop
+chmod +x ~/bin/grid-openclaw-ui ~/bin/grid-openclaw-ui-stop
 ```
 
 Run:
 ```bash
-nexus-openclaw-ui
+grid-openclaw-ui
 ```
 
 Stop tunnels:
 ```bash
-nexus-openclaw-ui-stop
+grid-openclaw-ui-stop
 ```

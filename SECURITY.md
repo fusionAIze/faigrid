@@ -6,7 +6,7 @@ Currently, the `faigrid` infrastructure templates are rolling releases. Please e
 
 ## Reporting a Vulnerability
 
-Security is a primary design principle of the Nexus architecture. If you discover a security vulnerability—whether in the Edge ingress proxy configs, the Core isolation layer, or the Workbench plugins—please do not report it via public issues.
+Security is a primary design principle of the Grid architecture. If you discover a security vulnerability—whether in the Edge ingress proxy configs, the Core isolation layer, or the Workbench plugins—please do not report it via public issues.
 
 Instead, please send an email to the repository owner directly. 
 

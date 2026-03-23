@@ -15,7 +15,7 @@ error()   { echo -e "${_H_RED}✖${_H_NC}  $*" >&2; }
 # Sets STACK_DIR, COMPOSE_DIR, ENV_FILE in caller's scope.
 # Requires CORE_ROOT to be set before calling.
 resolve_compose_paths() {
-    STACK_DIR="/opt/fusionaize-nexus/core-heart"
+    STACK_DIR="/opt/faigrid/core-heart"
     if [[ ! -d "${STACK_DIR}" ]]; then
         STACK_DIR="${CORE_ROOT}/heart"
     fi
@@ -32,12 +32,12 @@ resolve_compose_paths() {
 
     # Fallback 2: discover active compose project via docker compose ls
     if [[ ! -d "${COMPOSE_DIR}" ]] && command -v docker &>/dev/null; then
-        local _nexus_cfg
-        _nexus_cfg="$(docker compose ls --format json 2>/dev/null \
+        local _grid_cfg
+        _grid_cfg="$(docker compose ls --format json 2>/dev/null \
             | grep -o '"ConfigFiles":"[^"]*"' | head -1 \
             | cut -d'"' -f4)"
-        if [[ -n "${_nexus_cfg}" && -f "${_nexus_cfg}" ]]; then
-            COMPOSE_DIR="$(dirname "${_nexus_cfg}")"
+        if [[ -n "${_grid_cfg}" && -f "${_grid_cfg}" ]]; then
+            COMPOSE_DIR="$(dirname "${_grid_cfg}")"
         fi
     fi
 

@@ -5,22 +5,22 @@ Only SSH (LAN) is open. n8n binds to localhost and will later be exposed via the
 
 ## 0) Preconditions
 - Step 02 (base) done: users, SSH hardening, VNC optional
-- `nexus` can SSH into `grid-core`
+- `grid` can SSH into `grid-core`
 - Repo cloned on `grid-core`:
   - `git clone https://github.com/<you>/faigrid.git`
 
 ## 1) Copy stack to /opt
-On `grid-core` as user `nexus`:
+On `grid-core` as user `grid`:
 - `cd ~/faigrid`
 - `bash core/heart/scripts/install.sh`
 
 Then:
-- edit `/opt/fusionaize-nexus/core-heart/.env`
+- edit `/opt/faigrid/core-heart/.env`
   - set `N8N_ENCRYPTION_KEY`, `POSTGRES_PASSWORD`, `WEBHOOK_SHARED_SECRET`
 
 Restart stack:
-- `cd /opt/fusionaize-nexus/core-heart/compose`
-- `docker compose --env-file /opt/fusionaize-nexus/core-heart/.env up -d`
+- `cd /opt/faigrid/core-heart/compose`
+- `docker compose --env-file /opt/faigrid/core-heart/.env up -d`
 
 ## 2) Verify
 - `docker ps`

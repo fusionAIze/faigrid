@@ -16,15 +16,15 @@ setup() {
     source "${CORE_ROOT}/workbench/scripts/_lib.sh"
     
     # File should not exist initially
-    [ ! -f "$_NEXUS_ENV_FILE" ]
+    [ ! -f "$_GRID_ENV_FILE" ]
     
     # Write key
     grid_write_env "TEST_API_KEY" "sk-abc-12345"
     
     # File should now exist with correct permissions
-    [ -f "$_NEXUS_ENV_FILE" ]
+    [ -f "$_GRID_ENV_FILE" ]
     local perms
-    perms=$(stat -c "%a" "$_NEXUS_ENV_FILE" 2>/dev/null || stat -f "%A" "$_NEXUS_ENV_FILE" 2>/dev/null || stat -f "%Lp" "$_NEXUS_ENV_FILE" 2>/dev/null)
+    perms=$(stat -c "%a" "$_GRID_ENV_FILE" 2>/dev/null || stat -f "%A" "$_GRID_ENV_FILE" 2>/dev/null || stat -f "%Lp" "$_GRID_ENV_FILE" 2>/dev/null)
     [[ "$perms" == *"600"* ]]
     
     # Read key

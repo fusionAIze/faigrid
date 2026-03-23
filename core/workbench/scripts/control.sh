@@ -356,7 +356,7 @@ cmd_update() {
 
 # Check if fusionAIze Gate is installed and return its install dir (or empty)
 _faigate_dir() {
-  local dir="/opt/fusionaize-nexus/faigate"
+  local dir="/opt/faigrid/faigate"
   [[ -d "$dir" ]] && echo "$dir" || echo ""
 }
 

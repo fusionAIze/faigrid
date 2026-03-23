@@ -6,13 +6,13 @@ docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 
 echo ""
 echo "── grid-core / n8n ──"
-N8N_VERSION=$(docker exec nexus-n8n n8n --version 2>/dev/null || echo "unknown")
+N8N_VERSION=$(docker exec grid-core-n8n n8n --version 2>/dev/null || echo "unknown")
 echo "  Version : ${N8N_VERSION}"
 if curl -fsS http://127.0.0.1:5678/ >/dev/null 2>&1; then
     echo "  Status  : ✔ Reachable on localhost:5678"
     
     # Smart Connectivity Hint
-    TOPOLOGY_FILE="/tmp/nexus-install/.env.topology"
+    TOPOLOGY_FILE="/tmp/grid-install/.env.topology"
     if [[ ! -f "$TOPOLOGY_FILE" ]]; then TOPOLOGY_FILE="$(dirname "${BASH_SOURCE[0]}")/../../../../.env.topology"; fi
     
     if [[ -f "$TOPOLOGY_FILE" ]]; then

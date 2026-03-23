@@ -3,7 +3,7 @@ TOOL_NAME="n8n"
 TOOL_CATEGORY="automation"
 TOOL_DESC="n8n Workflow Automation (Core Compose)"
 TOOL_TYPE="docker"
-TOOL_SERVICE="nexus-n8n"
+TOOL_SERVICE="grid-core-n8n"
 FAIGATE_CLIENT="n8n"
 
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)"
@@ -24,9 +24,9 @@ tool_uninstall() {
     fi
 }
 tool_status() {
-    if docker ps --format '{{.Names}}' 2>/dev/null | grep -q "^nexus-n8n"; then
+    if docker ps --format '{{.Names}}' 2>/dev/null | grep -q "^grid-core-n8n"; then
         local ver
-        ver=$(docker inspect nexus-n8n --format '{{.Config.Image}}' 2>/dev/null | grep -o '[^:]*$' || echo "")
+        ver=$(docker inspect grid-core-n8n --format '{{.Config.Image}}' 2>/dev/null | grep -o '[^:]*$' || echo "")
         echo "Installed (Running${ver:+ v${ver}})"
     else
         echo "Not installed"

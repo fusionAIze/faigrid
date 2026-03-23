@@ -19,28 +19,28 @@ Test:
 We keep VNC bound to localhost on the server and tunnel it from macOS.
 
 Install scripts:
-- `core/base/client/macos/nexus-vnc-ops.example`
-- `core/base/client/macos/nexus-vnc-ops-stop.example`
+- `core/base/client/macos/grid-vnc-ops.example`
+- `core/base/client/macos/grid-vnc-ops-stop.example`
 
 Copy to:
-- `~/bin/nexus-vnc-ops`
-- `~/bin/nexus-vnc-ops-stop`
+- `~/bin/grid-vnc-ops`
+- `~/bin/grid-vnc-ops-stop`
 
 Make executable:
-- `chmod +x ~/bin/nexus-vnc-ops ~/bin/nexus-vnc-ops-stop`
+- `chmod +x ~/bin/grid-vnc-ops ~/bin/grid-vnc-ops-stop`
 
 Add to PATH:
 - `echo 'export PATH="$HOME/bin:$PATH"' >> ~/.zshrc`
 - `source ~/.zshrc`
 
 Run:
-- `nexus-vnc-ops`
+- `grid-vnc-ops`
 Stop:
-- `nexus-vnc-ops-stop`
+- `grid-vnc-ops-stop`
 
 Connect VNC client to:
 - `127.0.0.1:5901` (ops)
-- `127.0.0.1:5902` (nexus)
+- `127.0.0.1:5902` (grid)
 
 ## Notes on encryption warnings
 Some VNC clients show warnings if TLS is not negotiated.

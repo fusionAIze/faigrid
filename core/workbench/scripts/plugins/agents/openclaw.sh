@@ -6,7 +6,7 @@ TOOL_TYPE="systemd"
 TOOL_SERVICE="openclaw"
 
 # Resolve path to the native server scripts sitting next to us in the repo.
-# Works whether the repo is at its normal location or rsync'd to /tmp/nexus-install/.
+# Works whether the repo is at its normal location or rsync'd to /tmp/grid-install/.
 _OC_HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)"
 _OC_SERVER_DIR="$(cd "${_OC_HERE}/../../../../openclaw/native/server" 2>/dev/null && pwd)" \
     || _OC_SERVER_DIR=""
@@ -88,15 +88,15 @@ tool_configure() {
     # If empty input and key not yet set, falls back to matching grid.env value.
     _oc_key() {
         local key="$1"
-        local current nexus_val val tmp
+        local current grid_val val tmp
 
         current=$(sudo grep "^${key}=" "$providers_env" 2>/dev/null \
             | cut -d'=' -f2- | tr -d '"' || echo "")
-        nexus_val=$(grid_read_env "$key" 2>/dev/null || echo "")
+        grid_val=$(grid_read_env "$key" 2>/dev/null || echo "")
 
         if [[ -n "$current" ]]; then
             printf "  %-28s [%s]: " "$key" "$(grid_mask "$current")"
-        elif [[ -n "$nexus_val" ]]; then
+        elif [[ -n "$grid_val" ]]; then
             printf "  %-28s [${C_DIM}from grid.env${C_RESET}]: " "$key"
         else
             printf "  %-28s [${C_DIM}(not set)${C_RESET}]: " "$key"
@@ -106,8 +106,8 @@ tool_configure() {
 
         if [[ -z "$val" ]]; then
             # Empty input: adopt grid.env value if current is not set
-            if [[ -z "$current" && -n "$nexus_val" ]]; then
-                val="$nexus_val"
+            if [[ -z "$current" && -n "$grid_val" ]]; then
+                val="$grid_val"
                 info "  Using ${key} from grid.env"
             else
                 return 0  # keep existing
@@ -170,8 +170,8 @@ except Exception:
     # Auto-detect port from faigate .env if installed
     local fg_port="8090"
     for _fg_env in \
-        "/opt/fusionaize-nexus/faigate/.env" \
-        "/opt/fusionaize-nexus/foundrygate/.env"; do
+        "/opt/faigrid/faigate/.env" \
+        "/opt/faigrid/foundrygate/.env"; do
         if sudo test -f "$_fg_env" 2>/dev/null; then
             local detected_port
             detected_port=$(sudo grep -E "^FAIGATE_PORT=|^FOUNDRYGATE_PORT=" "$_fg_env" 2>/dev/null \
@@ -279,7 +279,7 @@ PYEOF
 
     # ── faigate OpenClaw Skill ─────────────────────────────────────────────────
     info "── faigate Skill for OpenClaw"
-    local faigate_dir="/opt/fusionaize-nexus/faigate"
+    local faigate_dir="/opt/faigrid/faigate"
     local skill_src="${faigate_dir}/skills/faigate/SKILL.md"
     local skills_dir="/var/lib/openclaw/.openclaw-prod/skills"
 

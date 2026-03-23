@@ -4,7 +4,7 @@ TOOL_CATEGORY="routers"
 TOOL_DESC="Main AI Routing Gateway (typelicious)"
 TOOL_TYPE="git"
 
-INSTALL_DIR="/opt/fusionaize-nexus/foundrygate"
+INSTALL_DIR="/opt/faigrid/foundrygate"
 
 tool_install() {
     if [[ -d "$INSTALL_DIR" ]]; then
@@ -58,14 +58,14 @@ tool_configure() {
     # Falls back to grid.env if the key is absent from the .env file.
     _fg_set_key() {
         local key="$1" label="$2" silent="${3:-no}"
-        local current nexus_val val hint tmp
+        local current grid_val val hint tmp
         current=$(sudo grep "^${key}=" "$env_file" 2>/dev/null | cut -d'=' -f2- | tr -d '"' || echo "")
-        nexus_val=$(grid_read_env "$key" 2>/dev/null || echo "")
+        grid_val=$(grid_read_env "$key" 2>/dev/null || echo "")
         if [[ "$silent" == "yes" ]]; then
             if [[ -n "$current" ]]; then
                 hint="$(grid_mask "$current")"
-            elif [[ -n "$nexus_val" ]]; then
-                hint="nexus: $(grid_mask "$nexus_val")"
+            elif [[ -n "$grid_val" ]]; then
+                hint="grid: $(grid_mask "$grid_val")"
             else
                 hint="not set"
             fi
@@ -74,8 +74,8 @@ tool_configure() {
         else
             if [[ -n "$current" ]]; then
                 hint="$current"
-            elif [[ -n "$nexus_val" ]]; then
-                hint="nexus: $nexus_val"
+            elif [[ -n "$grid_val" ]]; then
+                hint="grid: $grid_val"
             else
                 hint="not set"
             fi
@@ -83,8 +83,8 @@ tool_configure() {
             read -r val
         fi
         if [[ -z "$val" ]]; then
-            if [[ -z "$current" ]] && [[ -n "$nexus_val" ]]; then
-                val="$nexus_val"
+            if [[ -z "$current" ]] && [[ -n "$grid_val" ]]; then
+                val="$grid_val"
                 info "  ↳ adopted from grid.env"
             else
                 return 0

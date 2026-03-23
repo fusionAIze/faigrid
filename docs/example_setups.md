@@ -31,7 +31,7 @@ This setup is ideal for small teams, autonomous agent developers, or local agenc
 ---
 
 ## Example B: The "Full Cloud Deployment"
-*This setup is designed for scalable, high-availability SaaS products built on top of the Nexus architecture.*
+*This setup is designed for scalable, high-availability SaaS products built on top of the Grid architecture.*
 
 All nodes are virtualized and deployed across data centers. This maximizes uptime and bandwidth but incurs monthly cloud costs.
 

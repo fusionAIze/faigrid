@@ -5,7 +5,7 @@ TOOL_DESC="Paperclip AI Agent"
 TOOL_TYPE="git"
 FAIGATE_CLIENT="paperclip"
 
-INSTALL_DIR="/opt/fusionaize-nexus/paperclip"
+INSTALL_DIR="/opt/faigrid/paperclip"
 
 tool_install() {
     if [[ ! -d "$INSTALL_DIR" ]]; then

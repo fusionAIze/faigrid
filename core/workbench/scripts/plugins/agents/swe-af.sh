@@ -5,7 +5,7 @@ TOOL_DESC="Agent-Field SWE-AF"
 TOOL_TYPE="git"
 FAIGATE_CLIENT="swe-af"
 
-INSTALL_DIR="/opt/fusionaize-nexus/swe-af"
+INSTALL_DIR="/opt/faigrid/swe-af"
 
 tool_install() {
     if [[ ! -d "$INSTALL_DIR" ]]; then

@@ -17,7 +17,7 @@ setup() {
 @test "Compose Paths - resolve_compose_paths() defaults appropriately" {
     source "${BATS_TEST_TMPDIR}/_lib.sh"
     
-    # Scenario 1: Standard /opt/fusionaize-nexus path doesn't exist, fallback to repo CORE_ROOT
+    # Scenario 1: Standard /opt/faigrid path doesn't exist, fallback to repo CORE_ROOT
     run resolve_compose_paths
     
     # We must actually check variables in the current shell, not subshell.

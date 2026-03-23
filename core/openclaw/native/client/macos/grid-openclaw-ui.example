@@ -50,4 +50,4 @@ ssh "${SSH_OPTS[@]}" -fN \
 URL="http://127.0.0.1:${LOCAL_PORT}${UI_PATH}?token=${TOKEN}"
 /usr/bin/open "${URL}" >/dev/null 2>&1 || true
 
-osasay "Tunnel up.\n\n${URL}\n\nTo stop:\n  nexus-openclaw-ui-stop"
+osasay "Tunnel up.\n\n${URL}\n\nTo stop:\n  grid-openclaw-ui-stop"

@@ -14,5 +14,5 @@
 - OpenClaw API keys/tokens (as needed)
 
 ## Storage
-- `.env` on grid-core at: `/opt/fusionaize-nexus/core-heart/.env`
+- `.env` on grid-core at: `/opt/faigrid/core-heart/.env`
 - Backups should NOT include raw secrets unless you explicitly encrypt backups.

@@ -26,8 +26,8 @@ sudo -u openclaw -H bash -lc 'set -a; . /etc/openclaw/openclaw.providers.env; se
 
 ## Control UI (macOS tunnel)
 - Helpers:
-  core/openclaw/native/client/macos/nexus-openclaw-ui.example
-  core/openclaw/native/client/macos/nexus-openclaw-ui-stop.example
+  core/openclaw/native/client/macos/grid-openclaw-ui.example
+  core/openclaw/native/client/macos/grid-openclaw-ui-stop.example
 - Default local UI port: 19089 -> forwards to 127.0.0.1:18789
 
 ## Watchdog

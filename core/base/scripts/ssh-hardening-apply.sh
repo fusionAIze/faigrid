@@ -4,8 +4,8 @@ set -euo pipefail
 echo "[core] applying ssh hardening..."
 
 SRC_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-CONF_SRC="${SRC_DIR}/configs/sshd_config.d/10-nexus.conf"
-CONF_DST="/etc/ssh/sshd_config.d/10-nexus.conf"
+CONF_SRC="${SRC_DIR}/configs/sshd_config.d/10-grid.conf"
+CONF_DST="/etc/ssh/sshd_config.d/10-grid.conf"
 
 sudo install -m 0644 "${CONF_SRC}" "${CONF_DST}"
 

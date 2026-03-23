@@ -4,7 +4,7 @@ TOOL_CATEGORY="routers"
 TOOL_DESC="ClawRouter (BlockRunAI)"
 TOOL_TYPE="git"
 
-INSTALL_DIR="/opt/fusionaize-nexus/clawrouter"
+INSTALL_DIR="/opt/faigrid/clawrouter"
 
 tool_install() {
     if [[ ! -d "$INSTALL_DIR" ]]; then

@@ -4,7 +4,7 @@ TOOL_CATEGORY="memory"
 TOOL_DESC="In-Context Memory (RTK-AI)"
 TOOL_TYPE="git"
 
-INSTALL_DIR="/opt/fusionaize-nexus/icm"
+INSTALL_DIR="/opt/faigrid/icm"
 
 tool_install() {
     if [[ ! -d "$INSTALL_DIR" ]]; then

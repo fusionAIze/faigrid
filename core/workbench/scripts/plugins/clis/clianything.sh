@@ -4,7 +4,7 @@ TOOL_CATEGORY="clis"
 TOOL_DESC="HKUDS CLI-Anything Toolkit"
 TOOL_TYPE="git"
 
-INSTALL_DIR="/opt/fusionaize-nexus/cli-anything"
+INSTALL_DIR="/opt/faigrid/cli-anything"
 
 tool_install() {
     if [[ ! -d "$INSTALL_DIR" ]]; then

@@ -27,7 +27,7 @@ docs/local/
 # OS junk
 .DS_Store
 
-# Local Nexus Registry
+# Local Grid Registry
 .faigrid/
 
 # OpenClaw secrets

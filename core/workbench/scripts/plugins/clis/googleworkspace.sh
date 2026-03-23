@@ -4,7 +4,7 @@ TOOL_CATEGORY="clis"
 TOOL_DESC="Google Workspace CLI Toolkit"
 TOOL_TYPE="git"
 
-INSTALL_DIR="/opt/fusionaize-nexus/googleworkspace-cli"
+INSTALL_DIR="/opt/faigrid/googleworkspace-cli"
 
 tool_install() {
     if [[ ! -d "$INSTALL_DIR" ]]; then

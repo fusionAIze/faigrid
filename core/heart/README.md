@@ -6,4 +6,4 @@ Canonical stack files live in this module:
 - `compose/.env.example` as the base env template
 - `scripts/install.sh` to stage the stack on `grid-core`
 
-The install script copies `compose/.env.example` to `/opt/fusionaize-nexus/core-heart/.env`.
+The install script copies `compose/.env.example` to `/opt/faigrid/core-heart/.env`.

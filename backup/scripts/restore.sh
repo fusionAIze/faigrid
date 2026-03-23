@@ -9,7 +9,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd || exit 1)"
 # 1. Load Config
 CONFIG_FILE="${SCRIPT_DIR}/_backup_config.sh"
 if [[ ! -f "$CONFIG_FILE" ]]; then
-    echo "[nexus-restore] [ERROR] Configuration file missing: ${CONFIG_FILE}"
+    echo "[grid-restore] [ERROR] Configuration file missing: ${CONFIG_FILE}"
     exit 1
 fi
 # shellcheck disable=SC1090
@@ -31,7 +31,7 @@ if [[ -z "$SNAPSHOT_ID" ]]; then
 fi
 
 if [[ "$SNAPSHOT_ID" == "browse" ]]; then
-    MOUNT_POINT="/mnt/nexus-recovery"
+    MOUNT_POINT="/mnt/grid-recovery"
     sudo mkdir -p "$MOUNT_POINT"
     echo "Mounting repository to ${MOUNT_POINT}..."
     echo "Keep this terminal open. Press Ctrl+C to unmount when done."
@@ -39,8 +39,8 @@ if [[ "$SNAPSHOT_ID" == "browse" ]]; then
     exit 0
 fi
 
-read -r -p "Target directory for restoration (Default: /tmp/nexus-restored): " RESTORE_TARGET
-RESTORE_TARGET="${RESTORE_TARGET:-/tmp/nexus-restored}"
+read -r -p "Target directory for restoration (Default: /tmp/grid-restored): " RESTORE_TARGET
+RESTORE_TARGET="${RESTORE_TARGET:-/tmp/grid-restored}"
 
 mkdir -p "$RESTORE_TARGET"
 echo "Restoring snapshot ${SNAPSHOT_ID} to ${RESTORE_TARGET}..."

@@ -10,15 +10,15 @@ Use this as a "done list" + expected outputs.
   - `ip -4 addr show`
 
 ## B) Users
-- [ ] `nexus` exists and is in sudo
-  - `id nexus` (groups include `sudo`)
+- [ ] `grid` exists and is in sudo
+  - `id grid` (groups include `sudo`)
 
-- [ ] `nexus-ops` exists and is in sudo
-  - `id nexus-ops` (groups include `sudo`)
+- [ ] `grid-ops` exists and is in sudo
+  - `id grid-ops` (groups include `sudo`)
 
-- [ ] `nexus-ops` NOT in docker
-  - `id nexus-ops` (no `docker` group)
-  - optional: `sudo gpasswd -d nexus-ops docker`
+- [ ] `grid-ops` NOT in docker
+  - `id grid-ops` (no `docker` group)
+  - optional: `sudo gpasswd -d grid-ops docker`
 
 ## C) SSH hardening effective
 Expected (example):
@@ -26,7 +26,7 @@ Expected (example):
 - `passwordauthentication no`
 - `kbdinteractiveauthentication no`
 - `pubkeyauthentication yes`
-- `allowusers nexus nexus-ops`
+- `allowusers grid grid-ops`
 - `maxauthtries 3`
 - `logingracetime 20`
 
@@ -50,8 +50,8 @@ Expected:
 
 ## F) VNC configured (localhost only)
 Recommended:
-- `nexus-ops` display :1 -> port 5901
-- `nexus` display :2 -> port 5902
+- `grid-ops` display :1 -> port 5901
+- `grid` display :2 -> port 5902
 
 Check:
 - `sudo ss -tulpn | egrep ':5901|:5902'`
@@ -74,5 +74,5 @@ Expected:
 
 ## I) Client (macOS) VNC tunnel
 - [ ] tunnel script runs and opens VNC viewer (or at least keeps tunnel up)
-- [ ] connect to: `127.0.0.1:5901` (ops) or `127.0.0.1:5902` (nexus)
+- [ ] connect to: `127.0.0.1:5901` (ops) or `127.0.0.1:5902` (grid)
 

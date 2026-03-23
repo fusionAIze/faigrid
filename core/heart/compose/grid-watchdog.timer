@@ -1,5 +1,5 @@
 [Unit]
-Description=Run Nexus Watchdog every 5 minutes
+Description=Run Grid Watchdog every 5 minutes
 
 [Timer]
 OnBootSec=5min

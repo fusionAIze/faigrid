@@ -13,27 +13,30 @@ migrate_from_nexus_to_grid() {
     local legacy_state="$HOME/.grid-state"
     local grid_state="$HOME/.grid-state"
     
-    local legacy_config="$HOME/.config/faigrid"
+    local legacy_config="$HOME/.config/grid"
     local grid_config="$HOME/.config/faigrid"
 
-    local legacy_local_reg=".nexus"
+    local legacy_local_reg=".grid"
     local grid_local_reg=".faigrid"
 
     # Quick exit if already migrated or no legacy state exists
-    if [[ ! -f "$legacy_state" ]]; then return 0; fi
-    if [[ -f "$grid_state" ]]; then return 0; fi
+    if [[ ! -f "$legacy_state" ]] && [[ ! -d "$legacy_local_reg" ]] && [[ ! -d "$legacy_config" ]]; then return 0; fi
 
     log_mig "Legacy fusionAIze Grid (v0.x - 1.2.x) state detected. Initiating automatic migration..."
 
     # 1. State File Rename
-    log_mig "Migrating state file ($legacy_state -> $grid_state)..."
-    mv "$legacy_state" "$grid_state"
-    sed -i.bak 's/GRID_ROLE/GRID_ROLE/g' "$grid_state" || true
-    sed -i.bak 's/GRID_VERSION/GRID_VERSION/g' "$grid_state" || true
-    sed -i.bak 's/grid-core/grid-core/g' "$grid_state" || true
-    sed -i.bak 's/grid-edge/grid-edge/g' "$grid_state" || true
-    sed -i.bak 's/grid-worker/grid-worker/g' "$grid_state" || true
-    rm -f "${grid_state}.bak"
+    if [[ -f "$legacy_state" ]]; then
+        log_mig "Migrating state file ($legacy_state -> $grid_state)..."
+        if [[ "$legacy_state" != "$grid_state" ]]; then
+            mv "$legacy_state" "$grid_state"
+        fi
+        sed -i.bak 's/GRID_ROLE/GRID_ROLE/g' "$grid_state" || true
+        sed -i.bak 's/GRID_VERSION/GRID_VERSION/g' "$grid_state" || true
+        sed -i.bak 's/grid-core/grid-core/g' "$grid_state" || true
+        sed -i.bak 's/grid-edge/grid-edge/g' "$grid_state" || true
+        sed -i.bak 's/grid-worker/grid-worker/g' "$grid_state" || true
+        rm -f "${grid_state}.bak"
+    fi
 
     # 2. Config Folder Rename (Environment Keys)
     if [[ -d "$legacy_config" ]]; then
@@ -46,10 +49,9 @@ migrate_from_nexus_to_grid() {
             mv "${grid_config}/grid.env" "${grid_config}/grid.env"
         fi
         
-        # Patch .bashrc hook reference safely
-        if grep -q "nexus/grid.env" "$HOME/.bashrc" 2>/dev/null; then
+        if grep -q "grid/grid.env" "$HOME/.bashrc" 2>/dev/null; then
             log_mig "Patching ~/.bashrc hook variables..."
-            sed -i.bak 's/nexus\/grid.env/faigrid\/grid.env/g' "$HOME/.bashrc" || true
+            sed -i.bak 's/grid\/grid.env/faigrid\/grid.env/g' "$HOME/.bashrc" || true
             sed -i.bak 's/fusionAIze Grid/fusionAIze Grid/g' "$HOME/.bashrc" || true
             rm -f "${HOME}/.bashrc.bak"
         fi
@@ -61,14 +63,14 @@ migrate_from_nexus_to_grid() {
         mv "$legacy_local_reg" "$grid_local_reg"
         
         # Rename internal state files
-        find "$grid_local_reg" -type f -name "nexus-*.state" | while read -r statefile; do
-            new_name=$(echo "$statefile" | sed 's/nexus-/grid-/')
+        find "$grid_local_reg" -type f -name "grid-*.state" | while read -r statefile; do
+            new_name=$(echo "$statefile" | sed 's/grid-/grid-/')
             mv "$statefile" "$new_name"
         done
         
         # Patch internal registry variables
         find "$grid_local_reg" -type f -name "*.state" -exec sed -i.bak 's/GRID_ROLE/GRID_ROLE/g' {} + || true
-        find "$grid_local_reg" -type f -name "*.state" -exec sed -i.bak 's/nexus-/grid-/g' {} + || true
+        find "$grid_local_reg" -type f -name "*.state" -exec sed -i.bak 's/grid-/grid-/g' {} + || true
         find "$grid_local_reg" -type f -name "*.state.bak" -delete 2>/dev/null || true
     fi
 

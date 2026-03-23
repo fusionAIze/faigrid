@@ -4,7 +4,7 @@
 
 Host grid-edge
   HostName 192.168.178.10
-  User nexus
+  User grid
   IdentitiesOnly yes
   IdentityFile ~/.ssh/id_ed25519
   ServerAliveInterval 30
@@ -12,7 +12,7 @@ Host grid-edge
 
 Host grid-core
   HostName 192.168.178.20
-  User nexus
+  User grid
   IdentitiesOnly yes
   IdentityFile ~/.ssh/id_ed25519
   ServerAliveInterval 30
@@ -21,8 +21,8 @@ Host grid-core
 # Daily ops user (core)
 Host grid-core-ops
   HostName 192.168.178.20
-  User nexus-ops
+  User grid-ops
   IdentitiesOnly yes
-  IdentityFile ~/.ssh/nexus_core_backup_ed25519
+  IdentityFile ~/.ssh/grid_core_backup_ed25519
   ServerAliveInterval 30
   ServerAliveCountMax 3

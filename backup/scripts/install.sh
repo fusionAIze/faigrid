@@ -28,7 +28,7 @@ if [[ ! -f "$CONFIG_FILE" ]]; then
 fi
 
 # 3. Scaffold local vault directory (Default target)
-VAULT_DIR="/opt/nexus-vault"
+VAULT_DIR="/opt/grid-vault"
 echo "[grid-backup] Scaffolding local vault area..."
 sudo mkdir -p "${VAULT_DIR}"
 sudo chmod 700 "${VAULT_DIR}"

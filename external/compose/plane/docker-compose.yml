@@ -3,16 +3,16 @@
 services:
   plane-web:
     image: makeplane/plane-app:latest
-    container_name: nexus-plane-web
+    container_name: grid-plane-web
     restart: unless-stopped
     environment:
       - NEXT_PUBLIC_API_BASE_URL=https://${PLANE_HOST}/api
     networks:
-      - nexus_external_net
+      - grid_external_net
 
   plane-api:
     image: makeplane/plane-api:latest
-    container_name: nexus-plane-api
+    container_name: grid-plane-api
     restart: unless-stopped
     environment:
       - DB_HOST=plane-db
@@ -24,11 +24,11 @@ services:
       - plane-db
       - plane-redis
     networks:
-      - nexus_external_net
+      - grid_external_net
 
   plane-db:
     image: postgres:15-alpine
-    container_name: nexus-plane-db
+    container_name: grid-plane-db
     restart: unless-stopped
     environment:
       - POSTGRES_DB=plane
@@ -37,17 +37,17 @@ services:
     volumes:
       - plane_db_data:/var/lib/postgresql/data
     networks:
-      - nexus_external_net
+      - grid_external_net
 
   plane-redis:
     image: redis:7-alpine
-    container_name: nexus-plane-redis
+    container_name: grid-plane-redis
     restart: unless-stopped
     networks:
-      - nexus_external_net
+      - grid_external_net
 
 networks:
-  nexus_external_net:
+  grid_external_net:
     external: true
 
 volumes:

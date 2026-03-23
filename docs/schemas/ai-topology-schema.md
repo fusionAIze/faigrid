@@ -1,12 +1,12 @@
 # AI-Native Deployment Schema (`ai-topology.json`)
 
-To orchestrate the **fusionAIze Grid** autonomously, an AI Agent (Codex, Claude, etc.) should construct a `topology.json` file and pass it to the `scripts/nexus-deploy.sh` executable.
+To orchestrate the **fusionAIze Grid** autonomously, an AI Agent (Codex, Claude, etc.) should construct a `topology.json` file and pass it to the `scripts/grid-deploy.sh` executable.
 
 ## Execution Pattern
 
 1. **Agent Step**: Determine target mapping (e.g. from user prompt or `.env.topology`).
 2. **Agent Step**: Generate `payload.json` file anywhere on disk.
-3. **Agent Step**: Execute `bash scripts/nexus-deploy.sh payload.json`. The orchestrator will autonomously execute the `install.sh` sequence across all listed nodes.
+3. **Agent Step**: Execute `bash scripts/grid-deploy.sh payload.json`. The orchestrator will autonomously execute the `install.sh` sequence across all listed nodes.
 
 ## JSON Payload Schema Structure
 
@@ -42,4 +42,4 @@ To orchestrate the **fusionAIze Grid** autonomously, an AI Agent (Codex, Claude,
     *   `"3"`: Guided Wizard. *Note: Usually not recommended for AI payload mode as it introduces interactive hardware validations.*
 *   **`nodes[].ssh_target`** (string | `null`):
     *   Provide the SSH connection string (e.g. `pi@192.168.1.100`).
-    *   Provide `null` or omit the key to trigger local installation on the machine executing `nexus-deploy.sh`.
+    *   Provide `null` or omit the key to trigger local installation on the machine executing `grid-deploy.sh`.

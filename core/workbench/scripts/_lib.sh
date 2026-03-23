@@ -30,32 +30,32 @@ detect_pkg_manager() {
   fi
 }
 
-# ── Nexus environment config ───────────────────────────────────────────────────
+# ── Grid environment config ───────────────────────────────────────────────────
 # Persistent key=value store at ~/.config/faigrid/grid.env
 # Sourced automatically from ~/.bashrc after first configure run.
 
-_NEXUS_ENV_FILE="${HOME}/.config/faigrid/grid.env"
+_GRID_ENV_FILE="${HOME}/.config/faigrid/grid.env"
 
 # Write or update a single export in grid.env
 grid_write_env() {
   local key="$1" val="$2"
-  mkdir -p "$(dirname "$_NEXUS_ENV_FILE")"
-  if [[ ! -f "$_NEXUS_ENV_FILE" ]]; then
+  mkdir -p "$(dirname "$_GRID_ENV_FILE")"
+  if [[ ! -f "$_GRID_ENV_FILE" ]]; then
     printf '# fusionAIze Grid — Tool Environment\n# source ~/.config/faigrid/grid.env\n' \
-      > "$_NEXUS_ENV_FILE"
-    chmod 600 "$_NEXUS_ENV_FILE"
+      > "$_GRID_ENV_FILE"
+    chmod 600 "$_GRID_ENV_FILE"
   fi
   local tmp
   tmp=$(mktemp)
-  grep -v "^export ${key}=" "$_NEXUS_ENV_FILE" > "$tmp" && mv "$tmp" "$_NEXUS_ENV_FILE"
-  printf 'export %s="%s"\n' "$key" "$val" >> "$_NEXUS_ENV_FILE"
-  chmod 600 "$_NEXUS_ENV_FILE"
+  grep -v "^export ${key}=" "$_GRID_ENV_FILE" > "$tmp" && mv "$tmp" "$_GRID_ENV_FILE"
+  printf 'export %s="%s"\n' "$key" "$val" >> "$_GRID_ENV_FILE"
+  chmod 600 "$_GRID_ENV_FILE"
 }
 
 # Read a single key from grid.env; empty string if not set
 grid_read_env() {
   local key="$1"
-  grep "^export ${key}=" "$_NEXUS_ENV_FILE" 2>/dev/null | cut -d'"' -f2 || echo ""
+  grep "^export ${key}=" "$_GRID_ENV_FILE" 2>/dev/null | cut -d'"' -f2 || echo ""
 }
 
 # Mask a secret for safe display: first 4 chars + ****
@@ -72,7 +72,7 @@ grid_ensure_sourced() {
   if ! grep -q "faigrid/grid.env" "$rc_file" 2>/dev/null; then
     {
       printf '\n# fusionAIze Grid — tool environment\n'
-      printf '[ -f "%s" ] && source "%s"\n' "$_NEXUS_ENV_FILE" "$_NEXUS_ENV_FILE"
+      printf '[ -f "%s" ] && source "%s"\n' "$_GRID_ENV_FILE" "$_GRID_ENV_FILE"
     } >> "$rc_file"
     info "Added grid.env source hook to ${rc_file}"
   fi
@@ -88,8 +88,8 @@ log_event() {
   local COMPONENT=$1
   local SEVERITY=$2
   local MESSAGE=$3
-  local LOG_DIR="/var/log/nexus"
-  local LOG_FILE="${LOG_DIR}/nexus-system.log"
+  local LOG_DIR="/var/log/faigrid"
+  local LOG_FILE="${LOG_DIR}/grid-system.log"
   
   if [[ ! -d "$LOG_DIR" ]]; then
     sudo mkdir -p "$LOG_DIR" 2>/dev/null || true
@@ -103,7 +103,7 @@ log_event() {
 
 # Simple Log Rotation
 rotate_logs() {
-  local LOG_FILE="/var/log/nexus/nexus-system.log"
+  local LOG_FILE="/var/log/faigrid/grid-system.log"
   local MAX_SIZE_KB=5120 # 5MB limit
   
   if [[ -f "$LOG_FILE" ]]; then

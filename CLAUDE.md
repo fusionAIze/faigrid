@@ -91,7 +91,7 @@ sudo chmod 750            /etc/<service>/
 ```
 
 Apply this pattern consistently:
-- Dedicated user per service (e.g., `openclaw`, `nexus`)
+- Dedicated user per service (e.g., `openclaw`, `grid`)
 - All secret files: `root:<service>` / `640`
 - Service directories: `root:<service>` / `750`
 - Runtime data dirs owned by the service user: `<service>:<service>` / `750`

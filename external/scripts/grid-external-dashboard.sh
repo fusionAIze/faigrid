@@ -6,7 +6,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd || exit 1)"
 
-WWW_ROOT="/var/www/nexus"
+WWW_ROOT="/var/www/faigrid"
 OUTPUT_FILE="${WWW_ROOT}/index.html"
 JSON_DATA="${WWW_ROOT}/grid-status.json"
 
@@ -65,7 +65,7 @@ cat <<EOF > "${OUTPUT_FILE}"
 </head>
 <body>
     <header>
-        <h1>🛰️ Nexus Global Grid</h1>
+        <h1>🛰️ Grid Global Grid</h1>
         <p>Public Status Dashboard (External Extension)</p>
     </header>
     <div class="grid" id="status-grid">

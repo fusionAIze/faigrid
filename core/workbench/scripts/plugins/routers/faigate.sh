@@ -5,7 +5,7 @@ TOOL_DESC="fusionAIze Gate — Multi-client AI Routing Gateway"
 TOOL_TYPE="git"
 TOOL_SERVICE="faigate"
 
-INSTALL_DIR="/opt/fusionaize-nexus/faigate"
+INSTALL_DIR="/opt/faigrid/faigate"
 FAIGATE_PORT="${FAIGATE_PORT:-8090}"
 
 tool_install() {
@@ -236,12 +236,12 @@ _faigate_api_keys() {
 
     _set_key() {
         local key="$1" label="$2" silent="${3:-yes}"
-        local current nexus_val val hint tmp
+        local current grid_val val hint tmp
         current=$(sudo grep "^${key}=" "$env_file" 2>/dev/null | cut -d'=' -f2- | tr -d '"' || echo "")
-        nexus_val=$(grid_read_env "$key" 2>/dev/null || echo "")
+        grid_val=$(grid_read_env "$key" 2>/dev/null || echo "")
         if [[ -n "$current" ]]; then
             hint="$(grid_mask "$current")"
-        elif [[ -n "$nexus_val" ]]; then
+        elif [[ -n "$grid_val" ]]; then
             hint="${C_DIM}from grid.env${C_RESET}"
         else
             hint="${C_DIM}(not set)${C_RESET}"
@@ -249,7 +249,7 @@ _faigate_api_keys() {
         printf "  %-28s [%b]: " "$label" "$hint"
         if [[ "$silent" == "yes" ]]; then read -r -s val; echo ""; else read -r val; fi
         if [[ -z "$val" ]]; then
-            [[ -z "$current" && -n "$nexus_val" ]] && val="$nexus_val" && info "  ↳ adopted from grid.env"
+            [[ -z "$current" && -n "$grid_val" ]] && val="$grid_val" && info "  ↳ adopted from grid.env"
             [[ -z "$val" ]] && return 0
         fi
         tmp=$(mktemp)

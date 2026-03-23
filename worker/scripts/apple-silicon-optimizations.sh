@@ -6,7 +6,7 @@
 set -euo pipefail
 
 echo "============================================================"
-echo "          Nexus Worker - macOS Inference Mode               "
+echo "          Grid Worker - macOS Inference Mode               "
 echo "============================================================"
 
 # 1. Memory Pressure Audit

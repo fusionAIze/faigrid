@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-STACK_DIR="/opt/fusionaize-nexus/core-heart"
+STACK_DIR="/opt/faigrid/core-heart"
 COMPOSE_DIR="${STACK_DIR}/compose"
 ENV_FILE="${STACK_DIR}/.env"
 
@@ -36,11 +36,11 @@ fi
 
 echo "[grid-core-heart] Creating stack dir: ${STACK_DIR}"
 sudo mkdir -p "${STACK_DIR}"
-if ! id -u nexus > /dev/null 2>&1; then
-  echo "[grid-core-heart] Creating system user 'nexus'..."
-  sudo useradd -m -s /bin/bash nexus
+if ! id -u grid > /dev/null 2>&1; then
+  echo "[grid-core-heart] Creating system user 'grid'..."
+  sudo useradd -m -s /bin/bash grid
 fi
-sudo chown -R nexus:nexus "${STACK_DIR}"
+sudo chown -R grid:grid "${STACK_DIR}"
 
 echo "[grid-core-heart] Copy compose + env template"
 mkdir -p "${COMPOSE_DIR}"
@@ -50,8 +50,8 @@ if [[ ! -f "${ENV_FILE}" ]]; then
   echo ">> IMPORTANT: edit ${ENV_FILE} and set real secrets (N8N_ENCRYPTION_KEY, POSTGRES_PASSWORD, WEBHOOK_SHARED_SECRET)"
 fi
 
-echo "[grid-core-heart] Add nexus user to docker group (logout/login required)"
-sudo usermod -aG docker nexus
+echo "[grid-core-heart] Add grid user to docker group (logout/login required)"
+sudo usermod -aG docker grid
 
 echo "[grid-core-heart] Starting stack..."
 cd "${COMPOSE_DIR}" || exit 1 || exit

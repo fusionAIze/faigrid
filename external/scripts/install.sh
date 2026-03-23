@@ -11,14 +11,14 @@ STACK_DIR="$(cd "${SCRIPT_DIR}/.." && pwd || exit 1)"
 echo "[grid-external] Initializing cloud stack (Component: ${COMPONENT})..."
 
 # 1. Ensure global external network and web root exists
-if ! docker network ls | grep -q "nexus_external_net"; then
+if ! docker network ls | grep -q "grid_external_net"; then
     echo "[grid-external] Creating global external network..."
-    docker network create nexus_external_net
+    docker network create grid_external_net
 fi
 
 echo "[grid-external] Ensuring dashboard web root exists..."
-sudo mkdir -p /var/www/nexus
-sudo chown -R "$(id -u):$(id -g)" /var/www/nexus
+sudo mkdir -p /var/www/faigrid
+sudo chown -R "$(id -u):$(id -g)" /var/www/faigrid
 
 # 2. Component Installation
 install_n8n() {

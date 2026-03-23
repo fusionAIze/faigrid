@@ -7,8 +7,8 @@
 - `grid-backup` = backup storage/target
 
 ## Users
-- `nexus`      = admin/bootstrap user (sudo)
-- `nexus-ops`  = daily operator user (sudo, not docker)
+- `grid`      = admin/bootstrap user (sudo)
+- `grid-ops`  = daily operator user (sudo, not docker)
 
 Guidelines:
 - Prefer SSH key auth only.
