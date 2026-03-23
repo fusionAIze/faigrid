@@ -1,0 +1,28 @@
+services:
+  browser-runner:
+    image: mcr.microsoft.com/playwright:v1.42.1-jammy
+    container_name: grid-browser-runner
+    init: true
+    restart: unless-stopped
+    # Keeps the container running indefinitely so agents can `docker exec` into it
+    command: sleep infinity
+    networks:
+      - grid_runner_net
+    volumes:
+      - ./workspace:/workspace
+    # Browsers often crash without enough shared memory
+    shm_size: '2gb'
+    # Drop broad privileges, though browsers need some specific ones for sandbox 
+    # (Playwright handles its own sandboxing internally)
+    cap_drop:
+      - ALL
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+
+networks:
+  grid_runner_net:
+    driver: bridge
+    internal: false 

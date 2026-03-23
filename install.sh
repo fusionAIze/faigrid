@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ==============================================================================
 # fusionAIze Grid - Advanced Universal Orchestrator
-# Version 2.1.0
+# Version 1.5.0
 # ==============================================================================
 
 set -euo pipefail
@@ -19,7 +19,7 @@ DIM='\033[2m'
 
 echo -e "\033[38;2;0;82;204m▐▘    ▘    \033[38;2;196;217;0m▄▖▄▖\033[38;2;0;82;204m    \033[0m  \033[38;2;38;67;123m▄▖  ▘ ▌\033[0m"
 echo -e "\033[38;2;0;82;204m▜▘▌▌▛▘▌▛▌▛▌\033[38;2;196;217;0m▌▌▐ \033[38;2;0;82;204m▀▌█▌\033[0m  \033[38;2;38;67;123m▌ ▛▘▌▛▌\033[0m"
-echo -e "\033[38;2;0;82;204m▐ ▙▌▄▌▌▙▌▌▌\033[38;2;196;217;0m▛▌▟▖\033[38;2;0;82;204m▙▖▙▖\033[0m  \033[38;2;38;67;123m▙▌▌ ▌▙▌\033[0m  ${DIM}v1.3.0-dev${NC}"
+echo -e "\033[38;2;0;82;204m▐ ▙▌▄▌▌▙▌▌▌\033[38;2;196;217;0m▛▌▟▖\033[38;2;0;82;204m▙▖▙▖\033[0m  \033[38;2;38;67;123m▙▌▌ ▌▙▌\033[0m  ${DIM}v1.5.0${NC}"
 echo ""
 echo -e "${DIM}  Sovereign AI Infrastructure — Advanced Universal Orchestrator${NC}"
 echo ""
@@ -209,6 +209,7 @@ resolve_role_dir() {
         "worker")   echo "worker" ;;
         "backup")   echo "backup" ;;
         "external") echo "external" ;;
+        "runner")   echo "core/runners" ;;
         *) error "Unknown role: $role" ;;
     esac
 }
@@ -220,10 +221,11 @@ GRID_STATUS_edge="○"
 GRID_STATUS_worker="○"
 GRID_STATUS_backup="○"
 GRID_STATUS_external="○"
+GRID_STATUS_runner="○"
 
 probe_grid_status() {
     # Check local registry only (instant)
-    local roles=("core" "edge" "worker" "backup" "external")
+    local roles=("core" "edge" "worker" "backup" "external" "runner")
     for role in "${roles[@]}"; do
         if [[ -f "$LOCAL_REGISTRY/${role}.state" ]]; then
             eval "GRID_STATUS_${role}=\"✔\""
@@ -306,10 +308,10 @@ discover_services() {
 # STEP 1: GRID OVERVIEW
 # ==============================================================================
 divider
-echo -e "  ${BOLD}Step 1 │ Your Nexus Grid${NC}"
+echo -e "  ${BOLD}Step 1 │ Your fusionAIze Grid${NC}"
 divider
 echo ""
-echo -e "  The Nexus ${BOLD}4+1 Architecture${NC} consists of these roles:"
+echo -e "  The Grid ${BOLD}4+1 Architecture${NC} consists of these roles:"
 echo ""
 
 # Start of interactive wizard
@@ -327,6 +329,7 @@ _grid_icon() {
         worker)   status="$GRID_STATUS_worker" ;;
         backup)   status="$GRID_STATUS_backup" ;;
         external) status="$GRID_STATUS_external" ;;
+        runner)   status="$GRID_STATUS_runner" ;;
         *)        status="○" ;;
     esac
     if [[ "$status" == "✔" ]]; then
@@ -341,6 +344,7 @@ echo -e "    $(_grid_icon edge)  ${BOLD}grid-edge${NC}       ${DIM}TLS ingress, 
 echo -e "    $(_grid_icon worker)  ${BOLD}grid-worker${NC}     ${DIM}Local LLM inference — Ollama, LM Studio${NC}        ${DIM}[optional]${NC}"
 echo -e "    $(_grid_icon backup)  ${BOLD}grid-backup${NC}     ${DIM}Offsite storage vault — Synology, S3, USB${NC}      ${DIM}[optional]${NC}"
 echo -e "    $(_grid_icon external)  ${BOLD}grid-external${NC}   ${DIM}Cloud extension — ext. n8n, Plane PM${NC}           ${DIM}[optional]${NC}"
+echo -e "    $(_grid_icon runner)  ${BOLD}grid-runner${NC}     ${DIM}Isolated shell/browser execution environments${NC}  ${DIM}[optional]${NC}"
 echo ""
 echo -e "  ${DIM}Tip: Start with grid-core. Add other nodes as your grid grows.${NC}"
 
@@ -361,10 +365,11 @@ if [[ -z "$ROLE_NAME" ]]; then
     echo -e "    ${BOLD}3)${NC}  grid-worker     ${DIM}Local LLM execution (MacBook, GPU server)${NC}"
     echo -e "    ${BOLD}4)${NC}  grid-backup     ${DIM}Restic vault (NAS, USB disk, S3 bucket)${NC}"
     echo -e "    ${BOLD}5)${NC}  grid-external   ${DIM}Public cloud node (VPS, agency server)${NC}"
+    echo -e "    ${BOLD}6)${NC}  grid-runner     ${DIM}Isolated secure execution runners${NC}"
     echo ""
     echo -e "    ${BOLD}q)${NC}  Quit"
     echo ""
-    prompt "Enter role (1-5 / q): " ROLE_CHOICE
+    prompt "Enter role (1-6 / q): " ROLE_CHOICE
 
     case "$ROLE_CHOICE" in
         1) ROLE_NAME="core" ;;
@@ -372,8 +377,9 @@ if [[ -z "$ROLE_NAME" ]]; then
         3) ROLE_NAME="worker" ;;
         4) ROLE_NAME="backup" ;;
         5) ROLE_NAME="external" ;;
+        6) ROLE_NAME="runner" ;;
         [Qq]|"") _quit ;;
-        *) warning "Invalid choice. Please enter 1-5 or q." ;;
+        *) warning "Invalid choice. Please enter 1-6 or q." ;;
     esac
 
     # Smart suggestion for backup co-location
@@ -454,7 +460,7 @@ if [[ "$EXEC_MODE" == "remote" ]]; then
             backup) default_ip="192.168.178.40" ;;
         esac
         echo ""
-        prompt "SSH target (e.g. nexus@${default_ip}): " SSH_TARGET
+        prompt "SSH target (e.g. grid@${default_ip}): " SSH_TARGET
     fi
 
     info "Testing SSH connectivity to ${SSH_TARGET}..."
@@ -766,10 +772,10 @@ _run_action() {
 
     elif [ "$mode" = "remote" ]; then
         info "Initiating Remote Pipeline [${action}] to ${ssh_target}..."
-        ssh -q "$ssh_target" "mkdir -p /tmp/nexus-install"
+        ssh -q "$ssh_target" "mkdir -p /tmp/grid-install"
         info "Transferring payload to target..."
-        rsync -az --exclude='.git' --exclude='node_modules' ./ "$ssh_target:/tmp/nexus-install/" > /dev/null
-        scp "$TOPOLOGY_FILE" "${ssh_target}:/tmp/nexus-install/" > /dev/null
+        rsync -az --exclude='.git' --exclude='node_modules' ./ "$ssh_target:/tmp/grid-install/" > /dev/null
+        scp "$TOPOLOGY_FILE" "${ssh_target}:/tmp/grid-install/" > /dev/null
         info "Executing remote [${action}] payload..."
         echo ""
         
@@ -777,7 +783,7 @@ _run_action() {
         REL_ROLE_DIR="${role_dir#$REPO_ROOT/}"
         TARGET_SCRIPT="${REL_ROLE_DIR}/scripts/${action}.sh"
         
-        ssh -t "$ssh_target" "cd /tmp/nexus-install || exit 1; bash \"$TARGET_SCRIPT\" \"$cmd_arg\""
+        ssh -t "$ssh_target" "cd /tmp/grid-install || exit 1; bash \"$TARGET_SCRIPT\" \"$cmd_arg\""
         if [ "$action" = "install" ]; then
             write_state "$mode" "$ssh_target" "$role"
         fi
@@ -805,10 +811,20 @@ _show_help() {
     case "$role" in
         core)
             echo -e "  ${BOLD}n8n Automation Workbench:${NC}"
-            echo -e "    Local URL  : http://${ip}:5678"
-            if [[ "$mode" == "remote" ]]; then
-                echo -e "    SSH Tunnel : ${CYAN}ssh -L 5678:localhost:5678 ${ssh_target}${NC}"
-                echo -e "    ${DIM}(Run this on your workstation to access n8n in your local browser)${NC}"
+            
+            # Check edge status
+            local edge_status="○"
+            [[ -f "$LOCAL_REGISTRY/edge.state" ]] && edge_status="✔"
+            
+            if [[ "$edge_status" == "✔" ]]; then
+                echo -e "    Public URL : https://n8n.your-domain.com ${DIM}(via grid-edge Caddy Proxy)${NC}"
+                echo -e "    ${DIM}(Make sure your edge DNS is configured to point here)${NC}"
+            else
+                echo -e "    Local URL  : http://${ip}:5678"
+                if [[ "$mode" == "remote" ]]; then
+                    echo -e "    SSH Tunnel : ${CYAN}ssh -L 5678:localhost:5678 ${ssh_target}${NC}"
+                    echo -e "    ${DIM}(Run this on your workstation to access n8n in your local browser)${NC}"
+                fi
             fi
             echo ""
             echo -e "  ${BOLD}OpenClaw Gateway:${NC}"
