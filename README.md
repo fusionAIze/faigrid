@@ -1,28 +1,41 @@
-# fusionAIze Grid
+# fusionAIze Grid (faigrid)
 
 [![repo-safety](https://github.com/typelicious/faigrid/actions/workflows/repo-safety.yml/badge.svg)](https://github.com/typelicious/faigrid/actions/workflows/repo-safety.yml) [![Lint](https://github.com/typelicious/faigrid/actions/workflows/lint.yml/badge.svg)](https://github.com/typelicious/faigrid/actions/workflows/lint.yml) [![Test](https://github.com/typelicious/faigrid/actions/workflows/test.yml/badge.svg)](https://github.com/typelicious/faigrid/actions/workflows/test.yml) [![Release](https://img.shields.io/github/v/release/typelicious/faigrid?display_name=tag)](https://github.com/typelicious/faigrid/releases) [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![OpenClaw-friendly](https://img.shields.io/badge/OpenClaw-friendly-111827.svg)](https://openclaw.ai/) [![n8n-automated](https://img.shields.io/badge/n8n-automated-ea4b71.svg?logo=n8n&logoColor=white)](https://n8n.io/) [![Docker-ready](https://img.shields.io/badge/docker-ready-2496ED?logo=docker&logoColor=white)](https://www.docker.com/) [![Bash-powered](https://img.shields.io/badge/Language-Bash-4EAA25.svg)](https://www.gnu.org/software/bash/)
 
-# fusionAIze Grid (v1.0.0 GA)
+> **The sovereign execution substrate for AI-native operations.**
 
-**fusionAIze Grid** is a professional, secure, and modular reference stack for building a sovereign, self-hosted **Agent & Automation** environment. It embraces a strict "deny-by-default" security philosophy, decoupling untrusted ingress (Edge) from critical orchestration (Core) and heavy LLM inference (Workers). Now fully localized and cloud-ready for institutional and private use.
+**fusionAIze Grid (faigrid)** is the execution substrate of the fusionAIze ecosystem. Its explicit job is to define **where** AI-native work runs, under **what constraints**, with **what isolation**, through which **queues and runners**, and with which **observability and recovery patterns**.
+
+It provides a modular, secure, and self-hosted foundation across local, on-prem, private cloud, public cloud, and hybrid deployments.
 
 ---
 
 ### Navigation
-[Why fusionAIze Grid?](#why-nexus-labs) • 
+[The Ecosystem](#the-ecosystem) • 
 [Architecture](#architecture) • 
 [Quick Start](#quick-start) • 
 [Troubleshooting](#troubleshooting) • 
-[Modules](#modules) • 
+[Grid Modules](#grid-modules) • 
 [Repository Layout](#repository-layout) • 
 [License](#license)
 
 ---
 
-## Why fusionAIze Grid?
+## The Ecosystem
 
-Rather than relying on heavy, black-box frameworks, fusionAIze Grid utilizes pure Bash orchestration, robust Systemd services, and well-understood Docker topologies to provide a transparent and resilient AI workbench. It decouples orchestration from execution to ensure that your private data and models stay under your control.
+`faigrid` is part of a 5-layer product architecture that operationalizes human-AI fusion teams:
+1. **Gate (`faigate`)**: AI-native gateway for models, providers, tools and clients. *(Connects)*
+2. **Lens**: Compression, translation, and context-focusing layer. *(Filters)*
+3. **Fabric**: Shared context and memory. *(Remembers & Serves)*
+4. **Grid (`faigrid`)**: This repository. The sovereign execution substrate. *(Executes)*
+5. **OS (`fusionAIzeOS`)**: The operating logic defining how humans and virtual AI coworkers collaborate. *(Orchestrates Logic)*
+
+### Core Philosophy
+- **Execution First**: We define rigorous *Execution Classes* (Edge, Internal, Queued, Runners, Local Workers) rather than fuzzy environments.
+- **Agent Agnostic**: We provide the raw OS execution substrate agnostic of the framework (OpenClaw, AutoGen, CrewAI).
+- **Macher-Fokus (Builder Focus)**: Designed originally for the **Solo Operator** and scalable to **Small Teams** and **SMBs** without enterprise compliance theater.
+- **Portability**: Full freedom to run proprietary SaaS routes (via Cloud Bridges) or fully local open-source operations (via Local Model Workers).
 
 ---
 
@@ -31,75 +44,75 @@ Rather than relying on heavy, black-box frameworks, fusionAIze Grid utilizes pur
 The infrastructure relies on a decoupled, secure **4+1 Node Architecture**:
 
 ```text
-                     Public Internet
-                            │ (HTTPS)
-      ┌─────────────────────▼─────────────────────┐
-      │               NEXUS EDGE                  │ (1) Ingress / Proxy
-      │     (Caddy Reverse Proxy, SSO, Auth)      │
-      └─────────────────────┬─────────────────────┘
-                            │ (Internal TLS)
-      ┌─────────────────────▼─────────────────────┐
-      │               NEXUS CORE                  │ (2) Orchestrator 
-      │    (n8n, OpenClaw, RTK, Postgres, Redis)  │
-      └──────┬─────────────────────────────┬──────┘
-             │ (Local API)                 │ (Encrypted Tunnels)
-  ┌──────────▼──────────┐       ┌──────────▼──────────┐
-  │    NEXUS WORKER     │       │   NEXUS EXTERNAL    │ (5) Global Extension
-  │  (Local LLM Nodes)  │       │  (Cloud VPS Node)   │
-  └─────────────────────┘       └─────────────────────┘
-             │
-  ┌──────────▼──────────┐
-  │    NEXUS BACKUP     │ (4) Offsite Storage
-  │ (Synology / Restic) │
-  └─────────────────────┘
+                      Public Internet
+                             │ (HTTPS)
+       ┌─────────────────────▼─────────────────────┐
+       │               GRID EDGE                   │ (1) Ingress / Proxy
+       │     (Caddy Reverse Proxy, SSO, Auth)      │
+       └─────────────────────┬─────────────────────┘
+                             │ (Internal TLS)
+       ┌─────────────────────▼─────────────────────┐
+       │               GRID CORE                   │ (2) Trusted Internal Services
+       │    (n8n, OpenClaw, RTK, Postgres, Redis)  │     / Queued Automations
+       └──────┬─────────────────────────────┬──────┘
+              │ (Local API)                 │ (Encrypted Tunnels)
+   ┌──────────▼──────────┐       ┌──────────▼──────────┐
+   │    GRID WORKER      │       │   GRID EXTERNAL     │ (5) Cloud Model Bridges
+   │  (Local LLM Nodes)  │       │  (Cloud VPS Node)   │     / Global Extension
+   └─────────────────────┘       └─────────────────────┘
+              │
+   ┌──────────▼──────────┐
+   │    GRID BACKUP      │ (4) Observability & 
+   │ (Synology / Restic) │     Recovery Base
+   └─────────────────────┘
 ```
 
 ---
 
 ## Quick Start
 
-Get your Nexus infrastructure live in 2 steps:
+Get your faigrid ecosystem live in 2 steps:
 
 ```bash
 # 1. Clone & Provision (Detects macOS/Linux automatically)
-git clone https://github.com/typelicious/faigrid.git nexus
-cd nexus && bash install.sh
+git clone https://github.com/typelicious/faigrid.git faigrid
+cd faigrid && bash install.sh
 
-# 2. Deploy your first node (e.g. Core Workbench)
+# 2. Deploy your first node (e.g. Core Runtime)
 ./install.sh --mode local --role core --strategy 1 --yes
 ```
 
-Done. Your AI Workbench is now accessible via the **Terminal Dashboard**:
+Done. Your AI execution substrate is now accessible via the **Terminal Dashboard**:
 ```bash
-./scripts/nexus-dashboard.sh
+./scripts/grid-dashboard.sh
 ```
 
 ---
 
 ## Troubleshooting
 
-If something feels off, run the **Nexus Doctor**. It performs comprehensive sanity checks on resources, connectivity, and local state:
+If something feels off, run the **Grid Doctor**. It performs comprehensive sanity checks on resources, connectivity, and local state:
 
 ```bash
-./scripts/nexus-doctor.sh
+./scripts/grid-doctor.sh
 ```
 
 To view live system telemetry and consolidated logs:
 ```bash
-tail -f /var/log/nexus/nexus-system.log
+tail -f /var/log/faigrid/grid-system.log
 ```
 
 ---
 
-## Modules
+## Grid Modules
 
-The Nexus framework is logically segmented into specialized operational roles:
+The faigrid framework segments execution classes into specialized operational roles:
 
-- **grid-edge**: The gatekeeper. Handles TLS termination (Caddy), CrowdSec bouncers, and identity providers (Authelia/Authentik). Exposed to the internet.
-- **grid-core**: The orchestrator. Contains the AI Workbench including n8n, further AI routing logic natively managed by OpenClaw, Redis distributed queues, and system telemetry watchdogs. Strictly internal.
-- **grid-worker**: The execution engine. Dedicated hardware running local LLMs (e.g., LM Studio/Ollama) routed securely to the Core via Tailscale or reverse SSH tunnels.
+- **grid-edge**: The gatekeeper. Handles TLS termination (Caddy), CrowdSec bouncers, and identity intake. Public-facing but tightly constrained.
+- **grid-core**: The private compute substrate. Hosts internal services (n8n), queue consumers, internal APIs, and stable coordination. Strictly internal.
+- **grid-worker**: Dedicated isolated execution workers. Examples include local inference (LM Studio/Ollama), review workers, and shell runners routed securely to the Core.
 - **grid-backup**: The safety net. Automated, immutable offline backup pipelines targeting dedicated local network attached storage.
-- **grid-external** *(optional)*: The global bridge. Distributed extension nodes for public-facing automated workflows (n8n) and project management (Plane.so), syncing back to the primary local grid.
+- **grid-external** *(optional)*: Cloud model bridges for access to external hosted workloads under strict egress-aware constraints.
 
 > **Security Note:** This repository is intrinsically designed for autonomous deployments. It utilizes dynamic state and `.env.topology` generation. **Never commit secrets**.
 
@@ -107,11 +120,11 @@ The Nexus framework is logically segmented into specialized operational roles:
 
 ## Repository Layout
 
-- `core/` — Docker compose stacks, systemd servers, and core orchestration scripts.
-- `docs/` — Core architecture design, example deployment grids, AI schemas, and tunneling runbooks.
-- `edge/` — Firewall configs, advanced proxy templates, and SSO structures for Edge nodes.
-- `scripts/` — The master orchestration utilities (`install.sh`, `nexus-deploy.sh`, `nexus-dashboard.sh`, `nexus-watchdog.sh`, `nexus-doctor.sh`).
-- `tests/` — Automated syntactical checks and integration pipelines natively hooked into CI/CD.
+- `core/` — Docker compose stacks, systemd servers, and core execution scripts.
+- `docs/` — Core architecture roadmap, example deployment profiles (Solo to SMB), runbooks.
+- `edge/` — Firewall configs, advanced proxy templates, and SSO entry structures.
+- `scripts/` — The master orchestration utilities (`install.sh`, `grid-dashboard.sh`, `grid-watchdog.sh`, `grid-doctor.sh`).
+- `tests/` — Automated syntactical checks (Bats-core) natively hooked into CI/CD.
 
 ---
 
