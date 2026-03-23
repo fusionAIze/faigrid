@@ -1,6 +1,6 @@
 # fusionAIze Grid (faigrid)
 
-[![repo-safety](https://github.com/typelicious/faigrid/actions/workflows/repo-safety.yml/badge.svg)](https://github.com/typelicious/faigrid/actions/workflows/repo-safety.yml) [![Lint](https://github.com/typelicious/faigrid/actions/workflows/lint.yml/badge.svg)](https://github.com/typelicious/faigrid/actions/workflows/lint.yml) [![Test](https://github.com/typelicious/faigrid/actions/workflows/test.yml/badge.svg)](https://github.com/typelicious/faigrid/actions/workflows/test.yml) [![Release](https://img.shields.io/github/v/release/typelicious/faigrid?display_name=tag)](https://github.com/typelicious/faigrid/releases) [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![repo-safety](https://github.com/fusionAIze/faigrid/actions/workflows/repo-safety.yml/badge.svg)](https://github.com/fusionAIze/faigrid/actions/workflows/repo-safety.yml) [![Lint](https://github.com/fusionAIze/faigrid/actions/workflows/lint.yml/badge.svg)](https://github.com/fusionAIze/faigrid/actions/workflows/lint.yml) [![Test](https://github.com/fusionAIze/faigrid/actions/workflows/test.yml/badge.svg)](https://github.com/fusionAIze/faigrid/actions/workflows/test.yml) [![Release](https://img.shields.io/github/v/release/fusionAIze/faigrid?display_name=tag)](https://github.com/fusionAIze/faigrid/releases) [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![OpenClaw-friendly](https://img.shields.io/badge/OpenClaw-friendly-111827.svg)](https://openclaw.ai/) [![n8n-automated](https://img.shields.io/badge/n8n-automated-ea4b71.svg?logo=n8n&logoColor=white)](https://n8n.io/) [![Docker-ready](https://img.shields.io/badge/docker-ready-2496ED?logo=docker&logoColor=white)](https://www.docker.com/) [![Bash-powered](https://img.shields.io/badge/Language-Bash-4EAA25.svg)](https://www.gnu.org/software/bash/)
 
 > **The sovereign execution substrate for AI-native operations.**
@@ -75,7 +75,7 @@ Get your faigrid ecosystem live in 2 steps:
 
 ```bash
 # 1. Clone & Provision (Detects macOS/Linux automatically)
-git clone https://github.com/typelicious/faigrid.git faigrid
+git clone https://github.com/fusionAIze/faigrid.git faigrid
 cd faigrid && bash install.sh
 
 # 2. Deploy your first node (e.g. Core Runtime)
