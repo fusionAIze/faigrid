@@ -414,7 +414,7 @@ divider
 if [[ -z "$MODE_CHOICE" ]]; then
     if [[ -n "${EXEC_MODE:-}" ]]; then
         # Known target found in registry
-        local target_desc="Local Node"
+        target_desc="Local Node"
         if [ "$EXEC_MODE" = "remote" ]; then
             target_desc="SSH: ${SSH_TARGET:-unknown}"
         fi
