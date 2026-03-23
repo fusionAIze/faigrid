@@ -30,7 +30,7 @@ send_alert() {
     
     if [[ -n "${ALERT_WEBHOOK_URL:-}" ]]; then
         curl -X POST -H "Content-Type: application/json" \
-             -d "{\"text\": \"🚨 Nexus Alert: ${MESSAGE}\"}" \
+             -d "{\"text\": \"🚨 Grid Alert: ${MESSAGE}\"}" \
              "${ALERT_WEBHOOK_URL}" &> /dev/null || true
     fi
 }
@@ -39,7 +39,7 @@ log_event "watchdog" "INFO" "Watchdog health cycle initiated."
 
 # 1. Check n8n Core
 if curl -sSf -m 3 "http://127.0.0.1:5678/healthz" > /dev/null 2>&1; then
-    log_event "watchdog" "INFO" "Service 'n8n' (Nexus Core) is healthy."
+    log_event "watchdog" "INFO" "Service 'n8n' (Grid Core) is healthy."
 else
     log_event "watchdog" "ERROR" "Service 'n8n' failed healthcheck on port 5678."
     send_alert "n8n Core is down on $(hostname)"
@@ -54,19 +54,19 @@ fi
 
 # 3. Check Edge (Caddy admin API)
 if curl -sSf -m 3 "http://127.0.0.1:2019/config/" > /dev/null 2>&1; then
-    log_event "watchdog" "INFO" "Service 'Caddy' (Nexus Edge) is responding."
+    log_event "watchdog" "INFO" "Service 'Caddy' (Grid Edge) is responding."
 else
     log_event "watchdog" "WARN" "Service 'Caddy' proxy not detected on port 2019. (Ignored if not an Edge node)."
 fi
 
 # 4. Generate Static HTML Dashboard Component
-if [[ -x "${SCRIPT_DIR}/nexus-dashboard.sh" ]]; then
-    "${SCRIPT_DIR}/nexus-dashboard.sh" --html
+if [[ -x "${SCRIPT_DIR}/grid-dashboard.sh" ]]; then
+    "${SCRIPT_DIR}/grid-dashboard.sh" --html
 fi
 
 # 5. Sync Status to External Node (Dashboard)
-if [[ -x "${SCRIPT_DIR}/nexus-sync-status.sh" ]]; then
-    "${SCRIPT_DIR}/nexus-sync-status.sh"
+if [[ -x "${SCRIPT_DIR}/grid-sync-status.sh" ]]; then
+    "${SCRIPT_DIR}/grid-sync-status.sh"
 fi
 
 # 6. Maintenance: Rotate Logs

@@ -1,0 +1,27 @@
+{
+    "global": {
+        "force_overwrite": "true"
+    },
+    "nodes": [
+        {
+            "role": "core",
+            "strategy": "1",
+            "ssh_target": "grid@192.168.178.20"
+        },
+        {
+            "role": "edge",
+            "strategy": "1",
+            "ssh_target": "grid@192.168.178.10"
+        },
+        {
+            "role": "runner",
+            "strategy": "1",
+            "ssh_target": "grid@192.168.178.20"
+        },
+        {
+            "role": "worker",
+            "strategy": "1",
+            "ssh_target": "grid@192.168.178.30"
+        }
+    ]
+}

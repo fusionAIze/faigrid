@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# fusionAIze Grid - Nexus Doctor (Diagnostics)
+# fusionAIze Grid - Grid Doctor (Diagnostics)
 # ==============================================================================
 # Comprehensive sanity checks for the 5-node architecture.
-# Usage: ./nexus-doctor.sh
+# Usage: ./grid-doctor.sh
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd || exit 1)"
@@ -19,7 +19,7 @@ else
     error() { echo -e "${C_RED}[ERROR]${C_RESET} $*"; }
 fi
 
-print_header "Nexus Doctor: Infrastructure Diagnostics"
+print_header "Grid Doctor: Infrastructure Diagnostics"
 
 # 1. Environment & Resources
 info "Checking system resources..."
@@ -53,7 +53,7 @@ if command -v docker &> /dev/null; then
         success "Docker Engine: Running"
         
         # Check Core containers
-        if sudo docker ps | grep -q "nexus-n8n"; then
+        if sudo docker ps | grep -q "grid-core-n8n"; then
             success "Core service: n8n is running."
         fi
     else
@@ -72,7 +72,7 @@ else
 fi
 
 # 5. Log Health
-LOG_FILE="/var/log/nexus/nexus-system.log"
+LOG_FILE="/var/log/faigrid/grid-system.log"
 if [[ -f "$LOG_FILE" ]]; then
     ERR_COUNT=$(grep -c "\[ERROR\]" "$LOG_FILE" || echo "0")
     if [[ "$ERR_COUNT" -gt 0 ]]; then

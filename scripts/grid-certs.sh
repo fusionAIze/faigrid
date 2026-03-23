@@ -8,7 +8,7 @@
 
 set -euo pipefail
 
-DEST_DIR="/opt/fusionaize-nexus/certs"
+DEST_DIR="/opt/faigrid/certs"
 mkdir -p "$DEST_DIR"
 
 if command -v mkcert > /dev/null 2>&1; then
@@ -23,8 +23,8 @@ else
     cd "$DEST_DIR" || exit
     
     # Generate CA
-    openssl genrsa -out nexus-ca.key 4096 2>/dev/null
-    openssl req -x509 -new -nodes -key nexus-ca.key -sha256 -days 3650 -out nexus-ca.crt \
+    openssl genrsa -out grid-ca.key 4096 2>/dev/null
+    openssl req -x509 -new -nodes -key grid-ca.key -sha256 -days 3650 -out grid-ca.crt \
         -subj "/C=XX/ST=Local/L=Local/O=fusionAIze Grid/OU=Internal/CN=fusionAIze Grid Local CA" 2>/dev/null
     
     # Generate Server Cert
@@ -46,7 +46,7 @@ IP.1 = 127.0.0.1
 IP.2 = 10.0.0.100
 EOF
 
-    openssl x509 -req -in grid-core.csr -CA nexus-ca.crt -CAkey nexus-ca.key \
+    openssl x509 -req -in grid-core.csr -CA grid-ca.crt -CAkey grid-ca.key \
         -CAcreateserial -out grid-core.crt -days 3650 -sha256 -extfile extfile.cnf 2>/dev/null
     
     # Cleanup

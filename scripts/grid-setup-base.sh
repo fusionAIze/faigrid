@@ -30,13 +30,13 @@ mkdir -p \
 
 touch \
   core/base/README.md \
-  core/base/configs/sshd_config.d/10-nexus.conf \
+  core/base/configs/sshd_config.d/10-grid.conf \
   core/base/configs/systemd-user/vncserver@.service \
   core/base/configs/tigervnc/config.example \
   core/base/configs/ufw/rules.md \
   core/base/client/ssh/config.snippet.example \
-  core/base/client/macos/nexus-vnc-ops.example \
-  core/base/client/macos/nexus-vnc-ops-stop.example \
+  core/base/client/macos/grid-vnc-ops.example \
+  core/base/client/macos/grid-vnc-ops-stop.example \
   core/base/client/macos/README.md \
   core/base/scripts/ssh-hardening-apply.sh \
   core/base/scripts/ufw-apply.sh \

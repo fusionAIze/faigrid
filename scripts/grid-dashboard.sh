@@ -10,8 +10,8 @@ if [[ "${1:-}" == "--html" ]]; then
     MODE="html"
 fi
 
-HTML_OUT="/var/www/nexus/index.html"
-LOG_FILE="/var/log/nexus/nexus-system.log"
+HTML_OUT="/var/www/faigrid/index.html"
+LOG_FILE="/var/log/faigrid/grid-system.log"
 
 get_telemetry() {
     # Uptime
@@ -81,7 +81,7 @@ elif [[ "$MODE" == "html" ]]; then
         LAST_EVENTS=$(tail -n 12 "$LOG_FILE" | sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g')
     fi
     
-    cat <<EOF > /tmp/nexus-dashboard.html
+    cat <<EOF > /tmp/grid-dashboard.html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -126,6 +126,6 @@ elif [[ "$MODE" == "html" ]]; then
 </html>
 EOF
 
-    sudo mv /tmp/nexus-dashboard.html "$HTML_OUT" 2>/dev/null || true
+    sudo mv /tmp/grid-dashboard.html "$HTML_OUT" 2>/dev/null || true
     sudo chmod 644 "$HTML_OUT" 2>/dev/null || true
 fi

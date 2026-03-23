@@ -36,6 +36,6 @@ touch \
   docs/runbooks/step-03-core-heart-stack.md \
   docs/reference/ports.md \
   docs/reference/credentials.md \
-  docs/templates/systemd-nexus-heart.example
+  docs/templates/systemd-grid-heart.example
 
 echo "[scaffold] Done."
