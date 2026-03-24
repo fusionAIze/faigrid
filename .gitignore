@@ -27,6 +27,10 @@ docs/local/
 # OS junk
 .DS_Store
 
+# Claude Code
+.claude/
+.understand-anything/
+
 # Local Grid Registry
 .faigrid/
 
