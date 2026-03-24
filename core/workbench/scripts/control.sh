@@ -838,6 +838,64 @@ cmd_control() {
   esac
 }
 
+# ── Doctor / Validate ─────────────────────────────────────────────────────────
+
+cmd_doctor() {
+  wb_header "Doctor / Validate"
+  printf "  ${C_DIM}Run health checks and diagnostics for installed tools.${C_RESET}\n\n"
+
+  local plugin_list=()
+  local i=1
+  printf "  %-4s  %-12s  %-16s  %s\n" "No." "CATEGORY" "TOOL" "STATUS"
+  printf "  %s\n" "──────────────────────────────────────────────────────────"
+
+  while read -r p; do
+    grep -q "^tool_doctor()" "$p" 2>/dev/null || continue
+    local cat name stat
+    cat=$(get_plugin_meta  "$p" "TOOL_CATEGORY")
+    name=$(get_plugin_meta "$p" "TOOL_NAME")
+    stat=$( (source "$p" >/dev/null 2>&1 && tool_status) || echo "Error" )
+    [[ "$stat" == *"Not installed"* || "$stat" == "Error" ]] && continue
+    printf "  ${C_BOLD}%3d)${C_RESET}  %-12s  %-16s  ${C_GREEN}%s${C_RESET}\n" \
+      "$i" "$cat" "$name" "$stat"
+    plugin_list+=("$p")
+    i=$((i + 1))
+  done < <(get_plugins)
+
+  if [[ ${#plugin_list[@]} -eq 0 ]]; then
+    echo ""
+    warn "No tools with doctor/validate support are currently installed."
+    return
+  fi
+
+  local total=${#plugin_list[@]}
+  echo ""
+  read -r -p "  ▸ Select tool (c = cancel  q = quit): " choice
+  case "$choice" in
+    q|Q) _quit ;;
+    c|C|"") info "Cancelled."; return ;;
+  esac
+
+  if [[ "$choice" -ge 1 && "$choice" -le "$total" ]] 2>/dev/null; then
+    local arr_idx=$((choice - 1))
+    local p="${plugin_list[$arr_idx]}"
+    local name
+    name=$(get_plugin_meta "$p" "TOOL_NAME")
+    echo ""
+    divider
+    printf "  ${C_BOLD}Doctor: %s${C_RESET}\n" "$name"
+    divider
+    echo ""
+    (
+      source "${HERE}/_lib.sh"
+      source "$p"
+      tool_doctor
+    ) || warn "Doctor run for ${name} completed with warnings."
+  else
+    error "Invalid selection."
+  fi
+}
+
 # ── Main menu ──────────────────────────────────────────────────────────────────
 
 show_menu() {
@@ -854,6 +912,7 @@ show_menu() {
     printf "    ${C_BOLD}5)${C_RESET}  ${C_MAGENTA}Configure${C_RESET}    ${C_DIM}Set API keys and tool settings${C_RESET}\n"
     printf "    ${C_BOLD}6)${C_RESET}  ${C_RED}Uninstall${C_RESET}    ${C_DIM}Remove an installed tool${C_RESET}\n"
     printf "    ${C_BOLD}7)${C_RESET}  ${C_CYAN}Control${C_RESET}      ${C_DIM}Start, stop, restart or tail logs for a service${C_RESET}\n"
+    printf "    ${C_BOLD}8)${C_RESET}  ${C_YELLOW}Doctor${C_RESET}       ${C_DIM}Health checks and diagnostics for installed tools${C_RESET}\n"
     echo ""
     printf "    ${C_BOLD}q)${C_RESET}  Quit\n"
     echo ""
@@ -867,8 +926,9 @@ show_menu() {
       5) cmd_configure ;;
       6) cmd_uninstall ;;
       7) cmd_control ;;
+      8) cmd_doctor ;;
       0|[qQ]|quit|exit) _quit ;;
-      *) warn "Invalid option — enter 1-7 or q." ;;
+      *) warn "Invalid option — enter 1-8 or q." ;;
     esac
   done
 }
@@ -887,6 +947,7 @@ else
     configure)  cmd_configure ;;
     uninstall)  cmd_uninstall ;;
     control)    cmd_control ;;
+    doctor)     cmd_doctor ;;
     *) die "Unknown command: $1" ;;
   esac
 fi

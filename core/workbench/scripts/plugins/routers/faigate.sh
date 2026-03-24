@@ -109,6 +109,14 @@ tool_uninstall() {
     sudo rm -rf "${INSTALL_DIR}"
 }
 
+# ── Doctor ─────────────────────────────────────────────────────────────────────
+# Called from the Workbench "Doctor" menu (option 8).
+# Delegates to the faigate-doctor script bundled with the gateway.
+
+tool_doctor() {
+    _faigate_doctor
+}
+
 # ── Configure ──────────────────────────────────────────────────────────────────
 
 tool_configure() {

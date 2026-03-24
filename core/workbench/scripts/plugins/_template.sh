@@ -105,6 +105,25 @@ tool_uninstall() {
     echo "Uninstalling ${TOOL_NAME}..."
 }
 
+# ── Optional: doctor / validate ───────────────────────────────────────────────
+# Called from the Workbench "Doctor" menu (option 8).
+# Only tools with tool_doctor() defined appear in the Doctor menu.
+# Use this for health checks, config validation, connectivity probes, etc.
+# Run privileged checks with sudo; run user-context probes with sudo -u <svcuser>.
+#
+# tool_doctor() {
+#     info "── service status"
+#     systemctl --no-pager status example.service 2>&1 | head -20 || true
+#     echo ""
+#     info "── connectivity"
+#     curl -sf "http://127.0.0.1:${PORT}/health" >/dev/null 2>&1 \
+#         && success "responding on port ${PORT}" \
+#         || warn "not reachable on port ${PORT}"
+#     echo ""
+#     info "── probe (service user)"
+#     sudo -u example -H bash -lc "example --profile prod validate" 2>&1 | head -40 || true
+# }
+
 # ── Optional: interactive configuration ───────────────────────────────────────
 # Called from the Workbench "Configure" menu (option 5).
 # _lib.sh is sourced before this plugin in the subshell, so grid_write_env,

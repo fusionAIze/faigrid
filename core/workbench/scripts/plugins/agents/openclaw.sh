@@ -16,7 +16,21 @@ _OC_SERVER_DIR="$(cd "${_OC_HERE}/../../../../openclaw/native/server" 2>/dev/nul
 # ── Lifecycle ──────────────────────────────────────────────────────────────────
 
 tool_install() {
-    echo "Please use docs/runbooks/06-openclaw-native.md to install OpenClaw."
+    local install_script="${_OC_SERVER_DIR}/install.sh"
+    if [[ ! -f "$install_script" ]]; then
+        warn "install.sh not found at ${install_script}"
+        info "Please use docs/runbooks/06-openclaw-native.md to install OpenClaw."
+        return 1
+    fi
+
+    local default_ver="2026.3.23"
+    printf "  Version to install [%s]: " "$default_ver"
+    read -r ver_in
+    local target_ver="${ver_in:-$default_ver}"
+
+    info "Installing openclaw@${target_ver}…"
+    sudo bash "$install_script" --version "$target_ver"
+    success "openclaw@${target_ver} installed. Run Configure (5) to set API keys and faigate routing."
 }
 
 tool_update() {
@@ -337,4 +351,67 @@ PYEOF
     fi
 
     success "OpenClaw configuration saved to ${providers_env}"
+}
+
+# ── Doctor ──────────────────────────────────────────────────────────────────────
+# Called from the Workbench "Doctor" menu (option 8).
+# All service/port/permission checks run as root via sudo.
+# The model probe runs as the openclaw system user to load providers.env correctly
+# and avoid false positives from root's environment.
+
+tool_doctor() {
+    local verify_script="${_OC_SERVER_DIR}/verify.sh"
+    local providers_env="/etc/openclaw/openclaw.providers.env"
+    local oc_json="/var/lib/openclaw/.openclaw-prod/openclaw.json"
+    local fg_port="${FAIGATE_PORT:-8090}"
+
+    # ── 1. Infrastructure verify (service, ports, file permissions) ──────────
+    info "── openclaw infrastructure"
+    if [[ -f "$verify_script" ]]; then
+        sudo bash "$verify_script" 2>&1 || true
+    else
+        warn "verify.sh not found at ${verify_script} — running fallback checks"
+        openclaw --version 2>/dev/null || true
+        systemctl --no-pager status openclaw.service 2>&1 | head -20 || true
+        ss -lntp 2>/dev/null | grep ':18789' || true
+    fi
+    echo ""
+
+    # ── 2. faigate router connectivity ───────────────────────────────────────
+    info "── faigate router"
+    if curl -sf --max-time 3 "http://127.0.0.1:${fg_port}/health" >/dev/null 2>&1; then
+        success "faigate responding at http://127.0.0.1:${fg_port}"
+        if sudo test -f "$oc_json" 2>/dev/null; then
+            local has_fg
+            has_fg=$(sudo python3 -c "
+import json
+try:
+    cfg = json.load(open('${oc_json}'))
+    providers = cfg.get('models',{}).get('providers',{})
+    print('yes' if 'faigate' in providers else 'no')
+except Exception:
+    print('no')
+" 2>/dev/null || echo "no")
+            if [[ "$has_fg" == "yes" ]]; then
+                success "faigate provider configured in openclaw.json"
+            else
+                warn "faigate provider NOT in openclaw.json — run Configure → faigate section"
+            fi
+        fi
+    else
+        warn "faigate not reachable at port ${fg_port} — check faigate service"
+    fi
+    echo ""
+
+    # ── 3. Model probe as openclaw system user ────────────────────────────────
+    info "── model probe (openclaw system user)"
+    if ! sudo test -f "$providers_env" 2>/dev/null; then
+        warn "providers.env not found at ${providers_env} — run Configure first"
+        return
+    fi
+    sudo -u openclaw -H bash -lc \
+        "set -a; . ${providers_env}; set +a; \
+         openclaw --profile prod models status --probe --probe-max-tokens 16" \
+        2>&1 | sed -n '1,80p' \
+        || warn "Probe completed with errors — check: sudo journalctl -u openclaw.service -n 30"
 }
