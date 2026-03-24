@@ -170,15 +170,24 @@ except Exception:
     # Auto-detect port from faigate .env if installed
     local fg_port="8090"
     for _fg_env in \
+        "/opt/homebrew/etc/faigate/faigate.env" \
+        "$(brew --prefix 2>/dev/null)/etc/faigate/faigate.env" \
         "/opt/faigrid/faigate/.env" \
         "/opt/faigrid/foundrygate/.env"; do
-        if sudo test -f "$_fg_env" 2>/dev/null; then
+        # Use test without sudo for Homebrew paths (user-owned), sudo for system paths
+        if [[ "$_fg_env" == /opt/homebrew/* ]] || [[ "$_fg_env" == /usr/local/* ]]; then
+            [[ -f "$_fg_env" ]] || continue
+            local detected_port
+            detected_port=$(grep -E "^FAIGATE_PORT=|^FOUNDRYGATE_PORT=" "$_fg_env" 2>/dev/null \
+                | head -1 | cut -d'=' -f2 | tr -d '"' || echo "")
+        else
+            sudo test -f "$_fg_env" 2>/dev/null || continue
             local detected_port
             detected_port=$(sudo grep -E "^FAIGATE_PORT=|^FOUNDRYGATE_PORT=" "$_fg_env" 2>/dev/null \
                 | head -1 | cut -d'=' -f2 | tr -d '"' || echo "")
-            [[ -n "$detected_port" ]] && fg_port="$detected_port"
-            break
         fi
+        [[ -n "$detected_port" ]] && fg_port="$detected_port"
+        break
     done
 
     # Derive current port from existing URL for display
@@ -280,7 +289,12 @@ PYEOF
     # ── faigate OpenClaw Skill ─────────────────────────────────────────────────
     info "── faigate Skill for OpenClaw"
     local faigate_dir="/opt/faigrid/faigate"
+    # On macOS, faigate skills are installed in Homebrew share
+    local _brew_share
+    _brew_share="$(brew --prefix 2>/dev/null)/share/faigate"
     local skill_src="${faigate_dir}/skills/faigate/SKILL.md"
+    [[ ! -f "$skill_src" && -f "${_brew_share}/skills/faigate/SKILL.md" ]] \
+        && skill_src="${_brew_share}/skills/faigate/SKILL.md"
     local skills_dir="/var/lib/openclaw/.openclaw-prod/skills"
 
     if ! sudo test -f "$skill_src" 2>/dev/null; then

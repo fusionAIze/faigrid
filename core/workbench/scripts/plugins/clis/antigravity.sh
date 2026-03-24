@@ -3,6 +3,7 @@ TOOL_NAME="antigravity"
 TOOL_CATEGORY="clis"
 TOOL_DESC="Antigravity AI IDE — Google"
 TOOL_TYPE="apt|dnf"
+FAIGATE_CLIENT="antigravity"
 # https://antigravity.google/download/linux
 
 _detect_pkg_manager() {
@@ -86,4 +87,60 @@ tool_uninstall() {
             sudo rm -f /etc/yum.repos.d/antigravity.repo
             ;;
     esac
+}
+
+tool_configure() {
+    local current
+    current=$(grid_read_env "GEMINI_API_KEY")
+    info "Antigravity AI IDE uses the Gemini API."
+    printf "  GEMINI_API_KEY [%s]: " "$(grid_mask "$current")"
+    read -r -s api_key; echo ""
+    [[ -z "$api_key" && -n "$current" ]] && { info "Kept existing key."; }
+    if [[ -n "$api_key" ]]; then
+        grid_write_env "GEMINI_API_KEY" "$api_key"
+        grid_ensure_sourced
+        success "GEMINI_API_KEY saved to ~/.config/faigrid/grid.env"
+    fi
+
+    # ── fusionAIze Gate routing ────────────────────────────────────────────────
+    local fg_port="${FAIGATE_PORT:-8090}"
+    local fg_url="http://127.0.0.1:${fg_port}/v1"
+    echo ""
+    info "── fusionAIze Gate Routing (Antigravity)"
+    if ! curl -sf "http://127.0.0.1:${fg_port}/health" >/dev/null 2>&1; then
+        warn "  fusionAIze Gate not reachable at port ${fg_port} — skipping."
+        return 0
+    fi
+    info "  Gate is running at ${fg_url}"
+
+    # Antigravity supports custom OpenAI-compat endpoint via OPENAI_API_BASE
+    local cur_base
+    cur_base=$(grid_read_env "OPENAI_API_BASE" 2>/dev/null || echo "")
+    local routed="no"
+    [[ "$cur_base" == "$fg_url" ]] && routed="yes"
+
+    printf "  Route Antigravity through faigate (OPENAI_API_BASE)? current=[%s] (y/N): " "$routed"
+    read -r route_choice
+
+    if [[ "${route_choice:-N}" =~ ^[Yy]$ ]]; then
+        grid_write_env "OPENAI_API_BASE" "$fg_url"
+        grid_ensure_sourced
+        success "  OPENAI_API_BASE → ${fg_url} (saved to grid.env)"
+        info "  Antigravity will use faigate's 'antigravity' client profile."
+        info "  Preferred: gemini-flash-lite, gemini-flash, gemini-pro"
+        echo ""
+        info "  Note: Also configure Antigravity's custom endpoint in its IDE settings"
+        info "  to point to ${fg_url} with apiKey=local for full integration."
+    elif [[ "$routed" == "yes" ]]; then
+        printf "  Disable faigate routing for Antigravity? (y/N): "
+        read -r disable_choice
+        if [[ "${disable_choice:-N}" =~ ^[Yy]$ ]]; then
+            local tmp genv
+            genv="${HOME}/.config/faigrid/grid.env"
+            tmp=$(mktemp)
+            grep -v "^OPENAI_API_BASE=" "$genv" > "$tmp" 2>/dev/null || true
+            mv "$tmp" "$genv"
+            success "  OPENAI_API_BASE removed — Antigravity routes directly."
+        fi
+    fi
 }

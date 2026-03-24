@@ -8,7 +8,50 @@ TOOL_SERVICE="faigate"
 INSTALL_DIR="/opt/faigrid/faigate"
 FAIGATE_PORT="${FAIGATE_PORT:-8090}"
 
+# ── macOS / Homebrew detection ─────────────────────────────────────────────────
+_FAIGATE_IS_BREW=false
+_BREW_PREFIX="/opt/homebrew"
+if [[ "$(uname)" == "Darwin" ]]; then
+    _BREW_PREFIX="$(brew --prefix 2>/dev/null || echo /opt/homebrew)"
+    if brew list faigate >/dev/null 2>&1; then
+        _FAIGATE_IS_BREW=true
+    fi
+fi
+
+# Path helpers — always call these rather than hardcoding paths.
+_fg_config_dir()  { $_FAIGATE_IS_BREW && echo "${_BREW_PREFIX}/etc/faigate" || echo "$INSTALL_DIR"; }
+_fg_config_yaml() { echo "$(_fg_config_dir)/config.yaml"; }
+_fg_env_file()    { $_FAIGATE_IS_BREW && echo "${_BREW_PREFIX}/etc/faigate/faigate.env" || echo "${INSTALL_DIR}/.env"; }
+_fg_script()      {
+    # On Homebrew, scripts are installed as binaries in PATH.
+    # On Linux, they live in $INSTALL_DIR/scripts/.
+    local name="$1"
+    if $_FAIGATE_IS_BREW; then
+        command -v "$name" 2>/dev/null || echo ""
+    else
+        local s="${INSTALL_DIR}/scripts/${name}"
+        [[ -f "$s" ]] && echo "$s" || echo ""
+    fi
+}
+
+# ── Lifecycle ──────────────────────────────────────────────────────────────────
+
 tool_install() {
+    if $_FAIGATE_IS_BREW || brew list faigate >/dev/null 2>&1; then
+        echo "fusionAIze Gate already installed via Homebrew."
+        return 0
+    fi
+
+    if [[ "$(uname)" == "Darwin" ]]; then
+        info "Installing via Homebrew…"
+        brew tap fusionAIze/faigate 2>/dev/null || true
+        brew install faigate
+        success "fusionAIze Gate installed via Homebrew."
+        info "Start with: brew services start faigate"
+        return 0
+    fi
+
+    # Linux: git clone
     if [[ -d "$INSTALL_DIR" ]]; then
         echo "fusionAIze Gate already cloned in $INSTALL_DIR"
     else
@@ -18,6 +61,12 @@ tool_install() {
 }
 
 tool_update() {
+    if $_FAIGATE_IS_BREW; then
+        info "Upgrading via Homebrew…"
+        brew upgrade faigate
+        success "fusionAIze Gate upgraded."
+        return 0
+    fi
     if [[ -d "$INSTALL_DIR" ]]; then
         ( cd "$INSTALL_DIR" && sudo git pull )
     else
@@ -26,6 +75,17 @@ tool_update() {
 }
 
 tool_status() {
+    if $_FAIGATE_IS_BREW; then
+        local ver
+        ver=$(faigate --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "?")
+        if curl -sf "http://127.0.0.1:${FAIGATE_PORT}/health" >/dev/null 2>&1; then
+            echo "Installed (Homebrew v${ver}, running)"
+        else
+            echo "Installed (Homebrew v${ver}, stopped)"
+        fi
+        return 0
+    fi
+
     if [[ ! -d "$INSTALL_DIR" ]]; then
         echo "Not installed"
         return
@@ -39,18 +99,24 @@ tool_status() {
     fi
 }
 
-tool_uninstall() { sudo rm -rf "${INSTALL_DIR}"; }
+tool_uninstall() {
+    if $_FAIGATE_IS_BREW; then
+        brew uninstall faigate
+        return 0
+    fi
+    sudo rm -rf "${INSTALL_DIR}"
+}
 
 # ── Configure ──────────────────────────────────────────────────────────────────
 
 tool_configure() {
-    if [[ ! -d "$INSTALL_DIR" ]]; then
+    if ! $_FAIGATE_IS_BREW && [[ ! -d "$INSTALL_DIR" ]]; then
         warn "fusionAIze Gate is not installed. Run Install first."
         return 1
     fi
 
-    local wizard="${INSTALL_DIR}/scripts/faigate-config-wizard"
-    local config="${INSTALL_DIR}/config.yaml"
+    local config
+    config="$(_fg_config_yaml)"
 
     echo ""
     printf "  ${C_BOLD}fusionAIze Gate — Configuration${C_RESET}\n\n"
@@ -59,16 +125,18 @@ tool_configure() {
     printf "    ${C_BOLD}3)${C_RESET}  Provider Catalog   ${C_DIM}Browse available providers${C_RESET}\n"
     printf "    ${C_BOLD}4)${C_RESET}  Health Check       ${C_DIM}Gateway status and provider latency${C_RESET}\n"
     printf "    ${C_BOLD}5)${C_RESET}  API Keys           ${C_DIM}Set provider API keys in .env${C_RESET}\n"
+    printf "    ${C_BOLD}6)${C_RESET}  Stats              ${C_DIM}Usage stats via faigate-stats${C_RESET}\n"
     echo ""
     read -r -p "  ▸ Choice (c = cancel): " cfg_choice
     echo ""
 
     case "$cfg_choice" in
-        1) _faigate_wizard "$wizard" "$config" ;;
+        1) _faigate_wizard "$config" ;;
         2) _faigate_doctor ;;
         3) _faigate_provider_catalog ;;
         4) _faigate_health ;;
         5) _faigate_api_keys ;;
+        6) _faigate_stats ;;
         c|C|"") info "Cancelled."; return ;;
         *) warn "Invalid choice."; return ;;
     esac
@@ -77,12 +145,15 @@ tool_configure() {
 # ── Wizard ─────────────────────────────────────────────────────────────────────
 
 _faigate_wizard() {
-    local wizard="$1"
-    local config="$2"
+    local config="$1"
+    local wizard
+    wizard="$(_fg_script faigate-config-wizard)"
 
-    if [[ ! -f "$wizard" ]]; then
-        warn "faigate-config-wizard not found at ${wizard}."
-        warn "Run git pull in ${INSTALL_DIR} to update."
+    if [[ -z "$wizard" ]]; then
+        warn "faigate-config-wizard not found."
+        $_FAIGATE_IS_BREW \
+            && warn "Try: brew upgrade faigate" \
+            || warn "Run git pull in ${INSTALL_DIR} to update."
         return 1
     fi
 
@@ -118,7 +189,7 @@ _faigate_wizard() {
     echo ""
 
     # ── Provider selection
-    printf "  ${C_BOLD}Select providers${C_RESET}  ${C_DIM}comma-separated IDs from list above, or 'all', or Enter to use recommendations${C_RESET}\n"
+    printf "  ${C_BOLD}Select providers${C_RESET}  ${C_DIM}comma-separated IDs from list above, or 'all', or Enter for recommendations${C_RESET}\n"
     read -r -p "  ▸ Selection: " prov_select
     echo ""
 
@@ -169,30 +240,33 @@ _faigate_wizard() {
 # ── Doctor ─────────────────────────────────────────────────────────────────────
 
 _faigate_doctor() {
-    local doctor="${INSTALL_DIR}/scripts/faigate-doctor"
-    local config="${INSTALL_DIR}/config.yaml"
-    if [[ ! -f "$doctor" ]]; then
-        warn "faigate-doctor not found — run git pull in ${INSTALL_DIR}"
+    local doctor
+    doctor="$(_fg_script faigate-doctor)"
+    if [[ -z "$doctor" ]]; then
+        warn "faigate-doctor not found."
+        $_FAIGATE_IS_BREW && warn "Try: brew upgrade faigate" || warn "Run git pull in ${INSTALL_DIR}"
         return 1
     fi
     info "Running faigate-doctor…"
-    bash "$doctor" ${config:+--config "$config"} 2>&1 || true
+    bash "$doctor" 2>&1 || true
 }
 
 # ── Provider catalog ───────────────────────────────────────────────────────────
 
 _faigate_provider_catalog() {
-    local disc="${INSTALL_DIR}/scripts/faigate-provider-discovery"
-    if [[ ! -f "$disc" ]]; then
-        # Fallback: hit the local API if gateway is running
-        if curl -sf "http://127.0.0.1:${FAIGATE_PORT}/api/provider-catalog" \
-                | python3 -m json.tool 2>/dev/null; then
-            return
-        fi
-        warn "Provider discovery script not found and gateway not reachable."
-        return 1
+    local disc
+    disc="$(_fg_script faigate-provider-discovery)"
+    if [[ -n "$disc" ]]; then
+        bash "$disc" 2>&1 | head -80 || true
+        return
     fi
-    bash "$disc" 2>&1 | head -80 || true
+    # Fallback: hit the local API if gateway is running
+    if curl -sf "http://127.0.0.1:${FAIGATE_PORT}/api/provider-catalog" \
+            | python3 -m json.tool 2>/dev/null; then
+        return
+    fi
+    warn "Provider discovery script not found and gateway not reachable."
+    return 1
 }
 
 # ── Health check ───────────────────────────────────────────────────────────────
@@ -210,25 +284,62 @@ data = json.load(sys.stdin)
 for m in data.get('data', []):
     print('  ', m.get('id',''))
 " 2>/dev/null || true
+        echo ""
+        info "Dashboard: http://127.0.0.1:${FAIGATE_PORT}/dashboard"
     else
         warn "Gateway not reachable at port ${FAIGATE_PORT}."
-        info "Start it via Docker: cd ${INSTALL_DIR} && docker compose up -d"
+        if $_FAIGATE_IS_BREW; then
+            info "Start with: brew services start faigate"
+        else
+            info "Start it via Docker: cd ${INSTALL_DIR} && docker compose up -d"
+        fi
     fi
 }
 
-# ── API Keys (.env) ────────────────────────────────────────────────────────────
+# ── Stats ──────────────────────────────────────────────────────────────────────
+
+_faigate_stats() {
+    local stats_bin
+    stats_bin="$(_fg_script faigate-stats)"
+    if [[ -z "$stats_bin" ]]; then
+        warn "faigate-stats not found."
+        return 1
+    fi
+    info "fusionAIze Gate — Usage Stats"
+    echo ""
+    bash "$stats_bin" 2>&1 || true
+    echo ""
+    info "Dashboard: http://127.0.0.1:${FAIGATE_PORT}/dashboard"
+}
+
+# ── API Keys ───────────────────────────────────────────────────────────────────
 
 _faigate_api_keys() {
-    local env_file="${INSTALL_DIR}/.env"
-    local example_file="${INSTALL_DIR}/.env.example"
+    local env_file
+    env_file="$(_fg_env_file)"
+    local example_file
+    if $_FAIGATE_IS_BREW; then
+        example_file="${_BREW_PREFIX}/share/faigate/.env.example"
+    else
+        example_file="${INSTALL_DIR}/.env.example"
+    fi
 
+    # Create env file if absent
     if [[ ! -f "$env_file" ]] && [[ -f "$example_file" ]]; then
-        sudo cp "$example_file" "$env_file"
-        sudo chmod 600 "$env_file"
+        if $_FAIGATE_IS_BREW; then
+            cp "$example_file" "$env_file"
+            chmod 600 "$env_file"
+        else
+            sudo cp "$example_file" "$env_file"
+            sudo chmod 600 "$env_file"
+        fi
         info "Created ${env_file} from .env.example"
     elif [[ ! -f "$env_file" ]]; then
-        sudo touch "$env_file"
-        sudo chmod 600 "$env_file"
+        if $_FAIGATE_IS_BREW; then
+            touch "$env_file"; chmod 600 "$env_file"
+        else
+            sudo touch "$env_file"; sudo chmod 600 "$env_file"
+        fi
     fi
 
     info "Writing API keys to ${env_file} — press Enter to keep current value."
@@ -237,7 +348,11 @@ _faigate_api_keys() {
     _set_key() {
         local key="$1" label="$2" silent="${3:-yes}"
         local current grid_val val hint tmp
-        current=$(sudo grep "^${key}=" "$env_file" 2>/dev/null | cut -d'=' -f2- | tr -d '"' || echo "")
+        if $_FAIGATE_IS_BREW; then
+            current=$(grep "^${key}=" "$env_file" 2>/dev/null | cut -d'=' -f2- | tr -d '"' || echo "")
+        else
+            current=$(sudo grep "^${key}=" "$env_file" 2>/dev/null | cut -d'=' -f2- | tr -d '"' || echo "")
+        fi
         grid_val=$(grid_read_env "$key" 2>/dev/null || echo "")
         if [[ -n "$current" ]]; then
             hint="$(grid_mask "$current")"
@@ -253,10 +368,17 @@ _faigate_api_keys() {
             [[ -z "$val" ]] && return 0
         fi
         tmp=$(mktemp)
-        sudo grep -v "^${key}=" "$env_file" > "$tmp" 2>/dev/null || true
-        printf '%s=%s\n' "$key" "$val" >> "$tmp"
-        sudo mv "$tmp" "$env_file"
-        sudo chmod 600 "$env_file"
+        if $_FAIGATE_IS_BREW; then
+            grep -v "^${key}=" "$env_file" > "$tmp" 2>/dev/null || true
+            printf '%s=%s\n' "$key" "$val" >> "$tmp"
+            mv "$tmp" "$env_file"
+            chmod 600 "$env_file"
+        else
+            sudo grep -v "^${key}=" "$env_file" > "$tmp" 2>/dev/null || true
+            printf '%s=%s\n' "$key" "$val" >> "$tmp"
+            sudo mv "$tmp" "$env_file"
+            sudo chmod 600 "$env_file"
+        fi
     }
 
     info "── LLM Providers"
@@ -272,12 +394,22 @@ _faigate_api_keys() {
     info "── Gateway"
     _set_key "FAIGATE_PORT"       "HTTP port"            "no"
     echo ""
-    success ".env updated. Restart faigate to apply (docker compose up -d in ${INSTALL_DIR})."
+    if $_FAIGATE_IS_BREW; then
+        success ".env updated at ${env_file}. Restart faigate to apply:"
+        info "  brew services restart faigate"
+    else
+        success ".env updated. Restart faigate to apply (docker compose up -d in ${INSTALL_DIR})."
+    fi
 }
 
 # ── Restart helper ─────────────────────────────────────────────────────────────
 
 _faigate_restart() {
+    if $_FAIGATE_IS_BREW; then
+        brew services restart faigate
+        success "faigate restarted via Homebrew services."
+        return 0
+    fi
     if systemctl is-active --quiet faigate.service 2>/dev/null; then
         sudo systemctl restart faigate.service
         success "faigate.service restarted."
