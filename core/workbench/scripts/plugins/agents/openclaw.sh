@@ -3,6 +3,8 @@ TOOL_NAME="openclaw"
 TOOL_CATEGORY="agents"
 TOOL_DESC="Host-native OpenClaw orchestrator"
 TOOL_TYPE="systemd"
+TOOL_UPDATE_TYPE="github"
+TOOL_UPDATE_REPO="openclaw/openclaw"
 TOOL_SERVICE="openclaw"
 
 # Resolve path to the native server scripts sitting next to us in the repo.
@@ -23,7 +25,7 @@ tool_update() {
     # Show current version
     local current_ver
     current_ver=$(openclaw --version 2>/dev/null \
-        | head -1 | grep -oE '[0-9]{4}\.[0-9]+\.[0-9]+-[0-9]+' | head -1 \
+        | head -1 | grep -oE '[0-9]{4}\.[0-9]+\.[0-9]+(-[0-9]+)?' | head -1 \
         || echo "unknown")
 
     info "Current version: ${current_ver}"
