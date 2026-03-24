@@ -37,7 +37,9 @@ tool_status() {
         return
     fi
     local rev
-    rev=$(git -C "$INSTALL_DIR" rev-parse --short HEAD 2>/dev/null || echo "unknown")
+    rev=$(git -C "$INSTALL_DIR" describe --tags --abbrev=0 2>/dev/null \
+        || git -C "$INSTALL_DIR" rev-parse --short HEAD 2>/dev/null \
+        || echo "unknown")
     if curl -sf "http://127.0.0.1:${DEERFLOW_PORT}/" >/dev/null 2>&1; then
         echo "Installed (${rev}, running — http://127.0.0.1:${DEERFLOW_PORT})"
     else

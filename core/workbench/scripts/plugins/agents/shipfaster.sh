@@ -3,6 +3,8 @@ TOOL_NAME="ship-faster"
 TOOL_CATEGORY="agents"
 TOOL_DESC="Ship-faster workflow tool"
 TOOL_TYPE="git"
+TOOL_UPDATE_TYPE="github"
+TOOL_UPDATE_REPO="Heyvhuang/ship-faster"
 FAIGATE_CLIENT="ship-faster"
 
 INSTALL_DIR="/opt/faigrid/shipfaster"
@@ -18,7 +20,9 @@ tool_update() {
 tool_status() {
     if [[ -d "$INSTALL_DIR" ]]; then
         local rev
-        rev=$(git -C "$INSTALL_DIR" rev-parse --short HEAD 2>/dev/null || echo "unknown")
+        rev=$(git -C "$INSTALL_DIR" describe --tags --abbrev=0 2>/dev/null \
+            || git -C "$INSTALL_DIR" rev-parse --short HEAD 2>/dev/null \
+            || echo "unknown")
         echo "Installed (${rev})"
     else
         echo "Not installed"

@@ -3,6 +3,8 @@ TOOL_NAME="clawrouter"
 TOOL_CATEGORY="routers"
 TOOL_DESC="ClawRouter (BlockRunAI)"
 TOOL_TYPE="git"
+TOOL_UPDATE_TYPE="github"
+TOOL_UPDATE_REPO="BlockRunAI/ClawRouter"
 
 INSTALL_DIR="/opt/faigrid/clawrouter"
 
@@ -17,7 +19,9 @@ tool_update() {
 tool_status() {
     if [[ -d "$INSTALL_DIR" ]]; then
         local rev
-        rev=$(git -C "$INSTALL_DIR" rev-parse --short HEAD 2>/dev/null || echo "unknown")
+        rev=$(git -C "$INSTALL_DIR" describe --tags --abbrev=0 2>/dev/null \
+            || git -C "$INSTALL_DIR" rev-parse --short HEAD 2>/dev/null \
+            || echo "unknown")
         echo "Installed (${rev})"
     else
         echo "Not installed"
