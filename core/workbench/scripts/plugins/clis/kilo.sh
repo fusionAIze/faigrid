@@ -80,7 +80,7 @@ tool_configure() {
         printf "  Patch faigate provider into ${kilo_cfg}? (y/N): "
         read -r patch_cfg
         if [[ "${patch_cfg:-N}" =~ ^[Yy]$ ]]; then
-            python3 - <<PYEOF
+            if python3 - <<PYEOF
 import json, sys
 path = "${kilo_cfg}"
 try:
@@ -109,9 +109,11 @@ with open(path, "w") as f:
     f.write("\n")
 print("OK")
 PYEOF
-            [[ $? -eq 0 ]] \
-                && success "  faigate provider written to ${kilo_cfg}" \
-                || warn "  Failed to patch ${kilo_cfg}"
+            then
+                success "  faigate provider written to ${kilo_cfg}"
+            else
+                warn "  Failed to patch ${kilo_cfg}"
+            fi
         fi
     fi
 }
