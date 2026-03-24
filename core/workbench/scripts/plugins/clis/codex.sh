@@ -3,6 +3,8 @@ TOOL_NAME="codex"
 TOOL_CATEGORY="clis"
 TOOL_DESC="OpenAI Codex CLI interface"
 TOOL_TYPE="npm"
+TOOL_UPDATE_TYPE="npm"
+TOOL_UPDATE_PKG="@openai/codex"
 FAIGATE_CLIENT="codex"
 
 tool_install() {

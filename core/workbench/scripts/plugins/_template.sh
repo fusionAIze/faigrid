@@ -1,9 +1,17 @@
 #!/usr/bin/env bash
 # Plugin Template for grid-core Workbench
 # ─────────────────────────────────────────────────────────────────────────────
-# TOOL_CATEGORY: clis | routers | memory | agents | automation | wrappers
-# TOOL_TYPE:     npm | apt|dnf | pipx | git | binary | docker | tbd
-# TOOL_MANAGED:  (omit) = user-installable  |  "auto" = hide from install/boost/update
+# TOOL_CATEGORY:      clis | routers | memory | agents | automation | wrappers
+# TOOL_TYPE:          npm | apt|dnf | pipx | git | binary | docker | tbd
+# TOOL_MANAGED:       (omit) = user-installable  |  "auto" = hide from install/boost/update
+#
+# ── Update-check metadata (optional) ─────────────────────────────────────────
+# TOOL_UPDATE_TYPE:   npm | git | github  — selects the check strategy
+# TOOL_UPDATE_PKG:    npm package name    — required when TOOL_UPDATE_TYPE="npm"
+#                     e.g. "@openai/codex"
+# TOOL_UPDATE_REPO:   owner/repo slug     — required when TOOL_UPDATE_TYPE="github"
+#                     e.g. "rtk-ai/rtk"
+# (git)               uses INSTALL_DIR + git fetch; no extra field needed
 # ─────────────────────────────────────────────────────────────────────────────
 
 TOOL_NAME="example"

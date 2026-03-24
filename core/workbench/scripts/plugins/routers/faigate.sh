@@ -3,6 +3,8 @@ TOOL_NAME="faigate"
 TOOL_CATEGORY="routers"
 TOOL_DESC="fusionAIze Gate — Multi-client AI Routing Gateway"
 TOOL_TYPE="git"
+TOOL_UPDATE_TYPE="github"
+TOOL_UPDATE_REPO="fusionAIze/faigate"
 TOOL_SERVICE="faigate"
 
 INSTALL_DIR="/opt/faigrid/faigate"

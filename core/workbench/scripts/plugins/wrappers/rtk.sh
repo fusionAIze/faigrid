@@ -3,6 +3,8 @@ TOOL_NAME="rtk"
 TOOL_CATEGORY="wrappers"
 TOOL_DESC="RTK Shell Wrapper"
 TOOL_TYPE="binary"
+TOOL_UPDATE_TYPE="github"
+TOOL_UPDATE_REPO="rtk-ai/rtk"
 
 # Official install puts the binary at ~/.local/bin/rtk
 BINARY_PATH="${HOME}/.local/bin/rtk"
