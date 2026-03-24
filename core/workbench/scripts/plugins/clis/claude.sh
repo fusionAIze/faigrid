@@ -3,6 +3,8 @@ TOOL_NAME="claude-cli"
 TOOL_CATEGORY="clis"
 TOOL_DESC="Anthropic Claude CLI agent"
 TOOL_TYPE="npm"
+TOOL_UPDATE_TYPE="npm"
+TOOL_UPDATE_PKG="@anthropic-ai/claude-code"
 FAIGATE_CLIENT="claude"
 
 tool_install() {

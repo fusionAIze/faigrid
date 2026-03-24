@@ -60,14 +60,82 @@ get_plugin_meta() {
   grep -E "^${var_name}=" "$plugin_file" | head -n 1 | cut -d'"' -f2 || echo ""
 }
 
-# Check remote commits behind HEAD using local tracking state (no network call).
+# Check remote commits behind HEAD — does a git fetch first (network).
 # Prints "N commit(s)" if behind, empty string if up-to-date or N/A.
 _git_update_check() {
   local dir="$1"
   if [[ ! -d "${dir}/.git" ]]; then echo ""; return; fi
+  git -C "$dir" fetch -q 2>/dev/null || true
   local behind
   behind=$(git -C "$dir" rev-list HEAD..@{u} --count 2>/dev/null || echo "0")
   if [[ "$behind" -gt 0 ]]; then printf "%s" "${behind} commit(s)"; else echo ""; fi
+}
+
+# npm: compare installed global version against latest published on registry.
+# Prints "vX.Y.Z available" or empty string.
+_npm_update_check() {
+  local pkg="$1"
+  local installed latest
+  installed=$(npm list -g --depth=0 2>/dev/null \
+    | grep -oE "${pkg}@[0-9]+\.[0-9]+\.[0-9]+" | head -1 \
+    | cut -d'@' -f2 || echo "")
+  [[ -z "$installed" ]] && echo "" && return
+  latest=$(npm show "$pkg" version 2>/dev/null || echo "")
+  [[ -z "$latest" ]] && echo "" && return
+  if [[ "$installed" != "$latest" ]]; then
+    printf "v%s available" "$latest"
+  fi
+}
+
+# github: compare installed version string against latest release tag.
+# Prints "vX.Y.Z available" or empty string.
+_github_release_check() {
+  local repo="$1" installed_ver="$2"
+  local latest
+  latest=$(curl -sf --max-time 5 \
+    "https://api.github.com/repos/${repo}/releases/latest" 2>/dev/null \
+    | grep '"tag_name"' | head -1 | cut -d'"' -f4 || echo "")
+  [[ -z "$latest" ]] && echo "" && return
+  # Strip leading 'v' for comparison
+  local latest_clean="${latest#v}"
+  local installed_clean="${installed_ver#v}"
+  if [[ -n "$installed_clean" && "$installed_clean" != "$latest_clean" ]]; then
+    printf "%s available" "$latest"
+  fi
+}
+
+# Dispatcher: reads TOOL_UPDATE_TYPE from plugin metadata and runs the right check.
+# Prints update string if update available, empty string if up-to-date or N/A.
+_check_update() {
+  local plugin_file="$1"
+  local update_type install_dir update_pkg update_repo
+  update_type=$(get_plugin_meta "$plugin_file" "TOOL_UPDATE_TYPE")
+  install_dir=$(get_plugin_meta  "$plugin_file" "INSTALL_DIR")
+  update_pkg=$(get_plugin_meta   "$plugin_file" "TOOL_UPDATE_PKG")
+  update_repo=$(get_plugin_meta  "$plugin_file" "TOOL_UPDATE_REPO")
+
+  case "$update_type" in
+    npm)
+      [[ -n "$update_pkg" ]] && _npm_update_check "$update_pkg" || echo ""
+      ;;
+    git)
+      [[ -n "$install_dir" ]] && _git_update_check "$install_dir" || echo ""
+      ;;
+    github)
+      if [[ -n "$update_repo" ]]; then
+        # Extract installed version from tool_status output
+        local installed_ver
+        installed_ver=$( (source "$plugin_file" >/dev/null 2>&1 && tool_status) 2>/dev/null \
+          | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "")
+        _github_release_check "$update_repo" "$installed_ver"
+      else
+        echo ""
+      fi
+      ;;
+    *)
+      echo ""
+      ;;
+  esac
 }
 
 # ── Status ─────────────────────────────────────────────────────────────────────
@@ -273,10 +341,9 @@ cmd_update() {
   printf "  %s\n" "────────────────────────────────────────────────────────────────────────────"
 
   while read -r p; do
-    local cat name stat install_dir update_label
+    local cat name stat update_label
     cat=$(get_plugin_meta "$p" "TOOL_CATEGORY")
     name=$(get_plugin_meta "$p" "TOOL_NAME")
-    install_dir=$(get_plugin_meta "$p" "INSTALL_DIR")
     stat=$( (source "$p" >/dev/null 2>&1 && tool_status) || echo "Error" )
     plugin_list+=("$p")
 
@@ -285,14 +352,11 @@ cmd_update() {
         "$i" "$cat" "$name" "$stat"
     else
       installed_indices="$installed_indices $i"
-      # Git-based update check (local tracking branch, no network)
-      local behind=""
-      if [[ -n "$install_dir" && -d "${install_dir}/.git" ]]; then
-        behind=$(_git_update_check "$install_dir")
-      fi
-      if [[ -n "$behind" ]]; then
-        update_label="${C_YELLOW}↑ ${behind}${C_RESET}"
-      elif [[ -n "$install_dir" && -d "${install_dir}/.git" ]]; then
+      local update_info
+      update_info=$(_check_update "$p")
+      if [[ -n "$update_info" ]]; then
+        update_label="${C_YELLOW}↑ ${update_info}${C_RESET}"
+      elif [[ -n "$(get_plugin_meta "$p" "TOOL_UPDATE_TYPE")" ]]; then
         update_label="${C_GREEN}up to date${C_RESET}"
       else
         update_label="${C_DIM}check N/A${C_RESET}"
