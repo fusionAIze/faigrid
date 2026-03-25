@@ -5,6 +5,8 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PLUGINS_DIR="${HERE}/plugins"
 
 source "${HERE}/_lib.sh"
+source "${HERE}/_projects.sh"
+source "${HERE}/_skills.sh"
 
 # Ensure user-local bin is on PATH so pipx/rtk installs are visible in subshells
 export PATH="${HOME}/.local/bin:${PATH}"
@@ -1013,6 +1015,9 @@ show_menu() {
     printf "    ${C_BOLD}7)${C_RESET}  ${C_CYAN}Control${C_RESET}      ${C_DIM}Start, stop, restart or tail logs for a service${C_RESET}\n"
     printf "    ${C_BOLD}8)${C_RESET}  ${C_YELLOW}Doctor${C_RESET}       ${C_DIM}Health checks and diagnostics for installed tools${C_RESET}\n"
     echo ""
+    printf "    ${C_BOLD}9)${C_RESET}  ${C_CYAN}Projects${C_RESET}     ${C_DIM}Manage git repositories on this node${C_RESET}\n"
+    printf "    ${C_BOLD}s)${C_RESET}  ${C_MAGENTA}Skills${C_RESET}       ${C_DIM}Import and deploy AI skills across agents${C_RESET}\n"
+    echo ""
     printf "    ${C_BOLD}q)${C_RESET}  Quit\n"
     echo ""
     read -r -p "  ▸ Choice: " opt
@@ -1026,8 +1031,10 @@ show_menu() {
       6) cmd_uninstall ;;
       7) cmd_control ;;
       8) cmd_doctor ;;
+      9) cmd_projects ;;
+      s|S) cmd_skills ;;
       0|[qQ]|quit|exit) _quit ;;
-      *) warn "Invalid option — enter 1-8 or q." ;;
+      *) warn "Invalid option — enter 1-9, s or q." ;;
     esac
   done
 }
@@ -1047,6 +1054,8 @@ else
     uninstall)  cmd_uninstall ;;
     control)    cmd_control ;;
     doctor)     cmd_doctor ;;
+    projects)   cmd_projects ;;
+    skills)     cmd_skills ;;
     *) die "Unknown command: $1" ;;
   esac
 fi
