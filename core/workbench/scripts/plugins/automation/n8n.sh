@@ -28,6 +28,8 @@ tool_status() {
         local ver
         ver=$(docker inspect grid-core-n8n --format '{{.Config.Image}}' 2>/dev/null | grep -o '[^:]*$' || echo "")
         echo "Installed (Running${ver:+ v${ver}})"
+    elif docker ps -a --format '{{.Names}}' 2>/dev/null | grep -q "^grid-core-n8n"; then
+        echo "Installed (Stopped)"
     else
         echo "Not installed"
     fi

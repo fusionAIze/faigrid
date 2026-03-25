@@ -245,25 +245,42 @@ cmd_install() {
 
   local total=${#plugin_list[@]}
   echo ""
-  read -r -p "  ▸ Select number to install (c = cancel  q = quit): " choice
-  case "$choice" in
+  printf "  ${C_BOLD}▸${C_RESET}  Enter number(s) to install (e.g. ${C_BOLD}1${C_RESET} or ${C_BOLD}3 7 12${C_RESET}), "
+  printf "${C_BOLD}c${C_RESET} = cancel, ${C_BOLD}q${C_RESET} = quit\n\n"
+  read -r -p "  Selection: " install_input
+  case "$install_input" in
     q|Q) _quit ;;
-    c|C|""|0) info "Install cancelled."; return ;;
+    c|C|m|M|""|0) info "Install cancelled."; return ;;
   esac
 
-  if [[ "$choice" -ge 1 && "$choice" -le "$total" ]] 2>/dev/null; then
-    local arr_idx=$((choice - 1))
-    local p="${plugin_list[$arr_idx]}"
-    local name
-    name=$(get_plugin_meta "$p" "TOOL_NAME")
-    echo ""
-    _install_deps "$p" || return
-    printf "  ${C_CYAN}▸${C_RESET}  Installing ${C_BOLD}%s${C_RESET}...\n" "$name"
-    (source "$p" && tool_install)
-    success "Done. Run Status (1) to verify."
-  else
-    error "Invalid selection."
+  local selected_indices="${install_input//,/ }"
+  local valid_count=0
+  for idx in $selected_indices; do
+    [[ "$idx" -ge 1 && "$idx" -le "$total" ]] 2>/dev/null && valid_count=$((valid_count + 1))
+  done
+  if [[ "$valid_count" -eq 0 ]]; then
+    error "Invalid selection."; return
   fi
+
+  echo ""
+  for idx in $selected_indices; do
+    if ! [[ "$idx" -ge 1 && "$idx" -le "$total" ]] 2>/dev/null; then
+      warn "Ignoring invalid number: $idx"; continue
+    fi
+    local p="${plugin_list[$((idx-1))]}"
+    local name stat
+    name=$(get_plugin_meta "$p" "TOOL_NAME")
+    stat=$( (source "$p" >/dev/null 2>&1 && tool_status) || echo "Error" )
+    if [[ "$stat" != *"Not installed"* && "$stat" != "Error" ]]; then
+      printf "  ${C_GREEN}✔${C_RESET}  ${C_BOLD}%s${C_RESET} already installed — skipped.\n" "$name"
+      continue
+    fi
+    _install_deps "$p" || continue
+    printf "  ${C_CYAN}▸${C_RESET}  Installing ${C_BOLD}%s${C_RESET}...\n" "$name"
+    (source "$p" && tool_install) || warn "Failed to install $name"
+    printf "  ${C_GREEN}✔${C_RESET}  ${C_BOLD}%s${C_RESET} done.\n\n" "$name"
+  done
+  success "Done. Run Status (1) to verify."
 }
 
 # ── Boost: cross-category individual selector ──────────────────────────────────
@@ -301,7 +318,7 @@ cmd_boost() {
 
   case "$boost_input" in
     q|Q) _quit ;;
-    c|C|""|0) info "Boost cancelled."; return ;;
+    c|C|m|M|""|0) info "Boost cancelled."; return ;;
   esac
 
   # Expand 'all' → indices of not-installed tools
@@ -465,7 +482,7 @@ cmd_update() {
 
   case "$update_input" in
     q|Q) _quit ;;
-    c|C|""|0) info "Update cancelled."; return ;;
+    c|C|m|M|""|0) info "Update cancelled."; return ;;
   esac
 
   local selected_indices=""
@@ -647,7 +664,7 @@ cmd_configure() {
 
   case "$choice" in
     q|Q) _quit ;;
-    c|C|""|0) info "Configure cancelled."; return ;;
+    c|C|m|M|""|0) info "Configure cancelled."; return ;;
   esac
 
   if [[ "$choice" -ge 1 && "$choice" -le "$total" ]] 2>/dev/null; then
@@ -744,7 +761,7 @@ cmd_uninstall() {
   read -r -p "  ▸ Select number to uninstall (c = cancel  q = quit): " choice
   case "$choice" in
     q|Q) _quit ;;
-    c|C|""|0) info "Uninstall cancelled."; return ;;
+    c|C|m|M|""|0) info "Uninstall cancelled."; return ;;
   esac
 
   if [[ "$choice" -ge 1 && "$choice" -le "$total" ]] 2>/dev/null; then
@@ -880,7 +897,7 @@ cmd_control() {
   read -r -p "  ▸ Select service (c = cancel  q = quit): " choice
   case "$choice" in
     q|Q) _quit ;;
-    c|C|"") info "Cancelled."; return ;;
+    c|C|m|M|"") info "Cancelled."; return ;;
   esac
 
   if ! [[ "$choice" -ge 1 && "$choice" -le "$total" ]] 2>/dev/null; then
@@ -911,7 +928,7 @@ cmd_control() {
 
   case "$action" in
     q|Q)    _quit ;;
-    c|C|"") info "Cancelled."; return ;;
+    c|C|m|M|"") info "Cancelled."; return ;;
     1) _ctrl_action "start"   "$tool_type" "$tool_service" ;;
     2) _ctrl_action "stop"    "$tool_type" "$tool_service" ;;
     3) _ctrl_action "restart" "$tool_type" "$tool_service" ;;
@@ -955,7 +972,7 @@ cmd_doctor() {
   read -r -p "  ▸ Select tool (c = cancel  q = quit): " choice
   case "$choice" in
     q|Q) _quit ;;
-    c|C|"") info "Cancelled."; return ;;
+    c|C|m|M|"") info "Cancelled."; return ;;
   esac
 
   if [[ "$choice" -ge 1 && "$choice" -le "$total" ]] 2>/dev/null; then
