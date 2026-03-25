@@ -4,6 +4,8 @@
 # TOOL_CATEGORY:      clis | routers | memory | agents | automation | wrappers
 # TOOL_TYPE:          npm | apt|dnf | pipx | git | binary | docker | tbd
 # TOOL_MANAGED:       (omit) = user-installable  |  "auto" = hide from install/boost/update
+# TOOL_DEPS:          space-separated TOOL_NAMEs required before this tool installs
+#                     e.g. TOOL_DEPS="opencode"  or  TOOL_DEPS="opencode faigate"
 #
 # ── Update-check metadata (optional) ─────────────────────────────────────────
 # TOOL_UPDATE_TYPE:   npm | git | github  — selects the check strategy

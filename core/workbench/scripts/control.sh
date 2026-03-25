@@ -138,6 +138,51 @@ _check_update() {
   esac
 }
 
+# Find a plugin file by TOOL_NAME — prints path or empty string.
+_find_plugin_by_name() {
+  local target="$1"
+  while read -r p; do
+    local n
+    n=$(get_plugin_meta "$p" "TOOL_NAME")
+    if [[ "$n" == "$target" ]]; then
+      echo "$p"
+      return
+    fi
+  done < <(get_installable_plugins)
+}
+
+# Install dependencies declared in TOOL_DEPS for a given plugin.
+# Prompts once per missing dep; aborts install (returns 1) if user declines.
+# $1 = plugin file path   $2 = plugin_list array name (passed via name ref
+#      for bash 3.2 compat — we pass a temp file with paths instead)
+_install_deps() {
+  local plugin_file="$1"
+  local deps
+  deps=$(get_plugin_meta "$plugin_file" "TOOL_DEPS" 2>/dev/null || echo "")
+  [[ -z "$deps" ]] && return 0
+
+  for dep_name in $deps; do
+    local dep_p
+    dep_p=$(_find_plugin_by_name "$dep_name")
+    [[ -z "$dep_p" ]] && continue
+
+    local dep_stat
+    dep_stat=$( (source "$dep_p" >/dev/null 2>&1 && tool_status) || echo "Error" )
+    if [[ "$dep_stat" == *"Not installed"* ]]; then
+      printf "  ${C_YELLOW}⚠${C_RESET}  Dependency ${C_BOLD}%s${C_RESET} is required but not installed.\n" "$dep_name"
+      read -r -p "  Install ${dep_name} first? [Y/n]: " dep_choice
+      if [[ "${dep_choice:-Y}" =~ ^[Nn]$ ]]; then
+        warn "Skipping — dependency '${dep_name}' not satisfied."
+        return 1
+      fi
+      printf "  ${C_CYAN}▸${C_RESET}  Installing dependency ${C_BOLD}%s${C_RESET}...\n" "$dep_name"
+      (source "$dep_p" && tool_install) || { warn "Dependency install failed: ${dep_name}"; return 1; }
+      success "  ${dep_name} installed."
+    fi
+  done
+  return 0
+}
+
 # ── Status ─────────────────────────────────────────────────────────────────────
 
 cmd_status() {
@@ -211,7 +256,9 @@ cmd_install() {
     local p="${plugin_list[$arr_idx]}"
     local name
     name=$(get_plugin_meta "$p" "TOOL_NAME")
-    printf "\n  ${C_CYAN}▸${C_RESET}  Installing ${C_BOLD}%s${C_RESET}...\n" "$name"
+    echo ""
+    _install_deps "$p" || return
+    printf "  ${C_CYAN}▸${C_RESET}  Installing ${C_BOLD}%s${C_RESET}...\n" "$name"
     (source "$p" && tool_install)
     success "Done. Run Status (1) to verify."
   else
@@ -304,6 +351,41 @@ cmd_boost() {
     q|Q) _quit ;;
     n|N|c|C) info "Boost cancelled."; return ;;
   esac
+
+  # ── Resolve dependencies ────────────────────────────────────────────────────
+  # For each selected tool, prepend any uninstalled TOOL_DEPS that are not
+  # already queued. Deps are installed first to satisfy install order.
+  local resolved_indices=""
+  for idx in $selected_indices; do
+    if ! [[ "$idx" -ge 1 && "$idx" -le "$total" ]] 2>/dev/null; then continue; fi
+    local p="${plugin_list[$((idx-1))]}"
+    local deps
+    deps=$(get_plugin_meta "$p" "TOOL_DEPS" 2>/dev/null || echo "")
+    if [[ -n "$deps" ]]; then
+      for dep_name in $deps; do
+        local dep_p
+        dep_p=$(_find_plugin_by_name "$dep_name")
+        [[ -z "$dep_p" ]] && continue
+        local ds
+        ds=$( (source "$dep_p" >/dev/null 2>&1 && tool_status) || echo "Error" )
+        if [[ "$ds" == *"Not installed"* ]]; then
+          # Find dep's index in plugin_list
+          local di=1
+          for lp in "${plugin_list[@]}"; do
+            [[ "$lp" == "$dep_p" ]] && break
+            di=$((di+1))
+          done
+          # Prepend only if not already queued
+          echo " $resolved_indices " | grep -qw " $di " \
+            || { info "  Auto-adding dependency: ${dep_name}"; resolved_indices="$di $resolved_indices"; }
+        fi
+      done
+    fi
+    # Add current index (deduplication)
+    echo " $resolved_indices " | grep -qw " $idx " \
+      || resolved_indices="$resolved_indices $idx"
+  done
+  selected_indices="$resolved_indices"
 
   echo ""
   for idx in $selected_indices; do

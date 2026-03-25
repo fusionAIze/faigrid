@@ -5,6 +5,7 @@ TOOL_DESC="Browser-based remote dev server (CodeNomad)"
 TOOL_TYPE="npm"
 TOOL_UPDATE_TYPE="npm"
 TOOL_UPDATE_PKG="@neuralnomads/codenomad"
+TOOL_DEPS="opencode"
 
 tool_install() {
     # Requires opencode in PATH
