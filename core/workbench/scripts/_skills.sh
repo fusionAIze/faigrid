@@ -34,6 +34,9 @@ _skill_targets() {
     echo "openclaw|sudo|/var/lib/openclaw/.openclaw-prod/skills/%s/SKILL.md"
     echo "opencode|user|${HOME}/.config/opencode/skills/%s/SKILL.md"
     echo "claude-code|user|${HOME}/.claude/commands/%s.md"
+    # claude-skills: ~/.claude/skills/ is read by both opencode (claude-compatible path)
+    # and any other agent that follows the shared skill convention — no slash-command semantics
+    echo "claude-skills|user|${HOME}/.claude/skills/%s/SKILL.md"
 }
 
 # ── opencode frontmatter helpers ──────────────────────────────────────────────
@@ -202,8 +205,8 @@ _skill_deploy_to() {
     local skill_src="${SKILLS_REGISTRY}/${skill_name}/SKILL.md"
     [[ -f "$skill_src" ]] || { warn "Skill '${skill_name}' not in registry."; return 1; }
 
-    # opencode: validate name format and ensure frontmatter
-    if [[ "$agent" == "opencode" ]]; then
+    # opencode + claude-skills: validate name format and ensure frontmatter
+    if [[ "$agent" == "opencode" || "$agent" == "claude-skills" ]]; then
         local valid_name
         valid_name=$(_skill_normalize_name "$skill_name")
         if [[ "$valid_name" != "$skill_name" ]]; then
