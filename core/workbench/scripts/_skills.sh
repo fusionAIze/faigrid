@@ -13,8 +13,13 @@
 #
 # Deploy targets (node-local):
 #   openclaw    /var/lib/openclaw/.openclaw-prod/skills/<name>/SKILL.md  (sudo)
-#   claude-code ~/.claude/commands/<name>.md                             (user)
-#   opencode    TBD — path added once confirmed
+#   opencode    ~/.config/opencode/skills/<name>/SKILL.md                (user)
+#   claude-code ~/.claude/commands/<name>.md                             (user, slash commands)
+#
+# opencode skill requirements (https://opencode.ai/docs/skills/):
+#   - SKILL.md must have YAML frontmatter with 'name' and 'description'
+#   - name must match dir name: ^[a-z0-9]+(-[a-z0-9]+)*$  (1-64 chars)
+#   - Also reads: ~/.claude/skills/<name>/SKILL.md (claude-compatible path)
 
 SKILLS_REGISTRY="${SKILLS_REGISTRY:-/opt/faigrid/skills}"
 
@@ -23,13 +28,48 @@ _SKILL_CONTENT=""
 _SKILL_NAME_HINT=""
 
 # ── Deploy-path registry ───────────────────────────────────────────────────────
-# Prints "agent|mode|path" for every known target.
-# mode: sudo = requires sudo cp; user = plain cp as current user
+# Prints "agent|mode|path_template" for every known target.
+# mode: sudo = requires sudo; user = plain cp as current user
 _skill_targets() {
     echo "openclaw|sudo|/var/lib/openclaw/.openclaw-prod/skills/%s/SKILL.md"
+    echo "opencode|user|${HOME}/.config/opencode/skills/%s/SKILL.md"
     echo "claude-code|user|${HOME}/.claude/commands/%s.md"
-    # opencode: update path once confirmed
-    # echo "opencode|user|~/.config/opencode/skills/%s.md"
+}
+
+# ── opencode frontmatter helpers ──────────────────────────────────────────────
+# Returns 0 if SKILL.md already has valid YAML frontmatter (name + description).
+_skill_has_frontmatter() {
+    local content="$1"
+    echo "$content" | head -1 | grep -q "^---" \
+        && echo "$content" | grep -q "^name:" \
+        && echo "$content" | grep -q "^description:"
+}
+
+# Normalise a string to opencode-valid skill name: ^[a-z0-9]+(-[a-z0-9]+)*$
+_skill_normalize_name() {
+    local raw="$1"
+    # lowercase, replace anything not [a-z0-9] with hyphens, collapse runs, strip edges
+    echo "$raw" \
+        | tr '[:upper:]' '[:lower:]' \
+        | sed 's/[^a-z0-9]/-/g' \
+        | sed 's/--*/-/g' \
+        | sed 's/^-//;s/-$//' \
+        | cut -c1-64
+}
+
+# Prompt user for frontmatter fields and prepend to content.
+_skill_add_frontmatter() {
+    local skill_name="$1" current_content="$2"
+    printf "\n  ${C_YELLOW}opencode${C_RESET} requires YAML frontmatter in SKILL.md.\n"
+    printf "  ▸ description: "
+    read -r fm_desc
+    [[ -z "$fm_desc" ]] && fm_desc="Imported skill"
+    local frontmatter
+    frontmatter="---
+name: ${skill_name}
+description: ${fm_desc}
+---"
+    printf '%s\n\n%s\n' "$frontmatter" "$current_content"
 }
 
 _skill_deployed_file() { echo "${SKILLS_REGISTRY}/${1}/.deployed"; }
@@ -162,6 +202,26 @@ _skill_deploy_to() {
     local skill_src="${SKILLS_REGISTRY}/${skill_name}/SKILL.md"
     [[ -f "$skill_src" ]] || { warn "Skill '${skill_name}' not in registry."; return 1; }
 
+    # opencode: validate name format and ensure frontmatter
+    if [[ "$agent" == "opencode" ]]; then
+        local valid_name
+        valid_name=$(_skill_normalize_name "$skill_name")
+        if [[ "$valid_name" != "$skill_name" ]]; then
+            warn "Skill name '${skill_name}' is not opencode-compatible (would be '${valid_name}')."
+            warn "Rename the skill first or deploy under the normalized name."
+            return 1
+        fi
+        local content; content=$(cat "$skill_src")
+        if ! _skill_has_frontmatter "$content"; then
+            info "SKILL.md has no frontmatter — opencode requires name + description."
+            content=$(_skill_add_frontmatter "$skill_name" "$content")
+            # Write frontmatter-enriched copy to a temp file for this deploy
+            local tmp; tmp=$(mktemp)
+            printf '%s\n' "$content" > "$tmp"
+            skill_src="$tmp"
+        fi
+    fi
+
     while IFS='|' read -r ag mode path_tpl; do
         [[ "$ag" == "$agent" ]] || continue
         # shellcheck disable=SC2059
@@ -170,7 +230,6 @@ _skill_deploy_to() {
             sudo)
                 sudo mkdir -p "$(dirname "$dest")"
                 sudo cp "$skill_src" "$dest"
-                # openclaw: fix ownership
                 [[ "$agent" == "openclaw" ]] && \
                     sudo chown -R openclaw:openclaw "$(dirname "$dest")" 2>/dev/null || true
                 ;;
@@ -179,6 +238,8 @@ _skill_deploy_to() {
                 cp "$skill_src" "$dest"
                 ;;
         esac
+        # Clean up temp file if created
+        [[ "$skill_src" == /tmp/* ]] && rm -f "$skill_src"
         _skill_mark_deployed "$skill_name" "$agent"
         success "  Deployed '${skill_name}' → ${agent} (${dest})"
         return 0
@@ -233,9 +294,8 @@ _cmd_skills_add() {
 
     printf "  ▸ Skill name  [%s]: " "${_SKILL_NAME_HINT:-skill}"
     read -r name_in
-    local skill_name="${name_in:-${_SKILL_NAME_HINT:-skill}}"
-    # Normalize: lowercase, spaces/slashes → hyphens
-    skill_name=$(echo "$skill_name" | tr '[:upper:]' '[:lower:]' | tr ' /' '-')
+    local skill_name
+    skill_name=$(_skill_normalize_name "${name_in:-${_SKILL_NAME_HINT:-skill}}")
 
     local skill_dir="${SKILLS_REGISTRY}/${skill_name}"
     mkdir -p "$skill_dir"
