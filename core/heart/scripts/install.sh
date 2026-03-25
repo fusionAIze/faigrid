@@ -47,7 +47,24 @@ mkdir -p "${COMPOSE_DIR}"
 cp -a core/heart/compose/docker-compose.yml "${COMPOSE_DIR}/docker-compose.yml"
 if [[ ! -f "${ENV_FILE}" ]]; then
   cp -a core/heart/compose/.env.example "${ENV_FILE}"
-  echo ">> IMPORTANT: edit ${ENV_FILE} and set real secrets (N8N_ENCRYPTION_KEY, POSTGRES_PASSWORD, WEBHOOK_SHARED_SECRET)"
+  # Auto-generate N8N_ENCRYPTION_KEY so the instance starts correctly on first boot.
+  # The key is derived from the existing config volume when one is present (migration),
+  # or freshly generated via openssl (clean install).
+  if grep -q "CHANGE_ME" "${ENV_FILE}"; then
+    _vol_key=""
+    _vol_key=$(docker run --rm -v compose_n8n_data:/data alpine \
+        sh -c 'cat /data/config 2>/dev/null || true' 2>/dev/null \
+        | grep -o '"encryptionKey":"[^"]*"' | cut -d'"' -f4 || true)
+    if [[ -n "$_vol_key" ]]; then
+      echo "[grid-core-heart] Migrating existing n8n encryption key from volume."
+      N8N_KEY="$_vol_key"
+    else
+      N8N_KEY=$(openssl rand -hex 32)
+    fi
+    sed -i "s|CHANGE_ME_32+_CHARS_MIN|${N8N_KEY}|" "${ENV_FILE}"
+    echo "[grid-core-heart] N8N_ENCRYPTION_KEY set."
+  fi
+  echo ">> IMPORTANT: edit ${ENV_FILE} and set remaining secrets (POSTGRES_PASSWORD, WEBHOOK_SHARED_SECRET)"
 fi
 
 echo "[grid-core-heart] Add grid user to docker group (logout/login required)"
