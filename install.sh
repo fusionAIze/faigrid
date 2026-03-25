@@ -728,16 +728,18 @@ _run_action() {
         echo -e "    ${BOLD}3)${NC}  ${YELLOW}Restart${NC}"
         echo -e "    ${BOLD}4)${NC}  Status"
         echo -e "    ${BOLD}5)${NC}  Reload"
+        echo -e "    ${BOLD}6)${NC}  Logs     ${DIM}last 60 lines — all services${NC}"
         echo ""
         echo -e "    ${BOLD}a)${NC}  Action selection  ${DIM}(Back to Step 4)${NC}"
         echo ""
-        prompt "Select command (1-5 / a / s / q): " CONTROL_CHOICE
+        prompt "Select command (1-6 / a / s / q): " CONTROL_CHOICE
         case "$CONTROL_CHOICE" in
             1) cmd_arg="start" ;;
             2) cmd_arg="stop" ;;
             3) cmd_arg="restart" ;;
             4) cmd_arg="status" ;;
             5) cmd_arg="reload" ;;
+            6) cmd_arg="logs" ;;
             [Aa]) return 0 ;;
             [Ss]) exec bash "$0" ;;
             [Qq]|"") _quit ;;

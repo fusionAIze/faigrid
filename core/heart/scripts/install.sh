@@ -64,7 +64,12 @@ if [[ ! -f "${ENV_FILE}" ]]; then
     sed -i "s|CHANGE_ME_32+_CHARS_MIN|${N8N_KEY}|" "${ENV_FILE}"
     echo "[grid-core-heart] N8N_ENCRYPTION_KEY set."
   fi
-  echo ">> IMPORTANT: edit ${ENV_FILE} and set remaining secrets (POSTGRES_PASSWORD, WEBHOOK_SHARED_SECRET)"
+  if grep -q "CHANGE_ME" "${ENV_FILE}"; then
+    PG_PASS=$(openssl rand -hex 24)
+    sed -i "s|POSTGRES_PASSWORD=CHANGE_ME|POSTGRES_PASSWORD=${PG_PASS}|" "${ENV_FILE}"
+    echo "[grid-core-heart] POSTGRES_PASSWORD auto-generated."
+  fi
+  echo ">> Review ${ENV_FILE} — encryption key and DB password are set. Set WEBHOOK_SHARED_SECRET if needed."
 fi
 
 echo "[grid-core-heart] Add grid user to docker group (logout/login required)"

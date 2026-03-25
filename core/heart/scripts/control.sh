@@ -11,7 +11,7 @@ resolve_compose_paths
 ACTION="${1:-}"
 
 case "$ACTION" in
-  start|stop|restart|status|ps|reload)
+  start|stop|restart|status|ps|reload|logs)
     if [[ ! -d "${COMPOSE_DIR}" ]]; then
         echo "[ERROR] Compose directory not found: ${COMPOSE_DIR}"
         exit 1
@@ -24,6 +24,7 @@ case "$ACTION" in
         restart)   docker compose --env-file "${ENV_FILE}" restart ;;
         status|ps) docker compose --env-file "${ENV_FILE}" ps ;;
         reload)    docker compose --env-file "${ENV_FILE}" up -d --force-recreate ;;
+        logs)      docker compose --env-file "${ENV_FILE}" logs --tail 60 --no-color ;;
     esac
     ;;
 
