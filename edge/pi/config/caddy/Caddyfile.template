@@ -1,0 +1,37 @@
+# ==============================================================================
+# fusionAIze Grid — Caddyfile Template (Edge Node)
+# Generated/managed by: faigrid workbench → Caddy → Configure
+#
+# Variables to substitute:
+#   {{CORE_IP}}         internal IP of the core node (e.g. 10.0.0.10)
+#   {{BASE_DOMAIN}}     your base domain (e.g. yourdomain.com)
+#
+# Caddy automatically provisions TLS certificates via Let's Encrypt.
+# Ensure DNS A records for each subdomain point to this edge node's public IP.
+# ==============================================================================
+
+# ── n8n Workflow Automation ───────────────────────────────────────────────────
+n8n.{{BASE_DOMAIN}} {
+    reverse_proxy {{CORE_IP}}:5678 {
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+    }
+}
+
+# ── fusionAIze Gate (faigate) ─────────────────────────────────────────────────
+# Uncomment if you want faigate accessible externally.
+# WARNING: protect this with authentication (see Caddyfile.authelia.example)
+# faigate.{{BASE_DOMAIN}} {
+#     reverse_proxy {{CORE_IP}}:8090
+# }
+
+# ── OpenClaw Agent Orchestrator ───────────────────────────────────────────────
+# Uncomment to expose the OpenClaw gateway externally.
+# openclaw.{{BASE_DOMAIN}} {
+#     reverse_proxy {{CORE_IP}}:18789
+# }
+
+# ── Optional: redirect apex domain ───────────────────────────────────────────
+# {{BASE_DOMAIN}} {
+#     redir https://n8n.{{BASE_DOMAIN}}{uri}
+# }

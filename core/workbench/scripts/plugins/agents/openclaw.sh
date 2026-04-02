@@ -42,25 +42,54 @@ tool_update() {
         | head -1 | grep -oE '[0-9]{4}\.[0-9]+\.[0-9]+(-[0-9]+)?' | head -1 \
         || echo "unknown")
 
-    info "Current version: ${current_ver}"
+    # Fetch latest release tag from GitHub
+    local latest_ver
+    latest_ver=$(curl -sf --max-time 8 \
+        "https://api.github.com/repos/openclaw/openclaw/releases/latest" 2>/dev/null \
+        | grep '"tag_name"' | head -1 | cut -d'"' -f4 | sed 's/^v//' || echo "")
+
+    info "Current version : ${current_ver}"
+    if [[ -n "$latest_ver" ]]; then
+        info "Latest release  : ${latest_ver}"
+    fi
     info "State  /var/lib/openclaw/  and config  /etc/openclaw/  are untouched by update."
-    printf "  Target version [%s]: " "${current_ver}"
+    echo ""
+    printf "  Target version [%s]: " "${latest_ver:-$current_ver}"
     read -r target_ver
+    target_ver="${target_ver:-${latest_ver:-$current_ver}}"
 
-    if [[ -z "$target_ver" ]]; then
-        info "No version entered — keeping ${current_ver}."
+    if [[ -z "$target_ver" || "$target_ver" == "$current_ver" ]]; then
+        info "No update needed — keeping ${current_ver}."
         return 0
     fi
 
-    if [[ ! -f "$update_script" ]]; then
-        warn "update.sh not found at ${update_script}. Restarting service only."
+    # ── Bundled update.sh (repo checkout) ─────────────────────────────────────
+    if [[ -f "$update_script" ]]; then
+        info "Updating openclaw → ${target_ver}…"
+        sudo "${update_script}" --version "${target_ver}"
+        success "openclaw updated to ${target_ver} and service restarted."
+        return 0
+    fi
+
+    # ── Fallback: download installer from GitHub release ──────────────────────
+    info "Bundled update.sh not available — downloading installer from GitHub release…"
+    local install_url="https://github.com/openclaw/openclaw/releases/download/${target_ver}/install.sh"
+    local tmpdir
+    tmpdir=$(mktemp -d)
+    local tmpscript="${tmpdir}/openclaw-install.sh"
+
+    if curl -fsSL --max-time 30 "$install_url" -o "$tmpscript" 2>/dev/null; then
+        info "Running openclaw installer v${target_ver}…"
+        sudo bash "$tmpscript" --version "$target_ver"
         sudo systemctl restart openclaw.service
-        return 0
+        success "openclaw updated to ${target_ver} and service restarted."
+    else
+        warn "Could not download installer from: ${install_url}"
+        info "Fallback: restarting existing service only."
+        sudo systemctl restart openclaw.service
+        info "To update manually: curl -fsSL https://get.openclaw.dev | sudo bash"
     fi
-
-    info "Updating openclaw → ${target_ver}…"
-    sudo "${update_script}" --version "${target_ver}"
-    success "openclaw updated to ${target_ver} and service restarted."
+    rm -rf "$tmpdir"
 }
 
 tool_status() {
