@@ -50,23 +50,35 @@ _quit() {
 }
 
 STATE_FILE="$HOME/.grid-state"
-TOPOLOGY_FILE=".env.topology"
-LOCAL_REGISTRY=".faigrid/state"
-
-# --- 1.3.0 Legacy Migration Hook ---
-if [[ -f "core/heart/scripts/migrate_1.3.sh" ]]; then
-    bash core/heart/scripts/migrate_1.3.sh
-    # Refresh pointers if migration occurred
-    STATE_FILE="$HOME/.grid-state"
-    LOCAL_REGISTRY=".faigrid/state"
-fi
 # Repository root for relative path resolution
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+TOPOLOGY_FILE="${HOME}/.config/faigrid/.env.topology"
+# User-scoped registry — stable regardless of install method (git clone vs Homebrew)
+LOCAL_REGISTRY="${HOME}/.config/faigrid/registry"
+
+# --- 1.3.0 Legacy Migration Hook ---
+if [[ -f "${REPO_ROOT}/core/heart/scripts/migrate_1.3.sh" ]]; then
+    bash "${REPO_ROOT}/core/heart/scripts/migrate_1.3.sh"
+fi
+# --- Registry location migration (repo-relative → user-scoped) ---
+_old_registry="${REPO_ROOT}/.faigrid/state"
+if [[ -d "$_old_registry" ]]; then
+    mkdir -p "$LOCAL_REGISTRY"
+    for _f in "$_old_registry"/*.state; do
+        [[ -f "$_f" ]] || continue
+        _base="$(basename "$_f")"
+        if [[ ! -f "$LOCAL_REGISTRY/$_base" ]]; then
+            cp "$_f" "$LOCAL_REGISTRY/$_base"
+        fi
+    done
+fi
+unset _old_registry _f _base
 CURRENT_ROLE="none"
 CURRENT_VERSION="none"
 
-# Ensure local registry exists
+# Ensure user config dirs exist
 mkdir -p "$LOCAL_REGISTRY"
+mkdir -p "$(dirname "$TOPOLOGY_FILE")"
 
 # --- CLI Arguments ---
 AUTO_YES="false"
@@ -776,8 +788,8 @@ _run_action() {
         info "Initiating Remote Pipeline [${action}] to ${ssh_target}..."
         ssh -q "$ssh_target" "mkdir -p /tmp/grid-install"
         info "Transferring payload to target..."
-        rsync -az --exclude='.git' --exclude='node_modules' ./ "$ssh_target:/tmp/grid-install/" > /dev/null
-        scp "$TOPOLOGY_FILE" "${ssh_target}:/tmp/grid-install/" > /dev/null
+        rsync -az --exclude='.git' --exclude='node_modules' "${REPO_ROOT}/" "$ssh_target:/tmp/grid-install/" > /dev/null
+        scp "${TOPOLOGY_FILE}" "${ssh_target}:/tmp/grid-install/" > /dev/null
         info "Executing remote [${action}] payload..."
         echo ""
         
