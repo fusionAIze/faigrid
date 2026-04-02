@@ -13,7 +13,7 @@ jobs:
     name: Security & Integrity Audit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Make executable
         run: chmod +x tests/security_audit.sh
       - name: Run Security Audit
