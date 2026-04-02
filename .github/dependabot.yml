@@ -1,0 +1,21 @@
+version: 2
+updates:
+  # GitHub Actions — keep workflow actions up to date
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    labels:
+      - "ci"
+      - "dependencies"
+
+  # Python — grid-messenger dependencies
+  - package-ecosystem: "pip"
+    directory: "/core/messenger"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    labels:
+      - "dependencies"
+      - "python"

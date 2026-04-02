@@ -1,0 +1,28 @@
+# ruff configuration for fusionAIze Grid
+# Applied to: core/messenger/src/ and any future Python components
+
+line-length    = 88
+target-version = "py312"
+
+[lint]
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "W",   # pycodestyle warnings
+    "I",   # isort
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "S",   # flake8-bandit (security)
+    "RUF", # ruff-specific rules
+]
+ignore = [
+    "S101",  # assert statements (acceptable in tests)
+    "S603",  # subprocess without shell=True check
+]
+
+[lint.per-file-ignores]
+"tests/**" = ["S", "B"]
+
+[format]
+quote-style = "double"
+indent-style = "space"
