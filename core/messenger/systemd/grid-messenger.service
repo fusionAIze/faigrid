@@ -1,0 +1,30 @@
+[Unit]
+Description=fusionAIze Grid Messenger — Telegram bridge for grid-core
+Documentation=https://github.com/fusionAIze/faigrid
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=grid-messenger
+Group=grid-messenger
+WorkingDirectory=/opt/grid-messenger
+
+# Load config from /etc/grid-messenger/config.env
+EnvironmentFile=/etc/grid-messenger/config.env
+
+ExecStart=/opt/grid-messenger/venv/bin/python3 /opt/grid-messenger/grid_messenger.py
+
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=10
+
+# Hardening
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/opt/grid-messenger
+
+[Install]
+WantedBy=multi-user.target
