@@ -65,23 +65,23 @@ Config (/etc/grid-messenger/config.env)
   APPS_FILE                 default: /opt/grid-messenger/apps.json
 """
 
+import asyncio
 import json
+import logging
 import os
 import uuid
-import logging
-import asyncio
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
 
 import aiohttp
 from aiohttp import web
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import (
     Application,
-    CommandHandler,
     CallbackQueryHandler,
-    MessageHandler,
+    CommandHandler,
     ContextTypes,
+    MessageHandler,
     filters,
 )
 
@@ -159,7 +159,7 @@ def _source_line(source: str, source_id: str) -> str:
     dn = info.get("display_name", source)
     line = f"{em} *{dn}*"
     if source_id:
-        line += f"  ›  `{source_id}`"
+        line += f"  \u203a  `{source_id}`"
     return line
 
 
@@ -173,7 +173,7 @@ _awaiting_input: dict = {}
 
 
 def _now() -> str:
-    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def _allowed(update: Update) -> bool:
@@ -549,7 +549,7 @@ async def http_decision_request(req: web.Request) -> web.Response:
         "callback_url": callback_url,
         "created_at": _now(),
     }
-    log.info("decision [%s] %s›%s: %s", dtype, source, source_id, description[:80])
+    log.info("decision [%s] %s>%s: %s", dtype, source, source_id, description[:80])
 
     tg_app: Application = req.app["tg_app"]
     text = _format_decision(did, _pending[did])
@@ -575,7 +575,8 @@ async def http_decision_request(req: web.Request) -> web.Response:
 async def http_notify(req: web.Request) -> web.Response:
     """
     POST /notify
-    { "message": "...", "level": "info|warn|error", "source": "...", "source_id": "..." }
+    { "message": "...", "level": "info|warn|error",
+      "source": "...", "source_id": "..." }
     """
     try:
         body = await req.json()
@@ -586,11 +587,12 @@ async def http_notify(req: web.Request) -> web.Response:
     level = str(body.get("level", "info"))
     source = str(body.get("source", ""))
     source_id = str(body.get("source_id", ""))
-    icon = {"info": "ℹ", "warn": "⚠", "error": "🔴"}.get(level, "ℹ")
+    _icons = {"info": "\u2139", "warn": "\u26a0", "error": "\U0001f534"}
+    icon = _icons.get(level, "\u2139")
 
     lines = [f"{icon} {message}"]
     if source:
-        lines = [_source_line(source, source_id), ""] + lines
+        lines = [_source_line(source, source_id), "", *lines]
 
     tg_app: Application = req.app["tg_app"]
     await _send_to_chats(tg_app, "\n".join(lines), None, source)
@@ -600,7 +602,8 @@ async def http_notify(req: web.Request) -> web.Response:
 async def http_app_register(req: web.Request) -> web.Response:
     """
     POST /app/register
-    { "name": "codenomad", "display_name": "Codenomad", "emoji": "👨‍💻", "thread_id": null }
+    { "name": "codenomad", "display_name": "Codenomad",
+      "emoji": "👨\u200d💻", "thread_id": null }
     """
     try:
         body = await req.json()

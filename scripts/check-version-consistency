@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# check-version-consistency — pre-push hook
+# Ensures VERSION file and INSTALL_VERSION in install.sh stay in sync.
+set -euo pipefail
+
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+VERSION_FILE="${REPO_ROOT}/VERSION"
+INSTALL_SH="${REPO_ROOT}/install.sh"
+
+if [[ ! -f "$VERSION_FILE" ]]; then
+    echo "check-version-consistency: VERSION file not found — skipping" >&2
+    exit 0
+fi
+
+file_ver="$(tr -d '[:space:]' < "$VERSION_FILE")"
+
+install_ver="$(grep -m1 'INSTALL_VERSION=' "$INSTALL_SH" \
+    | sed 's/.*INSTALL_VERSION=["\x27]*\([0-9][^"'\''[:space:]]*\).*/\1/')"
+
+if [[ "$file_ver" != "$install_ver" ]]; then
+    echo "check-version-consistency: VERSION mismatch!" >&2
+    echo "  VERSION file : ${file_ver}" >&2
+    echo "  install.sh   : ${install_ver}" >&2
+    echo "" >&2
+    echo "Run:  scripts/faigrid-release <version>  to update both." >&2
+    exit 1
+fi
+
+echo "check-version-consistency: OK (${file_ver})"

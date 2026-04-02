@@ -22,6 +22,26 @@ repos:
         args: [--severity=warning, --external-sources]
         types: [shell]
 
+  # ── Python: ruff (lint + format) ─────────────────────────────────────────
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.9.10
+    hooks:
+      - id: ruff
+        args: [--fix]
+        files: ^core/messenger/src/
+      - id: ruff-format
+        files: ^core/messenger/src/
+
+  # ── Version consistency ───────────────────────────────────────────────────
+  - repo: local
+    hooks:
+      - id: version-consistency
+        name: VERSION vs install.sh
+        language: script
+        entry: scripts/check-version-consistency
+        pass_filenames: false
+        stages: [pre-push]
+
   # ── Conventional commits ─────────────────────────────────────────────────
   - repo: https://github.com/compilerla/conventional-pre-commit
     rev: v3.6.0
