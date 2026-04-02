@@ -3,6 +3,24 @@
 All notable changes to fusionAIze Grid are documented in this file.
 Generated from conventional commits using [git-cliff](https://git-cliff.org).
 
+## [1.6.1](https://github.com/fusionAIze/faigrid/compare/v1.6.0...v1.6.1) (2026-04-02)
+
+
+### Bug Fixes
+
+* **ci:** resolve ruff lint failures and add pre-push validation ([ecadc78](https://github.com/fusionAIze/faigrid/commit/ecadc78c1061f86814c8b1ecf00276440ce54ceb))
+* **ci:** ruff format + smarter CHANGE_ME smoke test ([56e170c](https://github.com/fusionAIze/faigrid/commit/56e170c3d1ad56295ae0d6738285833dbdb5c5f1))
+
+
+### CI/CD
+
+* re-trigger release-please after permissions fix ([5c657e6](https://github.com/fusionAIze/faigrid/commit/5c657e60cd7c9972b6d87b041dcd3e2de5bb9dbd))
+
+
+### Miscellaneous
+
+* complete benchmark template alignment ([73e21d4](https://github.com/fusionAIze/faigrid/commit/73e21d444ee92b162ad112d35cf1ef4182738111))
+
 ## [1.6.0] — 2026-04-02
 
 ### Features
