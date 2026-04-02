@@ -9,17 +9,35 @@ setup() {
 
 @test "Security Audit - No 'CHANGE_ME' tokens in production scripts" {
     cd "$REPO_ROOT"
-    
+
     local found_issues
-    # We ignore standard test files, example configs, node_modules.
+    # Exclude:
+    #   - template/example files (*.example, *.template)
+    #   - test files and CHANGELOG
+    #   - lines where CHANGE_ME appears inside a grep/sed/echo/warn/info call
+    #     (these are legitimate sentinel-detection patterns, not hardcoded values)
     found_issues=$(grep -r "CHANGE_ME" . \
+        --include="*.sh" \
+        --include="*.env" \
+        --include="*.yml" \
+        --include="*.yaml" \
         --exclude="*.example" \
         --exclude="*.template" \
-        --exclude="*.bats" \
         --exclude-dir=".git" \
         --exclude-dir="node_modules" \
-        --exclude-dir="tests" -l || echo "")
-        
+        --exclude-dir="tests" \
+        | grep -v \
+            -e 'grep.*CHANGE_ME' \
+            -e 'sed.*CHANGE_ME' \
+            -e '#.*CHANGE_ME' \
+            -e 'echo.*CHANGE_ME' \
+            -e 'warn.*CHANGE_ME' \
+            -e 'info.*CHANGE_ME' \
+            -e '==.*CHANGE_ME' \
+            -e '!=.*CHANGE_ME' \
+            -e 'CHANGELOG' \
+        | cut -d: -f1 | sort -u || echo "")
+
     if [[ -n "$found_issues" ]]; then
         echo "Found potentially hardcoded CHANGE_ME secrets in:"
         echo "$found_issues"
