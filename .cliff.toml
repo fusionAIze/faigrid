@@ -1,0 +1,47 @@
+[changelog]
+header = """
+# Changelog
+
+All notable changes to fusionAIze Grid are documented in this file.
+Generated from conventional commits using [git-cliff](https://git-cliff.org).
+
+"""
+body = """
+{% if version %}\
+## [{{ version | trim_start_matches(pat="v") }}] — {{ timestamp | date(format="%Y-%m-%d") }}
+{% else %}\
+## [Unreleased]
+{% endif %}\
+{% for group, commits in commits | group_by(attribute="group") %}
+### {{ group | upper_first }}
+{% for commit in commits | sort(attribute="message") %}\
+- {% if commit.breaking %}[**BREAKING**] {% endif %}\
+{% if commit.scope %}(`{{ commit.scope }}`) {% endif %}\
+{{ commit.message | upper_first }}\
+{% endfor %}
+{% endfor %}\n
+"""
+trim = true
+footer = ""
+
+[git]
+conventional_commits   = true
+filter_unconventional  = true
+split_commits          = false
+protect_breaking_commits = false
+filter_commits         = true
+tag_pattern            = "v[0-9].*"
+topo_order             = false
+sort_commits           = "oldest"
+
+commit_parsers = [
+  { message = "^feat",     group = "Features"       },
+  { message = "^fix",      group = "Bug Fixes"       },
+  { message = "^docs",     group = "Documentation"   },
+  { message = "^perf",     group = "Performance"     },
+  { message = "^refactor", group = "Refactoring"     },
+  { message = "^test",     group = "Testing"         },
+  { message = "^ci",       group = "CI/CD"           },
+  { message = "^chore",    group = "Miscellaneous"   },
+  { message = "^revert",   group = "Reverts"         },
+]

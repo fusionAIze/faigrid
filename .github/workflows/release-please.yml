@@ -1,0 +1,56 @@
+name: Release Please
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents:      write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    outputs:
+      release_created: ${{ steps.rp.outputs.release_created }}
+      tag_name:        ${{ steps.rp.outputs.tag_name }}
+      version:         ${{ steps.rp.outputs.version }}
+
+    steps:
+      - uses: googleapis/release-please-action@v4
+        id: rp
+        with:
+          release-type: simple
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+  # After a release is created, update the Homebrew tap
+  notify-tap:
+    needs: release-please
+    if: needs.release-please.outputs.release_created == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Compute SHA256
+        id: sha
+        run: |
+          VERSION="${{ needs.release-please.outputs.tag_name }}"
+          VERSION="${VERSION#v}"
+          URL="https://github.com/fusionAIze/faigrid/archive/refs/tags/v${VERSION}.tar.gz"
+          SHA=$(curl -sL "$URL" | sha256sum | awk '{print $1}')
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "sha256=${SHA}"      >> "$GITHUB_OUTPUT"
+
+      - name: Dispatch to homebrew-tap
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.TAP_GITHUB_TOKEN }}
+          script: |
+            await github.rest.repos.createDispatchEvent({
+              owner: 'fusionAIze',
+              repo:  'homebrew-tap',
+              event_type: 'formula-update',
+              client_payload: {
+                formula: 'faigrid',
+                version: '${{ steps.sha.outputs.version }}',
+                sha256:  '${{ steps.sha.outputs.sha256 }}',
+              },
+            });

@@ -1,0 +1,38 @@
+{
+  "name": "fusionAIze Grid",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
+
+  "features": {
+    "ghcr.io/devcontainers/features/python:1":     { "version": "3.12" },
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "timonwong.shellcheck",
+        "mads-hartmann.bash-ide-vscode",
+        "ms-python.python",
+        "ms-python.ruff",
+        "foxundermoon.shell-format",
+        "eamodio.gitlens",
+        "github.vscode-github-actions",
+        "vivaxy.vscode-conventional-commits"
+      ],
+      "settings": {
+        "editor.formatOnSave": true,
+        "shellcheck.enable": true,
+        "shellcheck.useWorkspaceRootAsCwd": true,
+        "[shellscript]": {
+          "editor.defaultFormatter": "foxundermoon.shell-format"
+        },
+        "[python]": {
+          "editor.defaultFormatter": "charliermarsh.ruff"
+        }
+      }
+    }
+  }
+}
