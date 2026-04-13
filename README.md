@@ -1,41 +1,49 @@
 # fusionAIze Grid (faigrid)
 
-[![repo-safety](https://github.com/fusionAIze/faigrid/actions/workflows/repo-safety.yml/badge.svg)](https://github.com/fusionAIze/faigrid/actions/workflows/repo-safety.yml) [![Lint](https://github.com/fusionAIze/faigrid/actions/workflows/lint.yml/badge.svg)](https://github.com/fusionAIze/faigrid/actions/workflows/lint.yml) [![Test](https://github.com/fusionAIze/faigrid/actions/workflows/test.yml/badge.svg)](https://github.com/fusionAIze/faigrid/actions/workflows/test.yml) [![Release](https://img.shields.io/github/v/release/fusionAIze/faigrid?display_name=tag)](https://github.com/fusionAIze/faigrid/releases) [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![OpenClaw-friendly](https://img.shields.io/badge/OpenClaw-friendly-111827.svg)](https://openclaw.ai/) [![n8n-automated](https://img.shields.io/badge/n8n-automated-ea4b71.svg?logo=n8n&logoColor=white)](https://n8n.io/) [![Docker-ready](https://img.shields.io/badge/docker-ready-2496ED?logo=docker&logoColor=white)](https://www.docker.com/) [![Bash-powered](https://img.shields.io/badge/Language-Bash-4EAA25.svg)](https://www.gnu.org/software/bash/)
+[![repo-safety](https://github.com/fusionAIze/faigrid/actions/workflows/repo-safety.yml/badge.svg)](https://github.com/fusionAIze/faigrid/actions/workflows/repo-safety.yml)
+[![Lint](https://github.com/fusionAIze/faigrid/actions/workflows/lint.yml/badge.svg)](https://github.com/fusionAIze/faigrid/actions/workflows/lint.yml)
+[![Test](https://github.com/fusionAIze/faigrid/actions/workflows/test.yml/badge.svg)](https://github.com/fusionAIze/faigrid/actions/workflows/test.yml)
+[![Release](https://img.shields.io/github/v/release/fusionAIze/faigrid?display_name=tag)](https://github.com/fusionAIze/faigrid/releases)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![OpenClaw-friendly](https://img.shields.io/badge/OpenClaw-friendly-111827.svg)](https://openclaw.ai/)
+[![n8n-automated](https://img.shields.io/badge/n8n-automated-ea4b71.svg?logo=n8n&logoColor=white)](https://n8n.io/)
+[![Docker-ready](https://img.shields.io/badge/docker-ready-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
+[![Bash-powered](https://img.shields.io/badge/Language-Bash-4EAA25.svg)](https://www.gnu.org/software/bash/)
 
 > **The sovereign execution substrate for AI-native operations.**
 
-**fusionAIze Grid (faigrid)** is the execution substrate of the fusionAIze ecosystem. Its explicit job is to define **where** AI-native work runs, under **what constraints**, with **what isolation**, through which **queues and runners**, and with which **observability and recovery patterns**.
-
-It provides a modular, secure, and self-hosted foundation across local, on-prem, private cloud, public cloud, and hybrid deployments.
+**fusionAIze Grid** defines *where* AI-native work runs, under *what constraints*, with *what isolation*, through which *queues and runners*, and with which *observability and recovery patterns*. It is the execution layer of the fusionAIze ecosystem — not the context, memory, or routing layer.
 
 ---
 
 ### Navigation
-[The Ecosystem](#the-ecosystem) • 
-[Architecture](#architecture) • 
-[Quick Start](#quick-start) • 
-[Troubleshooting](#troubleshooting) • 
-[Grid Modules](#grid-modules) • 
-[Repository Layout](#repository-layout) • 
+
+[Ecosystem](#the-ecosystem) •
+[Architecture](#architecture) •
+[Quick Start](#quick-start) •
+[Grid Modules](#grid-modules) •
+[Workbench](#workbench-plugins) •
+[Messenger](#grid-messenger) •
+[Repository Layout](#repository-layout) •
+[Troubleshooting](#troubleshooting) •
 [License](#license)
 
 ---
 
 ## The Ecosystem
 
-`faigrid` is part of a 5-layer product architecture that operationalizes human-AI fusion teams:
-1. **Gate (`faigate`)**: AI-native gateway for models, providers, tools and clients. *(Connects)*
-2. **Lens**: Compression, translation, and context-focusing layer. *(Filters)*
-3. **Fabric**: Shared context and memory. *(Remembers & Serves)*
-4. **Grid (`faigrid`)**: This repository. The sovereign execution substrate. *(Executes)*
-5. **OS (`fusionAIzeOS`)**: The operating logic defining how humans and virtual AI coworkers collaborate. *(Orchestrates Logic)*
+`faigrid` is part of the fusionAIze 5-layer product architecture that operationalizes human-AI fusion teams:
 
-### Core Philosophy
-- **Execution First**: We define rigorous *Execution Classes* (Edge, Internal, Queued, Runners, Local Workers) rather than fuzzy environments.
-- **Agent Agnostic**: We provide the raw OS execution substrate agnostic of the framework (OpenClaw, AutoGen, CrewAI).
-- **Macher-Fokus (Builder Focus)**: Designed originally for the **Solo Operator** and scalable to **Small Teams** and **SMBs** without enterprise compliance theater.
-- **Portability**: Full freedom to run proprietary SaaS routes (via Cloud Bridges) or fully local open-source operations (via Local Model Workers).
+| Layer | Repo | Role |
+|---|---|---|
+| **Gate** | `faigate` | AI-native gateway for models, providers, tools and clients |
+| **Lens** | `failens` | Compression, translation, and context-focusing |
+| **Fabric** | `faifabric` | Shared context, memory, and knowledge |
+| **Grid** | `faigrid` ← | Sovereign execution substrate |
+| **Signal** | `faisignal` | Observability, monitoring, and signal layer |
+| **OS** | `fusionAIzeOS` | Operating logic for human-AI fusion teams |
+
+faigrid feeds **runtime health signals** (runner failures, service state, queue backlog, job completion) directly into fusionAIze Signal for cross-layer operational intelligence.
 
 ---
 
@@ -43,62 +51,65 @@ It provides a modular, secure, and self-hosted foundation across local, on-prem,
 
 The infrastructure relies on a decoupled, secure **4+1 Node Architecture**:
 
-```text
-                      Public Internet
-                             │ (HTTPS)
-       ┌─────────────────────▼─────────────────────┐
-       │               GRID EDGE                   │ (1) Ingress / Proxy
-       │     (Caddy Reverse Proxy, SSO, Auth)      │
-       └─────────────────────┬─────────────────────┘
-                             │ (Internal TLS)
-       ┌─────────────────────▼─────────────────────┐
-       │               GRID CORE                   │ (2) Trusted Internal Services
-       │    (n8n, OpenClaw, RTK, Postgres, Redis)  │     / Queued Automations
-       └──────┬─────────────────────────────┬──────┘
-              │ (Local API)                 │ (Encrypted Tunnels)
-   ┌──────────▼──────────┐       ┌──────────▼──────────┐
-   │    GRID WORKER      │       │   GRID EXTERNAL     │ (5) Cloud Model Bridges
-   │  (Local LLM Nodes)  │       │  (Cloud VPS Node)   │     / Global Extension
-   └─────────────────────┘       └─────────────────────┘
-              │
-   ┌──────────▼──────────┐
-   │    GRID BACKUP      │ (4) Observability & 
-   │ (Synology / Restic) │     Recovery Base
-   └─────────────────────┘
 ```
+                     Public Internet
+                            │ (HTTPS)
+      ┌─────────────────────▼─────────────────────┐
+      │               GRID EDGE                   │  (1) Ingress / Proxy
+      │   Caddy Reverse Proxy · Pi-hole DNS · SSO │
+      └─────────────────────┬─────────────────────┘
+                            │ (Internal TLS / .grid)
+      ┌─────────────────────▼─────────────────────┐
+      │               GRID CORE                   │  (2) Trusted Internal Services
+      │  n8n · openclaw · codenomad · faigate     │
+      │  grid-messenger · Postgres · Redis        │
+      └──────┬─────────────────────────────┬──────┘
+             │ (Local API)                 │ (Encrypted Tunnels)
+  ┌──────────▼──────────┐       ┌──────────▼──────────┐
+  │    GRID WORKER      │       │   GRID EXTERNAL     │  (5) Cloud Model Bridges
+  │  Local LLM · Ollama │       │   Cloud VPS Node    │
+  └──────────┬──────────┘       └─────────────────────┘
+             │
+  ┌──────────▼──────────┐
+  │    GRID BACKUP      │  (4) Observability & Recovery
+  │  Synology · Restic  │
+  └─────────────────────┘
+```
+
+**Execution Classes** — Grid's core abstraction:
+
+| Class | Where | What |
+|---|---|---|
+| Edge Ingress | grid-edge | TLS termination, reverse proxy, DNS, auth |
+| Trusted Internal | grid-core | n8n, APIs, orchestration, messaging |
+| Queued Automations | grid-core | Workflow engine, background tasks |
+| Local Model Workers | grid-worker | Ollama, LM Studio, LAN-only inference |
+| Cloud Model Bridges | grid-external | Egress-controlled cloud reasoning |
+| Recovery Base | grid-backup | Automated immutable backup pipelines |
 
 ---
 
 ## Quick Start
 
-Get your faigrid ecosystem live in 2 steps:
-
 ```bash
-# 1. Clone & Provision (Detects macOS/Linux automatically)
-git clone https://github.com/fusionAIze/faigrid.git faigrid
-cd faigrid && bash install.sh
+# Clone and provision (detects macOS/Linux automatically)
+git clone https://github.com/fusionAIze/faigrid.git && cd faigrid
+bash install.sh
 
-# 2. Deploy your first node (e.g. Core Runtime)
+# Deploy a specific role, e.g. Core
 ./install.sh --mode local --role core --strategy 1 --yes
 ```
 
-Done. Your AI execution substrate is now accessible via the **Terminal Dashboard**:
-```bash
-./scripts/grid-dashboard.sh
-```
-
----
-
-## Troubleshooting
-
-If something feels off, run the **Grid Doctor**. It performs comprehensive sanity checks on resources, connectivity, and local state:
+Node registry is stored at `~/.config/faigrid/registry/` and persists across reinstalls and Homebrew upgrades.
 
 ```bash
+# Open the interactive Workbench
+./core/workbench/scripts/control.sh
+
+# Run diagnostics
 ./scripts/grid-doctor.sh
-```
 
-To view live system telemetry and consolidated logs:
-```bash
+# Check live logs
 tail -f /var/log/faigrid/grid-system.log
 ```
 
@@ -106,31 +117,132 @@ tail -f /var/log/faigrid/grid-system.log
 
 ## Grid Modules
 
-The faigrid framework segments execution classes into specialized operational roles:
+| Module | Role | Services |
+|---|---|---|
+| **grid-edge** | Public gatekeeper | Caddy, Pi-hole, CrowdSec, SSO |
+| **grid-core** | Private compute substrate | n8n, openclaw, codenomad, faigate, grid-messenger |
+| **grid-worker** | Isolated execution | Ollama, LM Studio, shell runners |
+| **grid-backup** | Safety net | Restic, Synology, automated snapshots |
+| **grid-external** | Cloud bridge | Egress-aware VPS, external model access |
 
-- **grid-edge**: The gatekeeper. Handles TLS termination (Caddy), CrowdSec bouncers, and identity intake. Public-facing but tightly constrained.
-- **grid-core**: The private compute substrate. Hosts internal services (n8n), queue consumers, internal APIs, and stable coordination. Strictly internal.
-- **grid-worker**: Dedicated isolated execution workers. Examples include local inference (LM Studio/Ollama), review workers, and shell runners routed securely to the Core.
-- **grid-backup**: The safety net. Automated, immutable offline backup pipelines targeting dedicated local network attached storage.
-- **grid-external** *(optional)*: Cloud model bridges for access to external hosted workloads under strict egress-aware constraints.
+---
 
-> **Security Note:** This repository is intrinsically designed for autonomous deployments. It utilizes dynamic state and `.env.topology` generation. **Never commit secrets**.
+## Workbench Plugins
+
+The **Grid Workbench** (`core/workbench/`) is the interactive operator console for managing services on each node. Plugins are self-contained Bash modules with a standard interface (`tool_configure`, `tool_doctor`, `tool_update`).
+
+**Current plugin registry:**
+
+| Plugin | Category | Purpose |
+|---|---|---|
+| `n8n` | automation | Workflow engine — install, configure, manage |
+| `openclaw` | agents | OpenClaw agent runtime — deploy, update, doctor |
+| `codenomad` | agents | Codenomad coding agent — configure, manage |
+| `faigate` | gateway | fusionAIze Gate — install, configure, health |
+| `caddy` | proxy | Internal LAN reverse proxy — `.grid` TLD + Pi-hole DNS |
+| `grid-messenger` | comms | Telegram decision bridge — configure, health |
+
+Plugin categories: `agents/` · `automation/` · `proxy/` · `comms/`
+
+---
+
+## Grid Messenger
+
+`grid-messenger` is the **Telegram decision and notification bridge** for the Grid. It runs as a systemd service on grid-core and exposes a local HTTP API (`127.0.0.1:9119`) that any registered app (n8n, openclaw, codenomad, etc.) can call to push decisions or notifications.
+
+**Three decision types:**
+
+| Type | UI | Use case |
+|---|---|---|
+| `approve` | Approve / Reject buttons | Binary gate — deploy, merge, confirm |
+| `choice` | N labelled buttons | Multi-option selection — which agent, which branch |
+| `input` | Free-text capture | User-supplied values — target dir, config input |
+
+**App registry** — each app (openclaw, codenomad, n8n, …) registers with a display name, emoji, and optional Telegram topic thread ID for sub-channel routing.
+
+```bash
+# HTTP API (from any app on grid-core)
+POST http://127.0.0.1:9119/decision/request
+POST http://127.0.0.1:9119/notify
+POST http://127.0.0.1:9119/app/register
+GET  http://127.0.0.1:9119/health
+```
+
+See `core/messenger/` for installation and configuration details.
 
 ---
 
 ## Repository Layout
 
-- `core/` — Docker compose stacks, systemd servers, and core execution scripts.
-- `docs/` — Core architecture roadmap, example deployment profiles (Solo to SMB), runbooks.
-- `edge/` — Firewall configs, advanced proxy templates, and SSO entry structures.
-- `scripts/` — The master orchestration utilities (`install.sh`, `grid-dashboard.sh`, `grid-watchdog.sh`, `grid-doctor.sh`).
-- `tests/` — Automated syntactical checks (Bats-core) natively hooked into CI/CD.
+```
+faigrid/
+├── install.sh                    # Root orchestrator (state-aware)
+├── core/
+│   ├── workbench/
+│   │   └── scripts/
+│   │       ├── control.sh        # Interactive Workbench CLI
+│   │       ├── _lib.sh           # Shared helpers
+│   │       ├── _projects.sh      # Project/repo manager
+│   │       ├── _skills.sh        # AI skill deployer
+│   │       └── plugins/
+│   │           ├── agents/       # openclaw, codenomad
+│   │           ├── automation/   # n8n
+│   │           ├── proxy/        # caddy
+│   │           └── comms/        # grid-messenger
+│   └── messenger/
+│       ├── src/grid_messenger.py # Telegram bot service
+│       ├── install.sh            # Messenger installer
+│       ├── systemd/              # Service unit
+│       └── requirements.txt
+├── docs/
+│   ├── ROADMAP.md
+│   ├── IMPLEMENTATION-PLAN.md
+│   ├── architecture/
+│   ├── runbooks/
+│   └── reference/
+├── scripts/
+│   ├── grid-doctor.sh
+│   ├── grid-dashboard.sh
+│   ├── grid-deploy.sh
+│   ├── grid-watchdog.sh
+│   └── faigrid-release
+├── tests/
+│   └── smoke/
+└── .github/
+    └── workflows/                # lint, test, release-please, codeql, repo-safety
+```
 
 ---
 
-### Support
+## Troubleshooting
 
-If you find this engineering blueprint valuable or you're using it to bootstrap your own sovereign AI networks, please consider giving it a ⭐️ to help the community grow!
+```bash
+# Comprehensive health check
+./scripts/grid-doctor.sh
+
+# Live system log
+tail -f /var/log/faigrid/grid-system.log
+
+# Workbench plugin doctor (per-service)
+./core/workbench/scripts/control.sh doctor
+```
+
+Common issues:
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| `no registered nodes` after Homebrew install | OLD: registry was repo-relative | Registry migrated to `~/.config/faigrid/registry/` in v1.6.0 |
+| `.grid` domains not resolving | Pi-hole DNS not set as resolver | Set workstation DNS to Edge LAN IP |
+| `grid-messenger` decisions not arriving | Bot token or chat ID missing | Run Workbench → comms → grid-messenger → configure |
+
+---
+
+## Security
+
+- All core services bind to `127.0.0.1` — never exposed beyond localhost/LAN without explicit edge config.
+- Secrets live in `.env` files outside the repo. Never committed. `.gitignore` covers all credential patterns.
+- Services run as dedicated system users (no login shell, no home dir). See `CLAUDE.md` for the full system user pattern.
+- Destructive operations (uninstall, wipe, volume removal) always prompt for confirmation.
 
 ---
 
@@ -140,4 +252,4 @@ Apache 2.0 — see [LICENSE](LICENSE) for details.
 
 ---
 
-> Made with ❤️ in Berlin
+> Made with ❤️ in Berlin · Part of the [fusionAIze](https://github.com/fusionAIze) ecosystem

@@ -8,11 +8,13 @@ This repository is `faigrid`, the official realization of **fusionAIze Grid**.
 Its job is to define **where** AI-native workloads execute, under **what constraints**, with **what isolation**, through which **queues/runners**, and with which **secrets, observability, and backup patterns**.
 
 It physically provisions and structurally connects the 4+1 Node Architecture:
-1. **grid-edge**: Edge ingress workloads (Public intake, TLS, reverse proxy, SSO).
-2. **grid-core**: Trusted internal services and queued automations (n8n, orchestration helpers).
+1. **grid-edge**: Edge ingress workloads (Public intake, TLS, Caddy reverse proxy, Pi-hole DNS, SSO).
+2. **grid-core**: Trusted internal services and queued automations (n8n, openclaw, codenomad, faigate, grid-messenger).
 3. **grid-worker**: Specialized runners, local model workers (LAN-only inference), and isolated task workers.
-4. **grid-backup**: Recovery and observability layer.
+4. **grid-backup**: Recovery and observability layer (Restic, Synology).
 5. **grid-external**: Cloud model bridges and distributed extensions.
+
+Grid feeds structured runtime health signals (runner failures, service state, queue backlog) into **fusionAIze Signal** (`faisignal`) for cross-layer operational intelligence. Grid's cockpit surface and Signal's ingestion pipeline are designed to be complementary, not overlapping.
 
 In the fusionAIze ecosystem, Grid runs the compute topology. It is explicitly **decoupled** from `fusionAIzeOS`, which serves as the "team operating logic" (defining *how* humans and virtual AI coworkers collaborate, roles, and identity).
 
@@ -26,8 +28,10 @@ In the fusionAIze ecosystem, Grid runs the compute topology. It is explicitly **
 
 The priority is maintaining a universal, highly secure, and easily deployable execution substrate.
 
-Do not optimize the repository around complex web frameworks, operating logic dashboards, or model routing logic (which belong in OS, Studio, or Gate).
-Optimize it around rock-solid shell orchestration (`install.sh`), state detection (`.grid-state`), cleanly isolated Workbench plugin registries (`plugins/`), runner layer definition (`docker compose`), and robust Bash-level testing (`tests/`).
+Do not optimize the repository around complex web frameworks, operating logic dashboards, or model routing logic (which belong in OS, Gate, and Lens).
+Optimize it around rock-solid shell orchestration (`install.sh`), state detection (`~/.config/faigrid/registry/`), cleanly isolated Workbench plugin registries (`plugins/`), runner layer definition (`docker compose`), and robust Bash-level testing (`tests/`).
+
+The Grid Cockpit (planned v2.0) is an exception to the "no web framework" rule — it is a lightweight, no-build, single-file HTML dashboard served by the existing Python messenger process. It stays inside Grid's scope: node health, service status, pending decisions, workbench state. It does not replicate Gate analytics or Signal correlation.
 
 ## Architecture principles
 
