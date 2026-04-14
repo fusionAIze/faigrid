@@ -3,6 +3,14 @@
 All notable changes to fusionAIze Grid are documented in this file.
 Generated from conventional commits using [git-cliff](https://git-cliff.org).
 
+## [1.7.0](https://github.com/fusionAIze/faigrid/compare/v1.6.2...v1.7.0) (2026-04-14)
+
+
+### Features
+
+* **cli:** agent-native CLI surface for faigrid + /api/v1/health ([6487ba9](https://github.com/fusionAIze/faigrid/commit/6487ba905dad1fcf6885daffe97a338a0235168a))
+* **messenger:** add fgm CLI + setup wizard + decision polling ([cea991e](https://github.com/fusionAIze/faigrid/commit/cea991e94376fc75bbf2b29b6e9d28e43a650e24))
+
 ## [1.6.2](https://github.com/fusionAIze/faigrid/compare/v1.6.1...v1.6.2) (2026-04-14)
 
 
