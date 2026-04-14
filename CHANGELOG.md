@@ -3,6 +3,18 @@
 All notable changes to fusionAIze Grid are documented in this file.
 Generated from conventional commits using [git-cliff](https://git-cliff.org).
 
+## [1.6.2](https://github.com/fusionAIze/faigrid/compare/v1.6.1...v1.6.2) (2026-04-14)
+
+
+### Documentation
+
+* reassessment — README, ROADMAP, AGENTS, cockpit spec, implementation plan ([#12](https://github.com/fusionAIze/faigrid/issues/12)) ([d28fcfc](https://github.com/fusionAIze/faigrid/commit/d28fcfca0f626d84a3968c2395da6a0e2f3c93dd))
+
+
+### CI/CD
+
+* add workflow_dispatch trigger to ci.yml ([#14](https://github.com/fusionAIze/faigrid/issues/14)) ([37c9a68](https://github.com/fusionAIze/faigrid/commit/37c9a68950f0e6fa67b0622874f131312cb9555f))
+
 ## [1.6.1](https://github.com/fusionAIze/faigrid/compare/v1.6.0...v1.6.1) (2026-04-02)
 
 
