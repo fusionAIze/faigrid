@@ -41,7 +41,7 @@ jobs:
           echo "sha256=${SHA}"      >> "$GITHUB_OUTPUT"
 
       - name: Dispatch to homebrew-tap
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           github-token: ${{ secrets.TAP_GITHUB_TOKEN }}
           script: |
