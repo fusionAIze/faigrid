@@ -1,0 +1,235 @@
+#!/usr/bin/env bash
+# fgm — faigrid messenger CLI  (agent-native interface)
+# ──────────────────────────────────────────────────────
+# Thin shell wrapper around the grid-messenger HTTP API.
+# Any agent, script, or human operator can call this directly.
+#
+# Usage:
+#   fgm notify  "text" [--source NAME] [--level info|warn|error]
+#   fgm ask     "text" [--type approve|choice|input]
+#               [--choices label1,label2] [--source NAME]
+#               [--wait] [--timeout SECS]
+#   fgm health
+#   fgm apps
+#   fgm register NAME [--emoji EMOJI] [--thread-id ID]
+#
+# Environment:
+#   MESSENGER_URL   base URL of grid-messenger (default: http://127.0.0.1:9119)
+#   FGM_TIMEOUT     curl timeout in seconds     (default: 30)
+#
+# Examples:
+#   fgm notify "Deployment complete" --source openclaw --level info
+#   fgm ask "Deploy to prod?" --type approve --source codenomad --wait
+#   fgm ask "Which env?" --type choice --choices staging,prod --wait --timeout 120
+#   fgm register myagent --emoji 🤖
+set -euo pipefail
+
+BASE="${MESSENGER_URL:-http://127.0.0.1:9119}"
+TIMEOUT="${FGM_TIMEOUT:-30}"
+
+_curl() {
+    curl -sf --max-time "$TIMEOUT" "$@"
+}
+
+# Build a JSON object using Python (handles escaping, special chars).
+# Args: key value key value …   (pass __null__ for JSON null)
+_json() {
+    python3 - "$@" <<'PY'
+import json, sys
+args = sys.argv[1:]
+d = {}
+for i in range(0, len(args) - 1, 2):
+    k, v = args[i], args[i + 1]
+    if v == "__null__":
+        d[k] = None
+    else:
+        try:
+            d[k] = int(v)
+        except ValueError:
+            try:
+                d[k] = float(v)
+            except ValueError:
+                d[k] = v
+print(json.dumps(d))
+PY
+}
+
+# Poll /decision/{id} until resolved or timeout.
+_wait_decision() {
+    local id="$1"
+    local deadline=$(( $(date +%s) + ${2:-300} ))
+    printf 'Waiting for decision %s ' "$id" >&2
+    while [[ $(date +%s) -lt $deadline ]]; do
+        sleep 2
+        local result
+        result=$(_curl "${BASE}/decision/${id}" 2>/dev/null || echo '{}')
+        local status
+        status=$(python3 -c "import json,sys; print(json.loads(sys.argv[1]).get('status','pending'))" "$result" 2>/dev/null || echo "pending")
+        if [[ "$status" != "pending" && "$status" != "unknown" ]]; then
+            printf '\n' >&2
+            echo "$result"
+            return 0
+        fi
+        printf '.' >&2
+    done
+    printf '\n' >&2
+    echo '{"status":"timeout"}'
+    return 1
+}
+
+cmd="${1:-help}"
+shift 2>/dev/null || true
+
+case "$cmd" in
+
+    # ── notify ────────────────────────────────────────────────────────────────
+    notify|msg)
+        text="${1:-}"
+        shift 2>/dev/null || true
+        source="" level="info"
+        while [[ $# -gt 0 ]]; do
+            case "$1" in
+                --source|-s) source="$2"; shift 2 ;;
+                --level|-l)  level="$2";  shift 2 ;;
+                *) shift ;;
+            esac
+        done
+        payload=$(python3 -c "
+import json, sys
+text, level, source = sys.argv[1], sys.argv[2], sys.argv[3]
+d = {'message': text, 'level': level}
+if source:
+    d['source'] = source
+print(json.dumps(d))
+" "$text" "$level" "$source")
+        _curl -X POST "${BASE}/notify" \
+            -H "Content-Type: application/json" \
+            -d "$payload"
+        echo
+        ;;
+
+    # ── ask / decision ────────────────────────────────────────────────────────
+    ask|decide|decision)
+        text="${1:-}"
+        shift 2>/dev/null || true
+        dtype="approve" source="" choices="" wait_flag=0 wait_timeout=300
+        while [[ $# -gt 0 ]]; do
+            case "$1" in
+                --type|-t)    dtype="$2";        shift 2 ;;
+                --source|-s)  source="$2";       shift 2 ;;
+                --choices|-c) choices="$2";      shift 2 ;;
+                --wait|-w)    wait_flag=1;        shift   ;;
+                --timeout)    wait_timeout="$2"; shift 2 ;;
+                *) shift ;;
+            esac
+        done
+        payload=$(python3 -c "
+import json, sys
+text, dtype, source, choices = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
+d = {'description': text, 'type': dtype}
+if source:
+    d['source'] = source
+if choices:
+    d['options'] = choices.split(',')
+print(json.dumps(d))
+" "$text" "$dtype" "$source" "$choices")
+        response=$(_curl -X POST "${BASE}/decision/request" \
+            -H "Content-Type: application/json" \
+            -d "$payload")
+
+        if [[ "$wait_flag" -eq 0 ]]; then
+            echo "$response"
+            echo
+            exit 0
+        fi
+
+        decision_id=$(python3 -c "
+import json, sys
+print(json.loads(sys.argv[1]).get('decision_id', ''))
+" "$response" 2>/dev/null || echo "")
+        if [[ -z "$decision_id" ]]; then
+            echo "$response" >&2
+            echo "fgm: no decision_id in response" >&2
+            exit 1
+        fi
+        _wait_decision "$decision_id" "$wait_timeout"
+        ;;
+
+    # ── health ────────────────────────────────────────────────────────────────
+    health)
+        _curl "${BASE}/health"
+        echo
+        ;;
+
+    # ── apps ──────────────────────────────────────────────────────────────────
+    apps)
+        _curl "${BASE}/app/list"
+        echo
+        ;;
+
+    # ── register ──────────────────────────────────────────────────────────────
+    register)
+        name="${1:-}"
+        shift 2>/dev/null || true
+        emoji="" thread_id=""
+        while [[ $# -gt 0 ]]; do
+            case "$1" in
+                --emoji|-e)     emoji="$2";     shift 2 ;;
+                --thread-id|-t) thread_id="$2"; shift 2 ;;
+                *) shift ;;
+            esac
+        done
+        payload=$(python3 -c "
+import json, sys
+name, emoji, tid = sys.argv[1], sys.argv[2], sys.argv[3]
+d = {'name': name}
+if emoji:
+    d['emoji'] = emoji
+if tid:
+    try:
+        d['thread_id'] = int(tid)
+    except ValueError:
+        d['thread_id'] = tid
+print(json.dumps(d))
+" "$name" "$emoji" "$thread_id")
+        _curl -X POST "${BASE}/app/register" \
+            -H "Content-Type: application/json" \
+            -d "$payload"
+        echo
+        ;;
+
+    # ── help ──────────────────────────────────────────────────────────────────
+    help|--help|-h)
+        cat <<'HELP'
+fgm — faigrid messenger CLI  (agent-native)
+
+COMMANDS
+  notify  "text"      [--source NAME] [--level info|warn|error]
+  ask     "text"      [--type approve|choice|input]
+                      [--choices label1,label2,...]
+                      [--source NAME]
+                      [--wait]  block until operator responds
+                      [--timeout SECS]  (default 300)
+  health              check if messenger is running
+  apps                list registered apps
+  register NAME       [--emoji EMOJI] [--thread-id ID]
+
+ENVIRONMENT
+  MESSENGER_URL   default: http://127.0.0.1:9119
+  FGM_TIMEOUT     curl timeout in seconds (default: 30)
+
+EXAMPLES
+  fgm notify "Deployment done" --source openclaw
+  fgm ask "Deploy to prod?" --type approve --source codenomad --wait
+  fgm ask "Which env?" --type choice --choices staging,prod --wait --timeout 120
+  fgm ask "Enter target path:" --type input --source codenomad --wait
+  fgm register myagent --emoji 🤖
+  fgm health
+HELP
+        ;;
+
+    *)
+        echo "fgm: unknown command '$cmd'  (try: fgm help)" >&2
+        exit 1
+        ;;
+esac

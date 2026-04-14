@@ -69,6 +69,9 @@ import asyncio
 import json
 import logging
 import os
+import sys
+import urllib.error
+import urllib.request
 import uuid
 from datetime import datetime
 from pathlib import Path
@@ -142,6 +145,13 @@ def _save_apps() -> None:
         log.warning("Could not save apps registry: %s", exc)
 
 
+def _save_resolved(did: str, status: str, payload: dict) -> None:
+    """Store a resolved decision outcome; prune oldest if cap reached."""
+    _resolved[did] = {"id": did, "status": status, "result": payload, "at": _now()}
+    if len(_resolved) > _MAX_RESOLVED:
+        del _resolved[next(iter(_resolved))]
+
+
 def _app_info(name: str) -> dict:
     """Return registry entry for name, creating a default if unknown."""
     if name in _apps:
@@ -167,6 +177,10 @@ def _source_line(source: str, source_id: str) -> str:
 # { decision_id: {source, source_id, description, type, options, placeholder,
 #                  callback_url, created_at} }
 _pending: dict = {}
+
+# { decision_id: {id, status, result, at} }  — resolved outcomes (capped)
+_resolved: dict = {}
+_MAX_RESOLVED = 200
 
 # { telegram_user_id: decision_id }  — tracks who is typing a text reply
 _awaiting_input: dict = {}
@@ -349,19 +363,17 @@ async def handle_text_input(update: Update, _ctx: ContextTypes.DEFAULT_TYPE) -> 
 
     user_input = update.message.text.strip()
     by = update.effective_user.username or str(uid)
-    await _fire_callback(
-        item,
-        did,
-        {
-            "decision_id": did,
-            "source": item.get("source", ""),
-            "source_id": item.get("source_id", ""),
-            "type": "input",
-            "input": user_input,
-            "by": by,
-            "at": _now(),
-        },
-    )
+    payload = {
+        "decision_id": did,
+        "source": item.get("source", ""),
+        "source_id": item.get("source_id", ""),
+        "type": "input",
+        "input": user_input,
+        "by": by,
+        "at": _now(),
+    }
+    _save_resolved(did, "input", payload)
+    await _fire_callback(item, did, payload)
     await update.message.reply_text(
         f"✔ Input captured for `{did}`\n\n_{user_input}_",
         parse_mode="Markdown",
@@ -419,6 +431,7 @@ async def cb_button(update: Update, _ctx: ContextTypes.DEFAULT_TYPE) -> None:
             "by": by,
             "at": _now(),
         }
+        _save_resolved(did, "approved" if approved else "rejected", payload)
         await _fire_callback(item, did, payload)
         suffix = f"\n{_source_line(source, source_id)}" if source else ""
         await query.edit_message_text(
@@ -437,6 +450,7 @@ async def cb_button(update: Update, _ctx: ContextTypes.DEFAULT_TYPE) -> None:
             "by": by,
             "at": _now(),
         }
+        _save_resolved(did, "choice", payload)
         await _fire_callback(item, did, payload)
         suffix = f"\n{_source_line(source, source_id)}" if source else ""
         await query.edit_message_text(
@@ -572,18 +586,31 @@ async def http_decision_request(req: web.Request) -> web.Response:
     return web.json_response({"decision_id": did})
 
 
+async def http_decision_status(req: web.Request) -> web.Response:
+    """GET /decision/{id} — poll outcome.
+    Returns status: pending | approved | rejected | choice | input | unknown.
+    """
+    did = req.match_info.get("id", "")
+    if did in _pending:
+        return web.json_response({"id": did, "status": "pending"})
+    if did in _resolved:
+        return web.json_response(_resolved[did])
+    return web.json_response({"id": did, "status": "unknown"}, status=404)
+
+
 async def http_notify(req: web.Request) -> web.Response:
     """
     POST /notify
     { "message": "...", "level": "info|warn|error",
       "source": "...", "source_id": "..." }
+    Accepts "text" as alias for "message".
     """
     try:
         body = await req.json()
     except Exception:
         return web.json_response({"error": "invalid JSON"}, status=400)
 
-    message = str(body.get("message", ""))
+    message = str(body.get("message") or body.get("text") or "")
     level = str(body.get("level", "info"))
     source = str(body.get("source", ""))
     source_id = str(body.get("source_id", ""))
@@ -635,6 +662,7 @@ def _build_http_app(tg_app: Application) -> web.Application:
     app.router.add_get("/health", http_health)
     app.router.add_post("/decision/request", http_decision_request)
     app.router.add_post("/approval/request", http_decision_request)  # compat alias
+    app.router.add_get("/decision/{id}", http_decision_status)
     app.router.add_post("/notify", http_notify)
     app.router.add_post("/app/register", http_app_register)
     app.router.add_get("/app/list", http_app_list)
@@ -685,13 +713,156 @@ async def _run() -> None:
     await runner.cleanup()
 
 
+def _setup_wizard() -> None:
+    """Interactive first-time setup. Writes ~/.config/grid-messenger/config.env."""
+    config_path = Path.home() / ".config" / "grid-messenger" / "config.env"
+
+    print("\n╔══════════════════════════════════════════╗")
+    print("║   grid-messenger  —  Setup Wizard         ║")
+    print("╚══════════════════════════════════════════╝\n")
+
+    if config_path.exists():
+        ans = (
+            input(f"Config already exists at {config_path}\nOverwrite? [y/N] ")
+            .strip()
+            .lower()
+        )
+        if ans != "y":
+            print("Aborted.")
+            return
+
+    # ── Step 1: Bot token ─────────────────────────────────────────────────────
+    print("\n[1/3] Bot Token")
+    print("  → Open Telegram → @BotFather → /newbot → copy token")
+    token = input("  Bot token: ").strip()
+    if not token:
+        print("No token provided. Aborted.")
+        raise SystemExit(1)
+
+    print("  Validating…", end="", flush=True)
+    try:
+        with urllib.request.urlopen(
+            f"https://api.telegram.org/bot{token}/getMe", timeout=10
+        ) as resp:
+            data = json.loads(resp.read())
+        if not data.get("ok"):
+            print(" ✗ Invalid token (API returned not ok)")
+            raise SystemExit(1)
+        bot_username = data["result"]["username"]
+        print(f" ✓  @{bot_username}")
+    except urllib.error.URLError as exc:
+        print(f" ✗ Network error: {exc}")
+        raise SystemExit(1) from exc
+
+    # ── Step 2: Auto-detect user ID ───────────────────────────────────────────
+    print("\n[2/3] Your User ID")
+    print(f"  → Open Telegram → search @{bot_username} → send any message")
+    input("  Press Enter when done… ")
+
+    user_id: str = ""
+    username: str = ""
+    print("  Detecting…", end="", flush=True)
+    try:
+        with urllib.request.urlopen(
+            f"https://api.telegram.org/bot{token}/getUpdates?timeout=20&limit=10",
+            timeout=25,
+        ) as resp:
+            data = json.loads(resp.read())
+        for update in reversed(data.get("result", [])):
+            msg = update.get("message", {})
+            from_user = msg.get("from", {})
+            if from_user.get("id"):
+                user_id = str(from_user["id"])
+                username = from_user.get("username", "")
+                break
+    except Exception as exc:
+        print(f" error: {exc}")
+
+    if user_id:
+        print(f" ✓  {user_id}" + (f" (@{username})" if username else ""))
+    else:
+        print(" not detected")
+        user_id = input("  Enter your Telegram user ID manually: ").strip()
+        if not user_id:
+            print("No user ID provided. Aborted.")
+            raise SystemExit(1)
+
+    # ── Step 3: Notification target (group or self) ───────────────────────────
+    print("\n[3/3] Notification Chat")
+    print("  Options:")
+    print("    a) Notify yourself directly (default)")
+    print("    b) Notify a group/supergroup")
+    print("       (add bot as admin first, then send any message)")
+    choice = input("  Choice [a/b]: ").strip().lower()
+
+    notify_id: str = user_id
+    if choice == "b":
+        input(
+            f"  Add @{bot_username} to your group as admin,\n"
+            "  send a message, then press Enter… "
+        )
+        print("  Detecting group…", end="", flush=True)
+        try:
+            with urllib.request.urlopen(
+                f"https://api.telegram.org/bot{token}/getUpdates?timeout=20&limit=20",
+                timeout=25,
+            ) as resp:
+                data = json.loads(resp.read())
+            for update in reversed(data.get("result", [])):
+                chat = update.get("message", {}).get("chat", {})
+                if chat.get("type") in ("group", "supergroup") and chat.get("id"):
+                    notify_id = str(chat["id"])
+                    title = chat.get("title", "")
+                    print(f" ✓  {notify_id}" + (f" ({title})" if title else ""))
+                    break
+            else:
+                print(" not found")
+                fallback = input(
+                    "  Enter group ID (or Enter for personal chat): "
+                ).strip()
+                notify_id = fallback or user_id
+        except Exception as exc:
+            print(f" error: {exc}")
+            notify_id = user_id
+
+    # ── Write config ──────────────────────────────────────────────────────────
+    apps_file = Path.home() / ".local" / "share" / "grid-messenger" / "apps.json"
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+    config_path.write_text(
+        f"# fusionAIze Grid Messenger — Configuration\n"
+        f"# Generated by setup wizard · {_now()}\n"
+        f"# Restart: brew services restart fusionaize/tap/faigrid\n\n"
+        f"TELEGRAM_BOT_TOKEN={token}\n"
+        f"TELEGRAM_ALLOWED_USER_IDS={user_id}\n"
+        f"NOTIFY_CHAT_IDS={notify_id}\n\n"
+        f"# Core service URLs\n"
+        f"N8N_BASE_URL=http://127.0.0.1:5678\n"
+        f"FAIGATE_URL=http://127.0.0.1:8090\n"
+        f"OPENCLAW_URL=http://127.0.0.1:18789\n\n"
+        f"# Inbound HTTP\n"
+        f"WEBHOOK_PORT=9119\n"
+        f"WEBHOOK_BIND=127.0.0.1\n"
+        f"APPS_FILE={apps_file}\n"
+    )
+    config_path.chmod(0o600)
+
+    print(f"\n✓ Config written → {config_path}")
+    print("\nNext:")
+    print("  brew services start fusionaize/tap/faigrid")
+    print("  fgm health")
+
+
 def main() -> None:
+    if "--setup" in sys.argv:
+        _setup_wizard()
+        return
+
     logging.basicConfig(
         format="%(asctime)s %(levelname)-8s %(name)s — %(message)s",
         level=logging.INFO,
     )
     if not TELEGRAM_BOT_TOKEN:
-        log.error("TELEGRAM_BOT_TOKEN not set")
+        log.error("TELEGRAM_BOT_TOKEN not set — run: faigrid-messenger --setup")
         raise SystemExit(1)
     if not ALLOWED_USER_IDS:
         log.warning("TELEGRAM_ALLOWED_USER_IDS empty — all users blocked")
