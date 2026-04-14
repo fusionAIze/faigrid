@@ -111,6 +111,8 @@ APPS_FILE = Path(os.getenv("APPS_FILE", "/opt/grid-messenger/apps.json"))
 
 log = logging.getLogger("grid-messenger")
 
+_START_TIME = datetime.now(datetime.UTC)
+
 # ── App registry ──────────────────────────────────────────────────────────────
 # { name: {display_name, emoji, thread_id, registered_at} }
 _apps: dict = {}
@@ -656,10 +658,61 @@ async def http_app_list(_req: web.Request) -> web.Response:
     return web.json_response({"apps": _apps})
 
 
+async def http_api_health(_req: web.Request) -> web.Response:
+    """GET /api/v1/health — structured health JSON for agent/faisignal consumption."""
+    uptime_s = int((datetime.now(datetime.UTC) - _START_TIME).total_seconds())
+
+    # Probe configured service URLs
+    service_map = {
+        "n8n": N8N_BASE_URL,
+        "faigate": FAIGATE_URL,
+        "openclaw": OPENCLAW_URL,
+        "messenger": f"http://{WEBHOOK_BIND}:{WEBHOOK_PORT}",
+    }
+    services: dict = {}
+    timeout = aiohttp.ClientTimeout(total=1.5)
+    async with aiohttp.ClientSession(timeout=timeout) as session:
+        for name, url in service_map.items():
+            try:
+                async with session.get(url + "/", allow_redirects=False) as resp:
+                    services[name] = {
+                        "url": url,
+                        "reachable": True,
+                        "status": resp.status,
+                    }
+            except Exception:
+                services[name] = {"url": url, "reachable": False}
+
+    # Walk up from this file to find VERSION at the repo root
+    _version = "unknown"
+    _check = Path(__file__).resolve()
+    for _ in range(6):
+        _check = _check.parent
+        if (_check / "VERSION").exists():
+            _version = (_check / "VERSION").read_text().strip()
+            break
+
+    return web.json_response(
+        {
+            "status": "ok",
+            "version": _version,
+            "uptime_s": uptime_s,
+            "messenger": {
+                "pending": len(_pending),
+                "apps": len(_apps),
+                "port": WEBHOOK_PORT,
+            },
+            "services": services,
+            "at": _now(),
+        }
+    )
+
+
 def _build_http_app(tg_app: Application) -> web.Application:
     app = web.Application()
     app["tg_app"] = tg_app
     app.router.add_get("/health", http_health)
+    app.router.add_get("/api/v1/health", http_api_health)
     app.router.add_post("/decision/request", http_decision_request)
     app.router.add_post("/approval/request", http_decision_request)  # compat alias
     app.router.add_get("/decision/{id}", http_decision_status)

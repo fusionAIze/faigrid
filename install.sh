@@ -80,6 +80,104 @@ CURRENT_VERSION="none"
 mkdir -p "$LOCAL_REGISTRY"
 mkdir -p "$(dirname "$TOPOLOGY_FILE")"
 
+# --- Agent-Native CLI Commands ---
+
+_cmd_help() {
+    echo ""
+    echo -e "  ${BOLD}Usage:${NC}"
+    echo -e "    faigrid [OPTIONS]"
+    echo -e "    faigrid --status [--json]"
+    echo ""
+    echo -e "  ${BOLD}Options:${NC}"
+    echo -e "    --mode   local|remote    Execution mode (default: interactive)"
+    echo -e "    --target SSH_TARGET      Remote SSH target for remote mode"
+    echo -e "    --role   ROLE            Node role: core|edge|worker|backup|external|runner"
+    echo -e "    --action ACTION          Action: install|verify|update|control|workbench|uninstall"
+    echo -e "    --component NAME         Target a specific component"
+    echo -e "    --vnc                    Enable VNC for core role"
+    echo -e "    --yes                    Auto-confirm all prompts"
+    echo -e "    --status [--json]        Print node health status and exit"
+    echo -e "    --help                   Show this help and exit"
+    echo ""
+    echo -e "  ${BOLD}Agent interface:${NC}"
+    echo -e "    faigrid --status --json  Machine-readable JSON health output"
+    echo -e "    faigrid-workbench status Workbench plugin registry"
+    echo -e "    fgm health               grid-messenger HTTP status"
+    echo -e "    fgm notify \"text\"        Send Telegram notification"
+    echo ""
+    exit 0
+}
+
+_port_reachable() {
+    # -s silent, no -f so any HTTP response (incl. 404) counts as "port open"
+    curl --connect-timeout 1 -so /dev/null "http://127.0.0.1:${1}/" 2>/dev/null
+}
+
+_cmd_status() {
+    local output_json="${1:-false}"
+    local version
+    version="$(cat "${REPO_ROOT}/VERSION" 2>/dev/null || echo "unknown")"
+    local node
+    node="$(hostname -s 2>/dev/null || hostname 2>/dev/null || echo "unknown")"
+    local os_name
+    os_name="$(uname -s | tr '[:upper:]' '[:lower:]')"
+    local ts
+    ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+    local svc_names=("messenger" "n8n" "faigate" "openclaw")
+    local svc_ports=("9119"      "5678" "8090"    "18789")
+    local svc_stati=()
+
+    local i=0
+    while [[ $i -lt 4 ]]; do
+        if _port_reachable "${svc_ports[$i]}" 2>/dev/null; then
+            svc_stati+=("running")
+        else
+            svc_stati+=("stopped")
+        fi
+        i=$((i + 1))
+    done
+
+    if [[ "$output_json" == "true" ]]; then
+        printf '{\n'
+        printf '  "version": "%s",\n' "$version"
+        printf '  "node": "%s",\n' "$node"
+        printf '  "os": "%s",\n' "$os_name"
+        printf '  "services": {\n'
+        local j=0
+        while [[ $j -lt 4 ]]; do
+            local comma=","
+            [[ $j -eq 3 ]] && comma=""
+            printf '    "%s": {"port": %s, "status": "%s"}%s\n' \
+                "${svc_names[$j]}" "${svc_ports[$j]}" "${svc_stati[$j]}" "$comma"
+            j=$((j + 1))
+        done
+        printf '  },\n'
+        printf '  "at": "%s"\n' "$ts"
+        printf '}\n'
+    else
+        divider
+        echo -e "  ${BOLD}Node Status${NC}  ${DIM}v${version} · ${node} · ${os_name}${NC}"
+        divider
+        printf "  %-14s  %-6s  %s\n" "SERVICE" "PORT" "STATUS"
+        echo -e "  ${DIM}──────────────────────────────────────${NC}"
+        local k=0
+        while [[ $k -lt 4 ]]; do
+            local st="${svc_stati[$k]}"
+            printf "  %-14s  %-6s  " "${svc_names[$k]}" "${svc_ports[$k]}"
+            if [[ "$st" == "running" ]]; then
+                echo -e "${GREEN}✔ running${NC}"
+            else
+                echo -e "${DIM}✘ stopped${NC}"
+            fi
+            k=$((k + 1))
+        done
+        divider
+        echo ""
+    fi
+    exit 0
+}
+
 # --- CLI Arguments ---
 AUTO_YES="false"
 VNC_CHOICE=""
@@ -90,6 +188,8 @@ SSH_TARGET=""
 ROLE_NAME=""
 BOOTSTRAP_MODE="false"
 COMPONENT_NAME=""
+OUTPUT_JSON="false"
+RUN_STATUS="false"
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -101,9 +201,14 @@ while [[ $# -gt 0 ]]; do
     --vnc)       VNC_CHOICE="y"; shift ;;
     --yes)       AUTO_YES="true"; shift ;;
     --bootstrap) BOOTSTRAP_MODE="true"; shift ;;
+    --json)      OUTPUT_JSON="true"; shift ;;
+    --status)    RUN_STATUS="true"; shift ;;
+    --help|-h)   _cmd_help ;;
     *) error "Unknown parameter passed: $1" ;;
   esac
 done
+
+[[ "$RUN_STATUS" == "true" ]] && _cmd_status "$OUTPUT_JSON"
 
 # --- Hardware Check Functions ---
 check_hardware() {
