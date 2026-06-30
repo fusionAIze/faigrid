@@ -10,6 +10,7 @@ permissions:
 
 jobs:
   release-please:
+    if: ${{ github.server_url == 'https://github.com' }}
     runs-on: ubuntu-latest
     outputs:
       release_created: ${{ steps.rp.outputs.release_created }}
@@ -27,7 +28,7 @@ jobs:
   # After a release is created, update the Homebrew tap
   notify-tap:
     needs: release-please
-    if: needs.release-please.outputs.release_created == 'true'
+    if: ${{ (needs.release-please.outputs.release_created == 'true') && (github.server_url == 'https://github.com') }}
     runs-on: ubuntu-latest
     steps:
       - name: Compute SHA256

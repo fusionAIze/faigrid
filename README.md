@@ -253,3 +253,9 @@ Apache 2.0 — see [LICENSE](LICENSE) for details.
 ---
 
 > Made with ❤️ in Berlin · Part of the [fusionAIze](https://github.com/fusionAIze) ecosystem
+
+## Repository & Contributing
+
+Canonical repository: **self-hosted Forgejo** — `git.langevc.com/fusionaize/faigrid`
+(`git clone git@git.langevc.com:fusionaize/faigrid.git`). Develop against the Forgejo
+clone and open pull requests there. The GitHub copy is a read-only mirror.
