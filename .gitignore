@@ -41,3 +41,7 @@ docs/local/
 **/.env
 **/.env.local
 tests/.libs/
+
+# SkillWeave runtime is local; only the helper is tracked.
+.skillweave/*
+!.skillweave/agents.md
