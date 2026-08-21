@@ -10,8 +10,9 @@ setup() {
     export HOME="${BATS_TEST_TMPDIR}/home"
     mkdir -p "$HOME"
     
-    export STATE_FILE="$HOME/.grid-state"
-    export LOCAL_REGISTRY="${BATS_TEST_TMPDIR}/.faigrid/state"
+    export STATE_DIR="$HOME/.config/faigrid/registry"
+    export STATE_FILE="$STATE_DIR/state.env"
+    export LOCAL_REGISTRY="$STATE_DIR"
     
     # We must mock output functions missing since we only source parts of the script
     # or if we source install.sh, we might hit execution. 
