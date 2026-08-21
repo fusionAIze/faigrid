@@ -53,6 +53,12 @@ jobs:
             echo "::error::Version mismatch: VERSION=${FILE_VER} install.sh=${SCRIPT_VER}"
             exit 1
           fi
+          TAG="$(git describe --tags --always 2>/dev/null || true)"
+          if [[ -n "$TAG" && "$TAG" != "$(git rev-parse --short HEAD 2>/dev/null || true)" && "$TAG" != "v${FILE_VER}" ]]; then
+            echo "::warning::Tag ${TAG} does not match version v${FILE_VER} (non-fatal; release-please owns the next tag)"
+          else
+            echo "tag check: no meaningful tag present yet (or matches) — non-fatal; release-please owns versioning"
+          fi
 
   # ── Bats test suite ──────────────────────────────────────────────────────────
   bats:

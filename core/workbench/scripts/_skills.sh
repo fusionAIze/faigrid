@@ -132,7 +132,7 @@ _skill_resolve_npx() {
     local cmd_dir="${HOME}/.claude/commands"
     mkdir -p "$cmd_dir"
     local before; before=$(ls "$cmd_dir" 2>/dev/null | sort)
-    eval "$full_cmd" >/dev/null 2>&1 || true
+    command $full_cmd >/dev/null 2>&1 || true
     local after; after=$(ls "$cmd_dir" 2>/dev/null | sort)
     local new_file
     new_file=$(comm -13 <(echo "$before") <(echo "$after") | head -1)

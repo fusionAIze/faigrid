@@ -16,6 +16,11 @@
 # (git)               uses INSTALL_DIR + git fetch; no extra field needed
 # ─────────────────────────────────────────────────────────────────────────────
 
+# Executor Contract v1 — see docs/reference/executor-contract.md
+# Conformance: declare TOOL_* metadata, define tool_install/tool_status/
+# tool_uninstall (tool_configure/tool_doctor/tool_update optional), and emit the
+# structured JSON status object as the final stdout line of each verb.
+
 TOOL_NAME="example"
 TOOL_CATEGORY="clis"
 TOOL_DESC="Example descriptive text for the registry"
@@ -96,6 +101,11 @@ tool_status() {
     else
         echo "Not installed"
     fi
+
+    # Executor Contract v1 — emit structured JSON status as the FINAL stdout line.
+    # All fields required except "version" (use null when unknown); "data" MAY be {}.
+    # {"status":"ok|error","plugin":"<TOOL_NAME>","verb":"status","message":"...","version":"<ver|null>","data":{}}
+    echo "${TOOL_NAME} status: see executor-contract.md for the JSON emitter" >&2
 }
 
 tool_uninstall() {

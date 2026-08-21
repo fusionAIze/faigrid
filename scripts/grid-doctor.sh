@@ -23,8 +23,13 @@ print_header "Grid Doctor: Infrastructure Diagnostics"
 
 # 1. Environment & Resources
 info "Checking system resources..."
-FREE_MB=$(free -m | awk '/^Mem:/{print $4}')
-DISK_PCT=$(df / | awk 'NR==2 {print $5}' | sed 's/%//')
+if [[ "$(uname -s)" == "Darwin" ]]; then
+    FREE_MB=$(vm_stat | awk '/Pages free/{f=$3} /Pages inactive/{i=$3} END{gsub(/\./,"",f); gsub(/\./,"",i); print (f+i)*4096/1048576}')
+    DISK_PCT=$(df -k / | tail -1 | awk '{print $5}' | sed 's/%//')
+else
+    FREE_MB=$(free -m | awk '/^Mem:/{print $4}')
+    DISK_PCT=$(df / | awk 'NR==2 {print $5}' | sed 's/%//')
+fi
 
 if [[ "$FREE_MB" -lt 512 ]]; then
     warn "Low memory detected: ${FREE_MB}MB free. Core services might be unstable."
@@ -64,11 +69,26 @@ else
 fi
 
 # 4. State Verification
-if [[ -f "$HOME/.grid-state" ]]; then
-    CURRENT_ROLE=$(grep "ROLE=" "$HOME/.grid-state" | cut -d= -f2 || echo "unknown")
+STATE_DIR="${HOME}/.config/faigrid/registry"
+STATE_FILE="${STATE_DIR}/state.env"
+LEGACY_STATE="${HOME}/.grid-state"
+CURRENT_ROLE=""
+if [[ -f "$STATE_FILE" ]]; then
+    CURRENT_ROLE=$(grep "GRID_ROLE=" "$STATE_FILE" | cut -d= -f2 || echo "unknown")
+    # Fall back to ROLE= key written by older canonical versions
+    if [[ -z "$CURRENT_ROLE" || "$CURRENT_ROLE" == "unknown" ]]; then
+        CURRENT_ROLE=$(grep "ROLE=" "$STATE_FILE" | cut -d= -f2 || echo "unknown")
+    fi
     success "Node identity verified: Role is [${CURRENT_ROLE}]."
+elif [[ -f "$LEGACY_STATE" ]]; then
+    CURRENT_ROLE=$(grep "ROLE=" "$LEGACY_STATE" | cut -d= -f2 || echo "unknown")
+    warn "Detected legacy state file (~/.grid-state). Migrating to canonical registry and deprecating the legacy file."
+    mkdir -p "$STATE_DIR"
+    cp "$LEGACY_STATE" "$STATE_FILE"
+    success "Node identity verified (migrated): Role is [${CURRENT_ROLE}]."
+    warn "Legacy state file (~/.grid-state) is deprecated. Canonical state: ${STATE_FILE}."
 else
-    warn "No state file (~/.grid-state) found. This node may be unprovisioned."
+    warn "No state registry found. This node may be unprovisioned."
 fi
 
 # 5. Log Health

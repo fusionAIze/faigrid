@@ -83,6 +83,13 @@ print_header() {
   printf "\n%b%b=== %s ===%b\n\n" "${C_BOLD}" "${C_MAGENTA}" "$1" "${C_RESET}"
 }
 
+# JSON-escape a value for safe embedding in a JSONL line
+_json_escape() {
+  printf '%s' "$1" \
+    | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' \
+    | tr -d '\000-\037'
+}
+
 # Centralized Logging Aggregator
 log_event() {
   local COMPONENT=$1
@@ -90,14 +97,31 @@ log_event() {
   local MESSAGE=$3
   local LOG_DIR="/var/log/faigrid"
   local LOG_FILE="${LOG_DIR}/grid-system.log"
-  
+  local EVENTS_FILE="${LOG_DIR}/grid-events.jsonl"
+
   if [[ ! -d "$LOG_DIR" ]]; then
     sudo mkdir -p "$LOG_DIR" 2>/dev/null || true
-    sudo chmod 777 "$LOG_DIR" 2>/dev/null || true
+    sudo chown root:adm "$LOG_DIR" 2>/dev/null || true
+    sudo chmod 750 "$LOG_DIR" 2>/dev/null || true
   fi
-  
+
+  if [[ ! -f "$EVENTS_FILE" ]]; then
+    sudo touch "$EVENTS_FILE" 2>/dev/null || true
+    sudo chown root:adm "$EVENTS_FILE" 2>/dev/null || true
+    sudo chmod 640 "$EVENTS_FILE" 2>/dev/null || true
+  fi
+
   if [[ -w "$LOG_DIR" ]] || [[ -f "$LOG_FILE" && -w "$LOG_FILE" ]]; then
-    echo "$(date -u +"%Y-%m-%dT%H:%M:%SZ") | ${COMPONENT} | [${SEVERITY}] | ${MESSAGE}" >> "$LOG_FILE"
+    local json
+    json=$(printf '{"ts":"%s","component":"%s","severity":"%s","message":"%s"}' \
+      "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
+      "$(_json_escape "$COMPONENT")" \
+      "$(_json_escape "$SEVERITY")" \
+      "$(_json_escape "$MESSAGE")")
+    printf '%s\n' "$json" >> "$LOG_FILE"
+    if [[ -f "$EVENTS_FILE" ]] && [[ -w "$EVENTS_FILE" ]]; then
+      printf '%s\n' "$json" >> "$EVENTS_FILE"
+    fi
   fi
 }
 
@@ -113,7 +137,8 @@ rotate_logs() {
       log_event "system" "INFO" "Rotating logs (Size: ${SIZE_KB}KB)"
       mv "$LOG_FILE" "${LOG_FILE}.old"
       touch "$LOG_FILE"
-      chmod 666 "$LOG_FILE" 2>/dev/null || true
+      chmod 640 "$LOG_FILE" 2>/dev/null || true
+      sudo chown root:adm "$LOG_FILE" 2>/dev/null || true
     fi
   fi
 }
