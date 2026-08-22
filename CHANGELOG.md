@@ -3,6 +3,29 @@
 All notable changes to fusionAIze Grid are documented in this file.
 Generated from conventional commits using [git-cliff](https://git-cliff.org).
 
+## [1.8.0](https://github.com/fusionAIze/faigrid/compare/v1.7.0...v1.8.0) (2026-08-22)
+
+
+### Bug Fixes
+
+* **optimization round (O1–O12):** version truth, --setup KeyError, least-privilege logs, .env.topology untracking, _projects precedence, grid-doctor macOS portability, single state registry, eval removal, JSONL logging, executor contract, scoped --force
+
+
+### Closeout (FAI-207, C1–C11)
+
+* **grid-doctor:** macOS memory reads vm_stat page size; JSONL severity count; read-only (no state writes)
+* **logging:** log_event write path reaches disk (adm membership, once-only setup); grid-events.jsonl rotatable; overridable LOG_DIR
+* **install:** --yes parity restored (AUTO_YES read), prompt() printf-v; one migration semantic
+* **ci:** version check can actually fail (fetch-depth 0, exact-match tag); pytest job on ubuntu+macos; bats --regression/--integration; executor-contract conformance check
+* **messenger:** pytest runs against real deps (stubs only on ImportError); /api/v1/health real-routing test
+* **skills:** npx dispatch without unquoted expansion
+
+
+### CI/CD
+
+* **forgejo-first:** unified mirror workflow, CI guards, dev pointers ([#22](https://github.com/fusionAIze/faigrid/issues/22))
+
+
 ## [1.7.0](https://github.com/fusionAIze/faigrid/compare/v1.6.2...v1.7.0) (2026-04-14)
 
 
