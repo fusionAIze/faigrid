@@ -6,7 +6,7 @@
 
 - **Domain**: Shell-driven AI Infrastructure Orchestration.
 - **Language**: Strict Bash (`set -euo pipefail`).
-- **Core Engine**: `install.sh` orchestrator with `.grid-state` detection.
+- **Core Engine**: `install.sh` orchestrator with state detection at `~/.config/faigrid/registry/state.env` (legacy `~/.grid-state` is deprecated).
 - **Default AI Role**: Claude is often utilized for deep architectural reviews, structural bash rewrites, and security hardening patches.
 
 ## Project Instruction Summary
@@ -53,7 +53,7 @@ Use raw OS commands only when `rtk` lacks the necessary flags or when running na
 ## Operational Guardrails
 
 1. **Deny-by-default**: Never expose ports beyond `localhost` or internal subnets unless they are explicitly destined for `grid-edge` ingress. All core services bind to `127.0.0.1`.
-2. **State Detection First**: The main `install.sh` parses `~/.grid-state`. Always check existing state before provisioning to avoid unintended overwrites.
+2. **State Detection First**: The main `install.sh` parses `~/.config/faigrid/registry/state.env` (legacy `~/.grid-state` is deprecated). Always check existing state before provisioning to avoid unintended overwrites.
 3. **No destructive scripts without safeguard**: Any script that purges volumes, removes stack directories, or drops databases must include an explicit user confirmation prompt before executing.
 4. **Bash 3.2 compatibility is mandatory** — macOS ships Bash 3.2; all scripts must run on it.
    Forbidden Bash 4+ features:

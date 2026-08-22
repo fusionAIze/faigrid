@@ -6,7 +6,7 @@
 
 - **Domain**: Shell-driven AI Infrastructure Orchestration.
 - **Language**: Strict Bash (`set -euo pipefail`).
-- **Core Engine**: `install.sh` orchestrator with `.grid-state` detection.
+- **Core Engine**: `install.sh` orchestrator with state detection at `~/.config/faigrid/registry/state.env` (legacy `~/.grid-state` is deprecated).
 - **Default AI Role**: Codex is meant to be a rapid terminal executor, operating heavily on shell pipelines and local system automation tasks.
 
 ## Project Instruction Summary

@@ -32,7 +32,7 @@ error()   { echo -e "  ${RED}✘${NC}  $1"; exit 1; }
 divider() { echo -e "  ${DIM}──────────────────────────────────────────────────────${NC}"; }
 
 prompt() {
-    read -r -p "$(echo -e "  ${CYAN}▸${NC} $1")" "$2" || eval "$2="
+    read -r -p "$(echo -e "  ${CYAN}▸${NC} $1")" "$2" || printf -v "$2" "%s" ""
 }
 
 prompt_hidden() {
@@ -356,6 +356,8 @@ probe_grid_status() {
     local roles=("core" "edge" "worker" "backup" "external" "runner")
     for role in "${roles[@]}"; do
         if [[ -f "$LOCAL_REGISTRY/${role}.state" ]]; then
+            # Bash 3.2 lacks associative arrays; role comes from the hardcoded array
+            # above, never from operator/network input, so this eval is safe (V7).
             eval "GRID_STATUS_${role}=\"✔\""
         fi
     done

@@ -102,7 +102,7 @@ else
     info "Docker not found (Standard behavior for Edge/Mac-Worker nodes)."
 fi
 
-# 4. State Verification
+# 4. State Verification (read-only: grid-doctor never writes state)
 STATE_DIR="${HOME}/.config/faigrid/registry"
 STATE_FILE="${STATE_DIR}/state.env"
 LEGACY_STATE="${HOME}/.grid-state"
@@ -115,12 +115,7 @@ if [[ -f "$STATE_FILE" ]]; then
     fi
     success "Node identity verified: Role is [${CURRENT_ROLE}]."
 elif [[ -f "$LEGACY_STATE" ]]; then
-    CURRENT_ROLE=$(grep "ROLE=" "$LEGACY_STATE" | cut -d= -f2 || echo "unknown")
-    warn "Detected legacy state file (~/.grid-state). Migrating to canonical registry and deprecating the legacy file."
-    mkdir -p "$STATE_DIR"
-    cp "$LEGACY_STATE" "$STATE_FILE"
-    success "Node identity verified (migrated): Role is [${CURRENT_ROLE}]."
-    warn "Legacy state file (~/.grid-state) is deprecated. Canonical state: ${STATE_FILE}."
+    warn "Legacy ~/.grid-state found; run faigrid install to migrate."
 else
     warn "No state registry found. This node may be unprovisioned."
 fi

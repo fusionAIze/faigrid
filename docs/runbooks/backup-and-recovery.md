@@ -18,7 +18,7 @@ sudo logrotate -d /etc/logrotate.d/faigrid
 ## Automated Snapshots (Systemd Timers)
 
 Grid ships with a hardened `backup.sh` script that snapshots:
-- `~/.grid-state` (Topology)
+- `~/.config/faigrid/registry/state.env` (Topology; legacy `~/.grid-state` is deprecated)
 - `~/.config/faigrid` (Runtime API Secrets)
 - Postgres Database (n8n orchestration state)
 - Docker Volumes
@@ -46,7 +46,7 @@ cd faigrid && bash install.sh
 ```
 
 ### 2. Restore State and Secrets
-Extract your backed-up tarballs into `~/.grid-state` and `~/.config/faigrid/`.
+Extract your backed-up tarballs into `~/.config/faigrid/` (state lives at `~/.config/faigrid/registry/state.env`; legacy `~/.grid-state` is deprecated).
 
 ### 3. Restore Volumes
 ```bash
