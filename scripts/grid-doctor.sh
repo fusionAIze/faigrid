@@ -21,21 +21,41 @@ fi
 
 print_header "Grid Doctor: Infrastructure Diagnostics"
 
+# Free-memory helpers. Both return a whole number (MB) so downstream integer
+# arithmetic never trips `[[ ... -lt ... ]]`. The Darwin helper reads the real
+# page size from the vm_stat header instead of assuming 4096.
+_free_mb_darwin() {
+    vm_stat | awk '
+        /page size of/ { gsub(/[^0-9]/, "", $0); ps = $0 }
+        /Pages free/ { gsub(/\./, "", $3); f = $3 }
+        /Pages inactive/ { gsub(/\./, "", $3); i = $3 }
+        END { printf "%.0f", (f + i) * ps / 1048576 }'
+}
+
+_free_mb_linux() {
+    free -m | awk '/^Mem:/{print $4}'
+}
+
+_memory_status() {
+    local mb="$1"
+    if [[ "$mb" -lt 512 ]]; then
+        warn "Low memory detected: ${mb}MB free. Core services might be unstable."
+    else
+        success "Memory: ${mb}MB free."
+    fi
+}
+
 # 1. Environment & Resources
 info "Checking system resources..."
 if [[ "$(uname -s)" == "Darwin" ]]; then
-    FREE_MB=$(vm_stat | awk '/Pages free/{f=$3} /Pages inactive/{i=$3} END{gsub(/\./,"",f); gsub(/\./,"",i); print (f+i)*4096/1048576}')
+    FREE_MB=$(_free_mb_darwin)
     DISK_PCT=$(df -k / | tail -1 | awk '{print $5}' | sed 's/%//')
 else
-    FREE_MB=$(free -m | awk '/^Mem:/{print $4}')
+    FREE_MB=$(_free_mb_linux)
     DISK_PCT=$(df / | awk 'NR==2 {print $5}' | sed 's/%//')
 fi
 
-if [[ "$FREE_MB" -lt 512 ]]; then
-    warn "Low memory detected: ${FREE_MB}MB free. Core services might be unstable."
-else
-    success "Memory: ${FREE_MB}MB free."
-fi
+_memory_status "$FREE_MB"
 
 if [[ "$DISK_PCT" -gt 90 ]]; then
     error "Disk nearly full: ${DISK_PCT}% used!"

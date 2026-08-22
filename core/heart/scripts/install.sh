@@ -75,6 +75,11 @@ fi
 echo "[grid-core-heart] Add grid user to docker group (logout/login required)"
 sudo usermod -aG docker grid
 
+echo "[grid-core-heart] Add grid user to adm group (logdir write access)"
+if getent group adm >/dev/null 2>&1 && id -u grid >/dev/null 2>&1; then
+  sudo usermod -aG adm grid
+fi
+
 echo "[grid-core-heart] Starting stack..."
 cd "${COMPOSE_DIR}" || exit 1 || exit
 docker compose --env-file "${ENV_FILE}" up -d

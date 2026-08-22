@@ -32,7 +32,7 @@ error()   { echo -e "  ${RED}✘${NC}  $1"; exit 1; }
 divider() { echo -e "  ${DIM}──────────────────────────────────────────────────────${NC}"; }
 
 prompt() {
-    read -r -p "$(echo -e "  ${CYAN}▸${NC} $1")" "$2"
+    read -r -p "$(echo -e "  ${CYAN}▸${NC} $1")" "$2" || eval "$2="
 }
 
 prompt_hidden() {
@@ -517,10 +517,12 @@ if [[ -z "$ROLE_NAME" ]]; then
         echo -e "     Restic can run directly on ${BOLD}grid-core${NC} or ${BOLD}grid-external${NC},"
         echo -e "     backing up to a Synology NAS, S3 bucket, or USB drive."
         echo ""
-        prompt "Continue with a dedicated backup node anyway? (Y/n): " BACKUP_CONFIRM
-        if [[ "${BACKUP_CONFIRM:-Y}" =~ ^[Nn]$ ]]; then
-            info "Returning to node selection..."
-            exec bash "$0"
+        if [[ "$AUTO_YES" != "true" ]]; then
+            prompt "Continue with a dedicated backup node anyway? (Y/n): " BACKUP_CONFIRM
+            if [[ "${BACKUP_CONFIRM:-Y}" =~ ^[Nn]$ ]]; then
+                info "Returning to node selection..."
+                exec bash "$0"
+            fi
         fi
     fi
 fi
@@ -664,11 +666,17 @@ fi
 if [[ "$CURRENT_ROLE" != "none" && "$CURRENT_ROLE" != "$ROLE_NAME" ]]; then
     echo ""
     warning "This target is already registered as ${BOLD}${CURRENT_ROLE}${NC}, but you selected ${BOLD}${ROLE_NAME}${NC}."
-    prompt "Change this node's role? (y/N): " CHANGE_ROLE
-    if [[ ! "${CHANGE_ROLE:-N}" =~ ^[Yy]$ ]]; then
+    if [[ "$AUTO_YES" == "true" ]]; then
         ROLE_NAME="$CURRENT_ROLE"
         ROLE_DIR="$(resolve_role_dir "$ROLE_NAME")"
-        info "Keeping existing role: ${ROLE_NAME}"
+        info "Keeping existing role: ${ROLE_NAME} (--yes: non-destructive auto-confirm)"
+    else
+        prompt "Change this node's role? (y/N): " CHANGE_ROLE
+        if [[ ! "${CHANGE_ROLE:-N}" =~ ^[Yy]$ ]]; then
+            ROLE_NAME="$CURRENT_ROLE"
+            ROLE_DIR="$(resolve_role_dir "$ROLE_NAME")"
+            info "Keeping existing role: ${ROLE_NAME}"
+        fi
     fi
 fi
 
@@ -804,7 +812,12 @@ fi
 if [[ "$ROLE_NAME" == "core" && "$ACTION_NAME" == "install" ]]; then
     if [[ -z "$VNC_CHOICE" ]]; then
         echo ""
-        prompt "Enable VNC GUI for the AI Workbench? (y/N): " VNC_CHOICE
+        if [[ "$AUTO_YES" == "true" ]]; then
+            VNC_CHOICE="N"
+            info "Disabling VNC (--yes: non-destructive auto-confirm)"
+        else
+            prompt "Enable VNC GUI for the AI Workbench? (y/N): " VNC_CHOICE
+        fi
     fi
 fi
 

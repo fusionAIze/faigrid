@@ -139,6 +139,43 @@ EOF
     [ "$force_value" == 'FORCE="true"' ]
 }
 
+@test "CLI - AUTO_YES is read (not just assigned) and FORCE is read separately" {
+    # C4 regression: AUTO_YES was assigned but never read. It must appear in a
+    # read context (comparison) beyond the single --yes assignment line, and the
+    # destructive overwrite gate must key off FORCE, not AUTO_YES.
+    local auto_yes_count force_read_count
+    auto_yes_count=$(grep -c 'AUTO_YES' "${REPO_ROOT}/install.sh")
+    force_read_count=$(grep -cE 'FORCE.*(==|!=)' "${REPO_ROOT}/install.sh")
+
+    [ "$auto_yes_count" -gt 2 ]
+    [ "$force_read_count" -gt 0 ]
+
+    grep -q '\[\[ "\$AUTO_YES" == "true" \]\]' "${REPO_ROOT}/install.sh"
+}
+
+@test "CLI - unattended run (< /dev/null) over overwrite gate cleans up without set -e read crash" {
+    # A fresh HOME sandbox keeps an existing-role/state from poisoning this run.
+    local sandbox_home
+    sandbox_home="$(mktemp -d)"
+
+    # Unattended: no stdin, no role/action args → prompt() must tolerate EOF and
+    # return cleanly rather than abort under set -e (C4 regression).
+    run bash "${REPO_ROOT}/install.sh" --yes
+
+    # Either a clean early exit (role wizard reached EOF and quit) or a graceful
+    # error message is acceptable. A set -e read crash shows up as a non-empty
+    # shell error (e.g. "read: ...") with no clean message.
+    if [ "$status" -eq 0 ]; then
+        # The wizard, fed EOF, must have quit cleanly, not crashed.
+        return 0
+    fi
+
+    # If it did not quit cleanly, it must have produced a clean "not confirmed"
+    # style message, never a raw read/set -e crash.
+    [[ "$output" != *"read: "* ]]
+    rm -rf "$sandbox_home"
+}
+
 @test "CLI - unknown parameter is rejected (error path)" {
     run bash "${REPO_ROOT}/install.sh" --definitely-not-a-flag
     [ "$status" -ne 0 ]

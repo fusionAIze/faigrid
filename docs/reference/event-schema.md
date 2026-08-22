@@ -41,3 +41,24 @@ always remains valid JSON.
 | `/var/log/faigrid/`                     | 750  | root:adm |
 | `/var/log/faigrid/grid-system.log`      | 640  | root:adm |
 | `/var/log/faigrid/grid-events.jsonl`    | 640  | root:adm |
+
+The `adm` group membership required by these `root:adm` permissions is
+established at install time by `core/heart/scripts/install.sh`, which adds
+the `grid` service user to the `adm` group (guarded: only when both the
+`grid` user and the `adm` group exist).
+
+## Overriding the log directory
+
+`LOG_DIR` is overridable via the environment. `log_event` resolves its
+target directory as `"${LOG_DIR:-/var/log/faigrid}"`, so a non-root caller
+(or a test/container) can redirect writes to a writable path without root:
+
+```bash
+export LOG_DIR="/tmp/faigrid-test"
+log_event "system" "INFO" "hello"
+```
+
+Both `grid-system.log` and `grid-events.jsonl` are written relative to the
+resolved `LOG_DIR`. This is used by the unit test suite
+(`tests/unit/05-log-event.bats`) to exercise the write path as an
+unprivileged caller.

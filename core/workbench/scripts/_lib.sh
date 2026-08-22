@@ -95,7 +95,7 @@ log_event() {
   local COMPONENT=$1
   local SEVERITY=$2
   local MESSAGE=$3
-  local LOG_DIR="/var/log/faigrid"
+  local LOG_DIR="${LOG_DIR:-/var/log/faigrid}"
   local LOG_FILE="${LOG_DIR}/grid-system.log"
   local EVENTS_FILE="${LOG_DIR}/grid-events.jsonl"
 
@@ -105,10 +105,14 @@ log_event() {
     sudo chmod 750 "$LOG_DIR" 2>/dev/null || true
   fi
 
-  if [[ ! -f "$EVENTS_FILE" ]]; then
-    sudo touch "$EVENTS_FILE" 2>/dev/null || true
-    sudo chown root:adm "$EVENTS_FILE" 2>/dev/null || true
-    sudo chmod 640 "$EVENTS_FILE" 2>/dev/null || true
+  if [[ ! -w "$EVENTS_FILE" ]]; then
+    if [[ -w "$LOG_DIR" ]]; then
+      touch "$EVENTS_FILE" 2>/dev/null || true
+    else
+      sudo touch "$EVENTS_FILE" 2>/dev/null || true
+      sudo chown root:adm "$EVENTS_FILE" 2>/dev/null || true
+      sudo chmod 640 "$EVENTS_FILE" 2>/dev/null || true
+    fi
   fi
 
   if [[ -w "$LOG_DIR" ]] || [[ -f "$LOG_FILE" && -w "$LOG_FILE" ]]; then
