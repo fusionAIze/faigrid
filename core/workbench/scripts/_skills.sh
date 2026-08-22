@@ -91,6 +91,41 @@ _skill_mark_deployed() {
 # ── Translator / resolver ──────────────────────────────────────────────────────
 # Sets _SKILL_CONTENT and _SKILL_NAME_HINT; returns 0 on success.
 
+# Tokenise a command line into words, honouring single and double quotes.
+# Everything else is treated literally: no globbing, no metacharacter
+# interpretation. This is the Bash 3.2-safe replacement for unquoted
+# $full_cmd expansion (indexed array + C-style loop; no assoc arrays).
+_skill_tokenize() {
+    local line="$1" word="" quote=""
+    local -a out=()
+    local i c
+    for ((i = 0; i < ${#line}; i++)); do
+        c="${line:i:1}"
+        if [[ -n "$quote" ]]; then
+            if [[ "$c" == "$quote" ]]; then
+                quote=""
+            else
+                word+="$c"
+            fi
+        elif [[ "$c" == '"' || "$c" == "'" ]]; then
+            quote="$c"
+        elif [[ "$c" == ' ' || "$c" == $'\t' ]]; then
+            if [[ -n "$word" ]]; then
+                out+=("$word")
+                word=""
+            fi
+        else
+            word+="$c"
+        fi
+    done
+    if [[ -n "$word" ]]; then
+        out+=("$word")
+    fi
+    if [[ ${#out[@]} -gt 0 ]]; then
+        printf '%s\n' "${out[@]}"
+    fi
+}
+
 _skill_resolve_npx() {
     local full_cmd="$1"
     # Extract package name (strip version) and --skill path
@@ -132,7 +167,16 @@ _skill_resolve_npx() {
     local cmd_dir="${HOME}/.claude/commands"
     mkdir -p "$cmd_dir"
     local before; before=$(ls "$cmd_dir" 2>/dev/null | sort)
-    command $full_cmd >/dev/null 2>&1 || true
+    # Tokenise the operator-supplied npx command ONCE into an array, then run it
+    # via array expansion. Each element stays a single argument: no word-splitting,
+    # no pathname (glob) expansion, no metacharacter interpretation — the Bash
+    # 3.2-safe replacement for the previous unquoted `command $full_cmd`.
+    local -a args=()
+    local _tok
+    while IFS= read -r _tok; do
+        args+=("$_tok")
+    done < <(_skill_tokenize "$full_cmd")
+    command "${args[@]}" >/dev/null 2>&1 || true
     local after; after=$(ls "$cmd_dir" 2>/dev/null | sort)
     local new_file
     new_file=$(comm -13 <(echo "$before") <(echo "$after") | head -1)

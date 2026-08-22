@@ -102,6 +102,28 @@ setup() {
     [ "$calls_after_first" -eq "$calls_after_third" ]
 }
 
+@test "rotate_logs rotates both grid-system.log and grid-events.jsonl" {
+    # Tiny threshold so a couple of KB is "over the limit"; the test exercises
+    # the real _lib.sh rotate_logs, not a reimplementation.
+    export MAX_SIZE_KB=1
+
+    local sys_log="${LOG_DIR}/grid-system.log"
+    local evt_log="${LOG_DIR}/grid-events.jsonl"
+
+    dd if=/dev/zero of="$sys_log" bs=1024 count=2 2>/dev/null
+    dd if=/dev/zero of="$evt_log" bs=1024 count=2 2>/dev/null
+
+    run rotate_logs
+    [ "$status" -eq 0 ]
+
+    [ -f "${sys_log}.old" ]
+    [ -f "${evt_log}.old" ]
+
+    # Fresh files are recreated (not just renamed away).
+    [ -f "$sys_log" ]
+    [ -f "$evt_log" ]
+}
+
 sudo_calls_count() {
     if [ -f "${BATS_TEST_TMPDIR}/sudo_calls" ]; then
         wc -l < "${BATS_TEST_TMPDIR}/sudo_calls" | tr -d ' '

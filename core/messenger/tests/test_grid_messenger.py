@@ -20,15 +20,37 @@ not at import time, so importing the module is safe without a token.
 
 from __future__ import annotations
 
+import json
 import pathlib
 import sys
 
-# Ensure stubs are registered before importing the module under test.
-import conftest  # noqa: F401  (registers aiohttp/telegram stubs)
+# Ensure stubs are registered (only if the real libs are missing) before the
+# module under test is imported.
+import conftest  # noqa: F401  (registers aiohttp/telegram stubs when absent)
 import pytest
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "src"))
 import grid_messenger as gm
+
+
+def _is_stub_aiohttp() -> bool:
+    """True when aiohttp is the in-process stub rather than the real library."""
+    return getattr(gm.aiohttp, "__spec__", None) is None
+
+
+def _response_json(resp) -> dict:
+    """Read a JSON body uniformly from the aiohttp stub and the real library.
+
+    The stub and real aiohttp both expose ``.body`` as the raw bytes payload;
+    ``.text`` differs across versions (plain ``str`` on the real lib, a
+    coroutine on the stub), so we decode from ``.body`` to stay portable.
+    """
+    return json.loads(resp.body.decode("utf-8"))
+
+
+REAL_AIOHTTP = pytest.mark.skipif(
+    _is_stub_aiohttp(), reason="aiohttp not installed; exercising route stubs"
+)
 
 
 @pytest.fixture(autouse=True)
@@ -258,8 +280,8 @@ def test_format_decision_choice_lists_options():
 async def test_http_health_returns_ok_json():
     # http_health ignores its request and only reads _pending/_apps lengths.
     resp = await gm.http_health(None)
-    assert resp["status"] == 200
-    assert resp["json"] == {
+    assert resp.status == 200
+    assert _response_json(resp) == {
         "status": "ok",
         "pending": 0,
         "apps": len(gm._apps),
@@ -271,8 +293,9 @@ async def test_http_app_list_reflects_registry():
     gm._apps.clear()
     gm._apps["n8n"] = {"display_name": "n8n", "emoji": "⚡", "thread_id": None}
     resp = await gm.http_app_list(None)
-    assert resp["status"] == 200
-    assert resp["json"]["apps"]["n8n"]["display_name"] == "n8n"
+    assert resp.status == 200
+    body = _response_json(resp)
+    assert body["apps"]["n8n"]["display_name"] == "n8n"
 
 
 @pytest.mark.asyncio
@@ -282,8 +305,8 @@ async def test_http_decision_request_unknown_type_rejected():
             return {"type": "bogus", "description": "x"}
 
     resp = await gm.http_decision_request(Req())
-    assert resp["status"] == 400
-    assert "unknown type" in resp["json"]["error"]
+    assert resp.status == 400
+    assert "unknown type" in (_response_json(resp))["error"]
 
 
 @pytest.mark.asyncio
@@ -293,8 +316,8 @@ async def test_http_decision_request_choice_requires_options():
             return {"type": "choice", "description": "pick"}
 
     resp = await gm.http_decision_request(Req())
-    assert resp["status"] == 400
-    assert "options" in resp["json"]["error"]
+    assert resp.status == 400
+    assert "options" in (_response_json(resp))["error"]
 
 
 @pytest.mark.asyncio
@@ -304,8 +327,8 @@ async def test_http_decision_request_invalid_json():
             raise ValueError("bad JSON")
 
     resp = await gm.http_decision_request(Req())
-    assert resp["status"] == 400
-    assert resp["json"]["error"] == "invalid JSON"
+    assert resp.status == 400
+    assert (_response_json(resp))["error"] == "invalid JSON"
 
 
 @pytest.mark.asyncio
@@ -315,7 +338,31 @@ async def test_http_notify_invalid_json():
             raise ValueError("nope")
 
     resp = await gm.http_notify(Req())
-    assert resp["status"] == 400
+    assert resp.status == 400
+
+
+# ── Real aiohttp routing (exercised only when aiohttp is installed) ──────────
+@REAL_AIOHTTP
+@pytest.mark.asyncio
+async def test_health_endpoint_real_routing():
+    """Build the real aiohttp app and drive /api/v1/health through the router."""
+    from aiohttp import web
+    from aiohttp.test_utils import TestClient, TestServer
+
+    app = gm._build_http_app(None)
+    assert isinstance(app, web.Application)
+
+    server = TestServer(app)
+    await server.start_server()
+    try:
+        async with TestClient(server) as client:
+            resp = await client.get("/api/v1/health")
+            assert resp.status == 200
+            body = await resp.json()
+            assert body["status"] == "ok"
+            assert body["messenger"]["pending"] == len(gm._pending)
+    finally:
+        await server.close()
 
 
 # ── --setup missing-token path ────────────────────────────────────────────────

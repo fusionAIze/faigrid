@@ -136,19 +136,46 @@ log_event() {
 }
 
 # Simple Log Rotation
+# Rotates grid-system.log and grid-events.jsonl under the same size rule.
+# Rotation happens first for both files, then a single summary event is emitted
+# so the event lands in the freshly-created files (never swept into the .old).
+_rotate_one_log() {
+  local file="$1"
+  local max_size_kb="$2"
+  [[ -f "$file" ]] || return 0
+  local size_kb
+  size_kb=$(du -k "$file" | cut -f1)
+  [[ "$size_kb" -gt "$max_size_kb" ]] || return 0
+  mv "$file" "${file}.old"
+  touch "$file"
+  chmod 640 "$file" 2>/dev/null || true
+  sudo chown root:adm "$file" 2>/dev/null || true
+  printf '%s' "$size_kb"
+}
+
 rotate_logs() {
-  local LOG_FILE="/var/log/faigrid/grid-system.log"
-  local MAX_SIZE_KB=5120 # 5MB limit
-  
-  if [[ -f "$LOG_FILE" ]]; then
-    local SIZE_KB
-    SIZE_KB=$(du -k "$LOG_FILE" | cut -f1)
-    if [[ "$SIZE_KB" -gt "$MAX_SIZE_KB" ]]; then
-      log_event "system" "INFO" "Rotating logs (Size: ${SIZE_KB}KB)"
-      mv "$LOG_FILE" "${LOG_FILE}.old"
-      touch "$LOG_FILE"
-      chmod 640 "$LOG_FILE" 2>/dev/null || true
-      sudo chown root:adm "$LOG_FILE" 2>/dev/null || true
+  local LOG_DIR="${LOG_DIR:-/var/log/faigrid}"
+  local MAX_SIZE_KB="${MAX_SIZE_KB:-5120}" # 5MB limit
+  local LOG_FILE="${LOG_DIR}/grid-system.log"
+  local EVENTS_FILE="${LOG_DIR}/grid-events.jsonl"
+
+  local sys_size evt_size
+  sys_size=$(_rotate_one_log "$LOG_FILE" "$MAX_SIZE_KB")
+  evt_size=$(_rotate_one_log "$EVENTS_FILE" "$MAX_SIZE_KB")
+
+  local rotated=""
+  if [[ -n "$sys_size" ]]; then
+    rotated="grid-system.log=${sys_size}KB"
+  fi
+  if [[ -n "$evt_size" ]]; then
+    if [[ -n "$rotated" ]]; then
+      rotated="${rotated}, grid-events.jsonl=${evt_size}KB"
+    else
+      rotated="grid-events.jsonl=${evt_size}KB"
     fi
+  fi
+
+  if [[ -n "$rotated" ]]; then
+    log_event "system" "INFO" "Rotating logs (Size: ${rotated})"
   fi
 }

@@ -7,8 +7,11 @@ installed. This conftest installs minimal in-process stubs for both libraries
 *before* the module under test is imported, so that importing the module and
 exercising its pure/HTTP logic works regardless of the environment.
 
-Only the symbols that grid_messenger.py (and the tests) actually touch are
-stubbed. Anything requiring a live network or a real bot is out of scope.
+The stubs are installed *only* when the real library cannot be imported: if
+``aiohttp`` or ``python-telegram-bot`` is actually importable, it is left in
+place and the tests exercise the real implementation. Only the symbols that
+grid_messenger.py (and the tests) actually touch are stubbed. Anything
+requiring a live network or a real bot is out of scope.
 """
 
 from __future__ import annotations
@@ -94,13 +97,27 @@ def _make_aiohttp_module() -> types.ModuleType:
         def __init__(self, total=None):
             self.total = total
 
+    # Minimal stand-in for aiohttp.web.Response. It exposes the same surface the
+    # tests touch (``.status`` and ``await .text()``) so handler assertions read
+    # identically against the stub and against a real aiohttp install.
+    class Response:
+        def __init__(self, *, status=200, body=b"", **kwargs):
+            self.status = status
+            self.body = body
+
+        async def text(self, *a, **k):
+            return self.body.decode("utf-8")
+
+    def _json_response(data, **kwargs):
+        import json as _json
+
+        status = kwargs.get("status", 200)
+        return Response(status=status, body=_json.dumps(data).encode("utf-8"))
+
     aiohttp.ClientSession = ClientSession
     aiohttp.ClientTimeout = ClientTimeout
-    aiohttp.web.Response = types.SimpleNamespace()
-    aiohttp.web.json_response = lambda data, **kw: {
-        "status": kw.get("status", 200),
-        "json": data,
-    }
+    aiohttp.web.Response = Response
+    aiohttp.web.json_response = _json_response
     aiohttp.web.Application = lambda *a, **k: {}
     aiohttp.web.AppRunner = object
     aiohttp.web.TCPSite = object
@@ -108,17 +125,21 @@ def _make_aiohttp_module() -> types.ModuleType:
 
 
 def _install_if_missing(name: str, factory) -> None:
-    if name not in sys.modules:
+    try:
+        __import__(name)
+    except ImportError:
         sys.modules[name] = factory()
 
 
-_install_if_missing("telegram", _make_telegram_module)
+def _install_telegram_if_missing() -> None:
+    try:
+        __import__("telegram")
+        __import__("telegram.ext")
+    except ImportError:
+        tg = _make_telegram_module()
+        sys.modules["telegram"] = tg
+        sys.modules["telegram.ext"] = tg.ext
+
+
+_install_telegram_if_missing()
 _install_if_missing("aiohttp", _make_aiohttp_module)
-
-
-# Ensure `telegram.ext` is importable as a submodule (grid_messenger does
-# `from telegram.ext import ...`). Registering it in sys.modules makes the import
-# system resolve the dotted path against our stub package.
-_telegram = sys.modules.get("telegram")
-if _telegram is not None:
-    sys.modules.setdefault("telegram.ext", _telegram.ext)
