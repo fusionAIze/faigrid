@@ -43,6 +43,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
       - name: Compare VERSION vs install.sh
         run: |
           FILE_VER="$(cat VERSION)"
@@ -53,6 +55,28 @@ jobs:
             echo "::error::Version mismatch: VERSION=${FILE_VER} install.sh=${SCRIPT_VER}"
             exit 1
           fi
+          TAG="$(git describe --tags --exact-match 2>/dev/null || true)"
+          if [[ -n "$TAG" && "$TAG" != "v${FILE_VER}" ]]; then
+            echo "::warning::Tag ${TAG} does not match version v${FILE_VER} (non-fatal; release-please owns the next tag)"
+          fi
+
+  # ── Python: grid-messenger tests (pytest) ────────────────────────────────────
+  pytest:
+    if: ${{ github.server_url == 'https://github.com' }}
+    name: Python (pytest)
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: pip install -r core/messenger/requirements-dev.txt
+      - name: Run pytest
+        run: python -m pytest core/messenger/tests/ -q
 
   # ── Bats test suite ──────────────────────────────────────────────────────────
   bats:
@@ -74,6 +98,20 @@ jobs:
         run: tests/run_tests.sh --functional
       - name: Run smoke tests
         run: tests/run_tests.sh --smoke
+      - name: Run regression tests
+        run: tests/run_tests.sh --regression
+      - name: Run integration tests
+        run: tests/run_tests.sh --integration
+
+  # ── Executor Contract conformance ────────────────────────────────────────────
+  executor-contract:
+    if: ${{ github.server_url == 'https://github.com' }}
+    name: Executor Contract conformance
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Run conformance check (report)
+        run: bash scripts/check-executor-contract.sh
 
   # ── Forbidden artifacts ──────────────────────────────────────────────────────
   forbid-artifacts:
@@ -106,16 +144,18 @@ jobs:
   gate:
     name: CI Gate
     runs-on: ubuntu-latest
-    needs: [shellcheck, python-lint, version-check, bats, forbid-artifacts]
+    needs: [shellcheck, python-lint, version-check, bats, pytest, forbid-artifacts, executor-contract]
     if: ${{ (always()) && (github.server_url == 'https://github.com') }}
     steps:
       - name: All required checks passed
         run: |
-          if [[ "${{ needs.shellcheck.result }}"        != "success" ]] ||
-             [[ "${{ needs.python-lint.result }}"       != "success" ]] ||
-             [[ "${{ needs.version-check.result }}"     != "success" ]] ||
-             [[ "${{ needs.bats.result }}"              != "success" ]] ||
-             [[ "${{ needs.forbid-artifacts.result }}"  != "success" ]]; then
+          if [[ "${{ needs.shellcheck.result }}"            != "success" ]] ||
+             [[ "${{ needs.python-lint.result }}"           != "success" ]] ||
+             [[ "${{ needs.version-check.result }}"         != "success" ]] ||
+             [[ "${{ needs.bats.result }}"                  != "success" ]] ||
+             [[ "${{ needs.pytest.result }}"                != "success" ]] ||
+             [[ "${{ needs.forbid-artifacts.result }}"      != "success" ]] ||
+             [[ "${{ needs.executor-contract.result }}"     != "success" ]]; then
             echo "::error::One or more required checks failed — merge blocked."
             exit 1
           fi

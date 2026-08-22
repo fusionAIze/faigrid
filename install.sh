@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ==============================================================================
 # fusionAIze Grid - Advanced Universal Orchestrator
-# Version 1.6.0
+# Version 1.7.0
 # ==============================================================================
 
 set -euo pipefail
@@ -19,7 +19,7 @@ DIM='\033[2m'
 
 echo -e "\033[38;2;0;82;204m▐▘    ▘    \033[38;2;196;217;0m▄▖▄▖\033[38;2;0;82;204m    \033[0m  \033[38;2;38;67;123m▄▖  ▘ ▌\033[0m"
 echo -e "\033[38;2;0;82;204m▜▘▌▌▛▘▌▛▌▛▌\033[38;2;196;217;0m▌▌▐ \033[38;2;0;82;204m▀▌█▌\033[0m  \033[38;2;38;67;123m▌ ▛▘▌▛▌\033[0m"
-echo -e "\033[38;2;0;82;204m▐ ▙▌▄▌▌▙▌▌▌\033[38;2;196;217;0m▛▌▟▖\033[38;2;0;82;204m▙▖▙▖\033[0m  \033[38;2;38;67;123m▙▌▌ ▌▙▌\033[0m  ${DIM}v1.6.0${NC}"
+echo -e "\033[38;2;0;82;204m▐ ▙▌▄▌▌▙▌▌▌\033[38;2;196;217;0m▛▌▟▖\033[38;2;0;82;204m▙▖▙▖\033[0m  \033[38;2;38;67;123m▙▌▌ ▌▙▌\033[0m  ${DIM}v1.7.0${NC}"
 echo ""
 echo -e "${DIM}  Sovereign AI Infrastructure — Advanced Universal Orchestrator${NC}"
 echo ""
@@ -32,7 +32,7 @@ error()   { echo -e "  ${RED}✘${NC}  $1"; exit 1; }
 divider() { echo -e "  ${DIM}──────────────────────────────────────────────────────${NC}"; }
 
 prompt() {
-    read -r -p "$(echo -e "  ${CYAN}▸${NC} $1")" "$2"
+    read -r -p "$(echo -e "  ${CYAN}▸${NC} $1")" "$2" || printf -v "$2" "%s" ""
 }
 
 prompt_hidden() {
@@ -49,12 +49,14 @@ _quit() {
     exit 0
 }
 
-STATE_FILE="$HOME/.grid-state"
+# Single canonical state directory (legacy ~/.grid-state is deprecated)
+STATE_DIR="${HOME}/.config/faigrid/registry"
+STATE_FILE="${STATE_DIR}/state.env"
 # Repository root for relative path resolution
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TOPOLOGY_FILE="${HOME}/.config/faigrid/.env.topology"
 # User-scoped registry — stable regardless of install method (git clone vs Homebrew)
-LOCAL_REGISTRY="${HOME}/.config/faigrid/registry"
+LOCAL_REGISTRY="${STATE_DIR}"
 
 # --- 1.3.0 Legacy Migration Hook ---
 if [[ -f "${REPO_ROOT}/core/heart/scripts/migrate_1.3.sh" ]]; then
@@ -95,7 +97,8 @@ _cmd_help() {
     echo -e "    --action ACTION          Action: install|verify|update|control|workbench|uninstall"
     echo -e "    --component NAME         Target a specific component"
     echo -e "    --vnc                    Enable VNC for core role"
-    echo -e "    --yes                    Auto-confirm all prompts"
+    echo -e "    --yes                    Auto-confirm non-destructive prompts"
+    echo -e "    --force                  Bypass destructive prompts (except delete-all-data)"
     echo -e "    --status [--json]        Print node health status and exit"
     echo -e "    --help                   Show this help and exit"
     echo ""
@@ -180,6 +183,7 @@ _cmd_status() {
 
 # --- CLI Arguments ---
 AUTO_YES="false"
+FORCE="false"
 VNC_CHOICE=""
 ROLE_CHOICE=""
 ACTION_NAME=""
@@ -200,6 +204,7 @@ while [[ $# -gt 0 ]]; do
     --component) COMPONENT_NAME="$2"; shift 2 ;;
     --vnc)       VNC_CHOICE="y"; shift ;;
     --yes)       AUTO_YES="true"; shift ;;
+    --force)     FORCE="true"; shift ;;
     --bootstrap) BOOTSTRAP_MODE="true"; shift ;;
     --json)      OUTPUT_JSON="true"; shift ;;
     --status)    RUN_STATUS="true"; shift ;;
@@ -272,14 +277,19 @@ inspect_state() {
             CURRENT_VERSION=${GRID_VERSION:-none}
         fi
     elif [ "$mode" = "remote" ]; then
-        # Check remote state safely
-        if ssh -q -o ConnectTimeout=3 "$ssh_target" "[ -f \"\$HOME/.grid-state\" ]" 2>/dev/null; then
-            local remote_state
-            remote_state=$(ssh -q -o ConnectTimeout=3 "$ssh_target" "cat \"\$HOME/.grid-state\"" || echo "")
-            if [ -n "$remote_state" ]; then
-                CURRENT_ROLE=$(echo "$remote_state" | grep "GRID_ROLE" | cut -d'=' -f2 || echo "none")
-                CURRENT_VERSION=$(echo "$remote_state" | grep "GRID_VERSION" | cut -d'=' -f2 || echo "none")
-            fi
+        # Check remote state safely: canonical registry first, legacy read-only fallback
+        local remote_state=""
+        local canonical="\$HOME/.config/faigrid/registry/state.env"
+        local legacy="\$HOME/.grid-state"
+        if ssh -q -o ConnectTimeout=3 "$ssh_target" "[ -f \"$canonical\" ]" 2>/dev/null; then
+            remote_state=$(ssh -q -o ConnectTimeout=3 "$ssh_target" "cat \"$canonical\"" || echo "")
+        elif ssh -q -o ConnectTimeout=3 "$ssh_target" "[ -f \"$legacy\" ]" 2>/dev/null; then
+            remote_state=$(ssh -q -o ConnectTimeout=3 "$ssh_target" "cat \"$legacy\"" || echo "")
+            warning "Legacy state file ~/.grid-state found on ${ssh_target}; canonical registry is preferred."
+        fi
+        if [ -n "$remote_state" ]; then
+            CURRENT_ROLE=$(echo "$remote_state" | grep "GRID_ROLE" | cut -d'=' -f2 || echo "none")
+            CURRENT_VERSION=$(echo "$remote_state" | grep "GRID_VERSION" | cut -d'=' -f2 || echo "none")
         fi
     fi
 }
@@ -310,10 +320,11 @@ write_state() {
         } > "$STATE_FILE"
         success "Saved state to ${STATE_FILE} (and local registry)"
     else
-        ssh -q "$ssh_target" "echo 'GRID_ROLE=$role' > \"\$HOME/.grid-state\"; \
-            echo 'GRID_VERSION=latest' >> \"\$HOME/.grid-state\"; \
-            echo 'INSTALL_DATE=\"$(date)\"' >> \"\$HOME/.grid-state\"" || true
-        success "Saved remote state to ~/${ssh_target}:~/.grid-state (and local registry)"
+        ssh -q "$ssh_target" "mkdir -p \"\$HOME/.config/faigrid/registry\"; \
+            echo 'GRID_ROLE=$role' > \"\$HOME/.config/faigrid/registry/state.env\"; \
+            echo 'GRID_VERSION=latest' >> \"\$HOME/.config/faigrid/registry/state.env\"; \
+            echo 'INSTALL_DATE=\"$(date)\"' >> \"\$HOME/.config/faigrid/registry/state.env\"" || true
+        success "Saved remote state to ${ssh_target}:~/.config/faigrid/registry/state.env (and local registry)"
     fi
 }
 
@@ -345,6 +356,8 @@ probe_grid_status() {
     local roles=("core" "edge" "worker" "backup" "external" "runner")
     for role in "${roles[@]}"; do
         if [[ -f "$LOCAL_REGISTRY/${role}.state" ]]; then
+            # Bash 3.2 lacks associative arrays; role comes from the hardcoded array
+            # above, never from operator/network input, so this eval is safe (V7).
             eval "GRID_STATUS_${role}=\"✔\""
         fi
     done
@@ -506,10 +519,12 @@ if [[ -z "$ROLE_NAME" ]]; then
         echo -e "     Restic can run directly on ${BOLD}grid-core${NC} or ${BOLD}grid-external${NC},"
         echo -e "     backing up to a Synology NAS, S3 bucket, or USB drive."
         echo ""
-        prompt "Continue with a dedicated backup node anyway? (Y/n): " BACKUP_CONFIRM
-        if [[ "${BACKUP_CONFIRM:-Y}" =~ ^[Nn]$ ]]; then
-            info "Returning to node selection..."
-            exec bash "$0"
+        if [[ "$AUTO_YES" != "true" ]]; then
+            prompt "Continue with a dedicated backup node anyway? (Y/n): " BACKUP_CONFIRM
+            if [[ "${BACKUP_CONFIRM:-Y}" =~ ^[Nn]$ ]]; then
+                info "Returning to node selection..."
+                exec bash "$0"
+            fi
         fi
     fi
 fi
@@ -616,7 +631,7 @@ echo ""
 if [[ "$CURRENT_ROLE" != "none" ]]; then
     success "Detected existing node: Role [${BOLD}${CURRENT_ROLE}${NC}], Version [${CURRENT_VERSION}]"
 else
-    info "No .grid-state file found. Scanning target for existing services..."
+    info "No state registry found. Scanning target for existing services..."
     echo ""
     discover_services "$EXEC_MODE" "$SSH_TARGET"
 
@@ -653,11 +668,17 @@ fi
 if [[ "$CURRENT_ROLE" != "none" && "$CURRENT_ROLE" != "$ROLE_NAME" ]]; then
     echo ""
     warning "This target is already registered as ${BOLD}${CURRENT_ROLE}${NC}, but you selected ${BOLD}${ROLE_NAME}${NC}."
-    prompt "Change this node's role? (y/N): " CHANGE_ROLE
-    if [[ ! "${CHANGE_ROLE:-N}" =~ ^[Yy]$ ]]; then
+    if [[ "$AUTO_YES" == "true" ]]; then
         ROLE_NAME="$CURRENT_ROLE"
         ROLE_DIR="$(resolve_role_dir "$ROLE_NAME")"
-        info "Keeping existing role: ${ROLE_NAME}"
+        info "Keeping existing role: ${ROLE_NAME} (--yes: non-destructive auto-confirm)"
+    else
+        prompt "Change this node's role? (y/N): " CHANGE_ROLE
+        if [[ ! "${CHANGE_ROLE:-N}" =~ ^[Yy]$ ]]; then
+            ROLE_NAME="$CURRENT_ROLE"
+            ROLE_DIR="$(resolve_role_dir "$ROLE_NAME")"
+            info "Keeping existing role: ${ROLE_NAME}"
+        fi
     fi
 fi
 
@@ -749,13 +770,13 @@ if [[ "$ACTION_NAME" == "install" && "$CURRENT_ROLE" != "none" ]]; then
     echo ""
     warning "This target already has a ${BOLD}${CURRENT_ROLE}${NC} installation."
     warning "A fresh install may overwrite critical services."
-    if [[ "$AUTO_YES" == "false" ]]; then
+    if [[ "$FORCE" == "false" ]]; then
         prompt "Type 'overwrite' to confirm destructive reinstall: " CONFIRM_OVERWRITE
         if [[ "${CONFIRM_OVERWRITE:-}" != "overwrite" ]]; then
              error "Overwrite not confirmed. Aborting."
         fi
     else
-        info "--yes flag detected. Bypassing overwrite confirmation."
+        info "--force flag detected. Bypassing overwrite confirmation."
     fi
 fi
 
@@ -777,14 +798,10 @@ if [[ "$ACTION_NAME" == "uninstall" ]]; then
         echo -e "  ${YELLOW}Tip: Run${NC} ${BOLD}Backup${NC} ${YELLOW}first to preserve your data.${NC}"
     fi
     echo ""
-    if [[ "$AUTO_YES" == "false" ]]; then
-        prompt "Type 'delete-all-data' to confirm permanent data loss: " CONFIRM_UNINSTALL
-        if [[ "${CONFIRM_UNINSTALL:-}" != "delete-all-data" ]]; then
-            error "Uninstall not confirmed. Aborting."
-            exit 1
-        fi
-    else
-        info "--yes flag detected. Bypassing uninstall confirmation."
+    prompt "Type 'delete-all-data' to confirm permanent data loss: " CONFIRM_UNINSTALL
+    if [[ "${CONFIRM_UNINSTALL:-}" != "delete-all-data" ]]; then
+        error "Uninstall not confirmed. Aborting."
+        exit 1
     fi
 fi
 
@@ -797,7 +814,12 @@ fi
 if [[ "$ROLE_NAME" == "core" && "$ACTION_NAME" == "install" ]]; then
     if [[ -z "$VNC_CHOICE" ]]; then
         echo ""
-        prompt "Enable VNC GUI for the AI Workbench? (y/N): " VNC_CHOICE
+        if [[ "$AUTO_YES" == "true" ]]; then
+            VNC_CHOICE="N"
+            info "Disabling VNC (--yes: non-destructive auto-confirm)"
+        else
+            prompt "Enable VNC GUI for the AI Workbench? (y/N): " VNC_CHOICE
+        fi
     fi
 fi
 

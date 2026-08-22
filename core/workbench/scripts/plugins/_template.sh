@@ -16,10 +16,32 @@
 # (git)               uses INSTALL_DIR + git fetch; no extra field needed
 # ─────────────────────────────────────────────────────────────────────────────
 
+# Executor Contract v1 — see docs/reference/executor-contract.md
+# Conformance: declare TOOL_* metadata, define tool_install/tool_status/
+# tool_uninstall (tool_configure/tool_doctor/tool_update optional), and emit the
+# structured JSON status object as the final stdout line of each verb.
+
 TOOL_NAME="example"
 TOOL_CATEGORY="clis"
 TOOL_DESC="Example descriptive text for the registry"
 TOOL_TYPE="npm"
+
+# ── JSON status emitter (Executor Contract v1) ───────────────────────────────
+# Emits the structured status object as the FINAL stdout line of a verb. Plugins
+# cannot rely on _lib.sh, so these self-contained helpers mirror its
+# _json_escape (see docs/reference/executor-contract.md §Structured JSON status).
+
+_json_escape() {
+    printf '%s' "$1" \
+        | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' \
+        | tr -d '\000-\037'
+}
+
+_emit_json_status() {  # $1=verb  $2=status  $3=message  $4=version
+    printf '{"status":"%s","plugin":"%s","verb":"%s","message":"%s","version":%s,"data":{}}\n' \
+        "$2" "$(_json_escape "$TOOL_NAME")" "$1" "$(_json_escape "$3")" \
+        "$(if [[ -n "$4" ]]; then printf '"%s"' "$(_json_escape "$4")"; else printf 'null'; fi)"
+}
 
 # ── Optional: OS / package-manager detection ──────────────────────────────────
 # Use when the tool is distributed via system packages (apt, dnf/yum, brew).
@@ -66,9 +88,19 @@ tool_install() {
     #       apt)     _install_deb ;;
     #       dnf|yum) _install_rpm ;;
     #       brew)    _install_brew ;;
-    #       *) echo "Unsupported package manager. See https://example.com/install" >&2; return 1 ;;
+    #   *) echo "Unsupported package manager. See https://example.com/install" >&2; return 1 ;;
     #   esac
     echo "Installing ${TOOL_NAME}..."
+    _emit_json_status "install" "ok" "Installed ${TOOL_NAME}" ""
+
+}
+
+_probe_version() {
+    # Returns the installed version string, empty when absent. Adapt per tool.
+    #   example-cli --version 2>&1 | head -1
+    #   pipx list --short | awk '/^example-cli /{print $2}'
+    #   git -C /opt/faigrid/example rev-parse --short HEAD 2>/dev/null
+    echo ""
 }
 
 tool_update() {
@@ -78,6 +110,7 @@ tool_update() {
     # apt:   sudo apt-get install -y --only-upgrade example
     # dnf:   sudo dnf upgrade -y example
     echo "Updating ${TOOL_NAME}..."
+    _emit_json_status "update" "ok" "Updated ${TOOL_NAME}" ""
 }
 
 tool_status() {
@@ -96,6 +129,16 @@ tool_status() {
     else
         echo "Not installed"
     fi
+
+    # Executor Contract v1 — emit structured JSON status as the FINAL stdout line.
+    # All fields required except "version" (use null when unknown); "data" MAY be {}.
+    if command -v example-cli >/dev/null 2>&1; then
+        local ver
+        ver=$(_probe_version)
+        _emit_json_status "status" "ok" "Installed${ver:+ (${ver})}" "$ver"
+    else
+        _emit_json_status "status" "ok" "Not installed" ""
+    fi
 }
 
 tool_uninstall() {
@@ -105,6 +148,7 @@ tool_uninstall() {
     # apt:   sudo apt-get remove -y example && sudo rm -f /etc/apt/sources.list.d/example.list
     # dnf:   sudo dnf remove -y example && sudo rm -f /etc/yum.repos.d/example.repo
     echo "Uninstalling ${TOOL_NAME}..."
+    _emit_json_status "uninstall" "ok" "Uninstalled ${TOOL_NAME}" ""
 }
 
 # ── Optional: doctor / validate ───────────────────────────────────────────────

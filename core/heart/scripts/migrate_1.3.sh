@@ -11,7 +11,7 @@ log_mig() { echo -e "\033[38;2;196;217;0m[MIGRATION]\033[0m $1"; }
 
 migrate_from_nexus_to_grid() {
     local legacy_state="$HOME/.grid-state"
-    local grid_state="$HOME/.grid-state"
+    local grid_state="$HOME/.config/faigrid/registry/state.env"
     
     local legacy_config="$HOME/.config/grid"
     local grid_config="$HOME/.config/faigrid"
@@ -27,6 +27,7 @@ migrate_from_nexus_to_grid() {
     # 1. State File Rename
     if [[ -f "$legacy_state" ]]; then
         log_mig "Migrating state file ($legacy_state -> $grid_state)..."
+        mkdir -p "$(dirname "$grid_state")"
         if [[ "$legacy_state" != "$grid_state" ]]; then
             mv "$legacy_state" "$grid_state"
         fi

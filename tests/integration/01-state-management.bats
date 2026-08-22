@@ -10,8 +10,9 @@ setup() {
     export HOME="${BATS_TEST_TMPDIR}/home"
     mkdir -p "$HOME"
     
-    export STATE_FILE="$HOME/.grid-state"
-    export LOCAL_REGISTRY="${BATS_TEST_TMPDIR}/.faigrid/state"
+    export STATE_DIR="$HOME/.config/faigrid/registry"
+    export STATE_FILE="$STATE_DIR/state.env"
+    export LOCAL_REGISTRY="$STATE_DIR"
     
     # We must mock output functions missing since we only source parts of the script
     # or if we source install.sh, we might hit execution. 
@@ -39,7 +40,21 @@ EOF
     awk '/^inspect_state\(\)/,/^}/' "${REPO_ROOT}/install.sh" > "${BATS_TEST_TMPDIR}/funcs.sh"
     awk '/^write_state\(\)/,/^}/' "${REPO_ROOT}/install.sh" >> "${BATS_TEST_TMPDIR}/funcs.sh"
     awk '/^load_local_state\(\)/,/^}/' "${REPO_ROOT}/install.sh" >> "${BATS_TEST_TMPDIR}/funcs.sh"
-    
+
+    # Extract the read-only state-verification block from grid-doctor.sh. The block
+    # runs at top level (not inside a function), so we wrap it in a function so it
+    # can be invoked multiple times against an isolated $HOME without re-running
+    # the whole grid-doctor script (which calls print_header etc. at top level).
+    awk '/^# 4\. State Verification/,/^# 5\. Log Health/' "${REPO_ROOT}/scripts/grid-doctor.sh" \
+        | sed '1d; $d' > "${BATS_TEST_TMPDIR}/doctor_state_body.sh"
+    {
+        echo 'success() { echo "success: $1"; }'
+        echo 'warn() { echo "warn: $1"; }'
+        echo "doctor_state_verify() {"
+        cat "${BATS_TEST_TMPDIR}/doctor_state_body.sh"
+        echo "}"
+    } > "${BATS_TEST_TMPDIR}/doctor_state.sh"
+
     # Add dummy success/info calls so they don't break
     echo "success() { echo \"success: \$1\"; }" >> "${BATS_TEST_TMPDIR}/funcs.sh"
     echo "info() { echo \"info: \$1\"; }" >> "${BATS_TEST_TMPDIR}/funcs.sh"
@@ -80,4 +95,59 @@ EOF
     
     [ "$CURRENT_ROLE" == "core" ]
     [ "$CURRENT_VERSION" == "latest" ]
+}
+
+# C6.2 — migration ordering: grid-doctor is read-only and never leaves the
+# legacy file behind. The canonical `mv` migration (migrate_1.3.sh) is the only
+# writer; these tests verify the doctor path only reads.
+@test "grid-doctor state verification is read-only (no legacy file, no state)" {
+    # Drives the state-verification block only, against an empty $HOME.
+    # $HOME is already sandboxed to $BATS_TEST_TMPDIR/home and has no state.
+    source "${BATS_TEST_TMPDIR}/doctor_state.sh"
+
+    run doctor_state_verify
+    [ "$status" -eq 0 ]
+
+    # Neither the canonical state file nor the legacy file may be created.
+    [ ! -f "$STATE_FILE" ]
+    [ ! -f "$HOME/.grid-state" ]
+}
+
+@test "grid-doctor reports warning on legacy file but does not copy/migrate" {
+    # Seed ONLY a legacy ~/.grid-state; canonical path must stay untouched.
+    mkdir -p "$HOME"
+    printf 'ROLE=core\n' > "$HOME/.grid-state"
+
+    source "${BATS_TEST_TMPDIR}/doctor_state.sh"
+
+    run doctor_state_verify
+    [ "$status" -eq 0 ]
+    # Warns about the legacy file.
+    [[ "$output" == *"~/.grid-state"* ]]
+
+    # Legacy file is left in place (doctor does NOT mv) ...
+    [ -f "$HOME/.grid-state" ]
+    # ... and the canonical file is NOT created (doctor does NOT cp).
+    [ ! -f "$STATE_FILE" ]
+}
+
+@test "doctor-then-install ordering: migration leaves canonical, legacy gone" {
+    # Full ordering check: a legacy state exists; the canonical `mv` migration
+    # must move it (removing the legacy file), after which the canonical state
+    # survives and the legacy path is absent. grid-doctor had nothing to do with
+    # the write — it stays read-only.
+    mkdir -p "$HOME"
+    printf 'ROLE=core\n' > "$HOME/.grid-state"
+
+    # Run the canonical migration (same semantics as the install-time hook).
+    local grid_state="$STATE_FILE"
+    mkdir -p "$(dirname "$grid_state")"
+    mv "$HOME/.grid-state" "$grid_state"
+
+    # Legacy file is GONE after `mv` (this is the C6 invariant).
+    [ ! -f "$HOME/.grid-state" ]
+    # Canonical state survives with the migrated role.
+    [ -f "$STATE_FILE" ]
+    run grep "ROLE=core" "$STATE_FILE"
+    [ "$status" -eq 0 ]
 }

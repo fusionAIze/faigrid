@@ -6,7 +6,7 @@
 
 - **Domain**: Shell-driven AI Infrastructure Orchestration.
 - **Language**: Strict Bash (`set -euo pipefail`).
-- **Core Engine**: `install.sh` orchestrator with `.grid-state` detection.
+- **Core Engine**: `install.sh` orchestrator with state detection at `~/.config/faigrid/registry/state.env` (legacy `~/.grid-state` is deprecated).
 - **Default AI Role**: Rapid pipeline prototyping, integration modeling, and analytical documentation structure.
 
 ## Project Instruction Summary
@@ -21,7 +21,7 @@ For Gemini, prioritize **speed and functionality** when generating configuration
 ## Operational Guardrails
 
 1. **Deny-by-default**: Ensure ports are only exposed to `localhost` or specific internal subnets unless they are explicitly meant for `grid-edge` ingress.
-2. **State Detection First**: Acknowledge that the main `install.sh` parses `~/.grid-state`. 
+2. **State Detection First**: Acknowledge that the main `install.sh` parses `~/.config/faigrid/registry/state.env` (legacy `~/.grid-state` is deprecated).
 3. **No destructive scripts without warning**: If you write a bash script that purges volumes, you must include an explicit user prompt.
 4. **Bash 3.2 compatibility is mandatory** — macOS ships Bash 3.2; all scripts must run on it.
    Never use: `declare -A`, `declare -gA`, `mapfile`, `readarray`, `local -A`, or `${!var}` indirect expansion under `set -u`.

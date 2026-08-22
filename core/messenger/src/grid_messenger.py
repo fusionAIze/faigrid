@@ -73,7 +73,7 @@ import sys
 import urllib.error
 import urllib.request
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 import aiohttp
@@ -90,7 +90,7 @@ from telegram.ext import (
 
 # ── Config ────────────────────────────────────────────────────────────────────
 
-TELEGRAM_BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 
 _raw_ids = os.getenv("TELEGRAM_ALLOWED_USER_IDS", "")
 ALLOWED_USER_IDS = {
@@ -111,7 +111,7 @@ APPS_FILE = Path(os.getenv("APPS_FILE", "/opt/grid-messenger/apps.json"))
 
 log = logging.getLogger("grid-messenger")
 
-_START_TIME = datetime.now(datetime.UTC)
+_START_TIME = datetime.now(UTC)
 
 # ── App registry ──────────────────────────────────────────────────────────────
 # { name: {display_name, emoji, thread_id, registered_at} }
@@ -189,7 +189,7 @@ _awaiting_input: dict = {}
 
 
 def _now() -> str:
-    return datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def _allowed(update: Update) -> bool:
@@ -660,7 +660,7 @@ async def http_app_list(_req: web.Request) -> web.Response:
 
 async def http_api_health(_req: web.Request) -> web.Response:
     """GET /api/v1/health — structured health JSON for agent/faisignal consumption."""
-    uptime_s = int((datetime.now(datetime.UTC) - _START_TIME).total_seconds())
+    uptime_s = int((datetime.now(UTC) - _START_TIME).total_seconds())
 
     # Probe configured service URLs
     service_map = {

@@ -83,37 +83,99 @@ print_header() {
   printf "\n%b%b=== %s ===%b\n\n" "${C_BOLD}" "${C_MAGENTA}" "$1" "${C_RESET}"
 }
 
+# JSON-escape a value for safe embedding in a JSONL line
+_json_escape() {
+  printf '%s' "$1" \
+    | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' \
+    | tr -d '\000-\037'
+}
+
 # Centralized Logging Aggregator
+LOG_SETUP_ATTEMPTED=0
+
 log_event() {
   local COMPONENT=$1
   local SEVERITY=$2
   local MESSAGE=$3
-  local LOG_DIR="/var/log/faigrid"
+  local LOG_DIR="${LOG_DIR:-/var/log/faigrid}"
   local LOG_FILE="${LOG_DIR}/grid-system.log"
-  
-  if [[ ! -d "$LOG_DIR" ]]; then
-    sudo mkdir -p "$LOG_DIR" 2>/dev/null || true
-    sudo chmod 777 "$LOG_DIR" 2>/dev/null || true
+  local EVENTS_FILE="${LOG_DIR}/grid-events.jsonl"
+
+  if [[ "${LOG_SETUP_ATTEMPTED:-0}" == 0 ]]; then
+    if [[ ! -d "$LOG_DIR" ]]; then
+      sudo mkdir -p "$LOG_DIR" 2>/dev/null || true
+      sudo chown root:adm "$LOG_DIR" 2>/dev/null || true
+      sudo chmod 750 "$LOG_DIR" 2>/dev/null || true
+    fi
+
+    if [[ ! -w "$EVENTS_FILE" ]]; then
+      if [[ -w "$LOG_DIR" ]]; then
+        touch "$EVENTS_FILE" 2>/dev/null || true
+      else
+        sudo touch "$EVENTS_FILE" 2>/dev/null || true
+        sudo chown root:adm "$EVENTS_FILE" 2>/dev/null || true
+        sudo chmod 640 "$EVENTS_FILE" 2>/dev/null || true
+      fi
+    fi
+
+    LOG_SETUP_ATTEMPTED=1
   fi
-  
+
   if [[ -w "$LOG_DIR" ]] || [[ -f "$LOG_FILE" && -w "$LOG_FILE" ]]; then
-    echo "$(date -u +"%Y-%m-%dT%H:%M:%SZ") | ${COMPONENT} | [${SEVERITY}] | ${MESSAGE}" >> "$LOG_FILE"
+    local json
+    json=$(printf '{"ts":"%s","component":"%s","severity":"%s","message":"%s"}' \
+      "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
+      "$(_json_escape "$COMPONENT")" \
+      "$(_json_escape "$SEVERITY")" \
+      "$(_json_escape "$MESSAGE")")
+    printf '%s\n' "$json" >> "$LOG_FILE"
+    if [[ -f "$EVENTS_FILE" ]] && [[ -w "$EVENTS_FILE" ]]; then
+      printf '%s\n' "$json" >> "$EVENTS_FILE"
+    fi
   fi
 }
 
 # Simple Log Rotation
+# Rotates grid-system.log and grid-events.jsonl under the same size rule.
+# Rotation happens first for both files, then a single summary event is emitted
+# so the event lands in the freshly-created files (never swept into the .old).
+_rotate_one_log() {
+  local file="$1"
+  local max_size_kb="$2"
+  [[ -f "$file" ]] || return 0
+  local size_kb
+  size_kb=$(du -k "$file" | cut -f1)
+  [[ "$size_kb" -gt "$max_size_kb" ]] || return 0
+  mv "$file" "${file}.old"
+  touch "$file"
+  chmod 640 "$file" 2>/dev/null || true
+  sudo chown root:adm "$file" 2>/dev/null || true
+  printf '%s' "$size_kb"
+}
+
 rotate_logs() {
-  local LOG_FILE="/var/log/faigrid/grid-system.log"
-  local MAX_SIZE_KB=5120 # 5MB limit
-  
-  if [[ -f "$LOG_FILE" ]]; then
-    local SIZE_KB
-    SIZE_KB=$(du -k "$LOG_FILE" | cut -f1)
-    if [[ "$SIZE_KB" -gt "$MAX_SIZE_KB" ]]; then
-      log_event "system" "INFO" "Rotating logs (Size: ${SIZE_KB}KB)"
-      mv "$LOG_FILE" "${LOG_FILE}.old"
-      touch "$LOG_FILE"
-      chmod 666 "$LOG_FILE" 2>/dev/null || true
+  local LOG_DIR="${LOG_DIR:-/var/log/faigrid}"
+  local MAX_SIZE_KB="${MAX_SIZE_KB:-5120}" # 5MB limit
+  local LOG_FILE="${LOG_DIR}/grid-system.log"
+  local EVENTS_FILE="${LOG_DIR}/grid-events.jsonl"
+
+  local sys_size evt_size
+  sys_size=$(_rotate_one_log "$LOG_FILE" "$MAX_SIZE_KB")
+  evt_size=$(_rotate_one_log "$EVENTS_FILE" "$MAX_SIZE_KB")
+
+  local rotated=""
+  if [[ -n "$sys_size" ]]; then
+    rotated="grid-system.log=${sys_size}KB"
+  fi
+  if [[ -n "$evt_size" ]]; then
+    if [[ -n "$rotated" ]]; then
+      rotated="${rotated}, grid-events.jsonl=${evt_size}KB"
+    else
+      rotated="grid-events.jsonl=${evt_size}KB"
     fi
+  fi
+
+  if [[ -n "$rotated" ]]; then
+    log_event "system" "INFO" "Rotating logs (Size: ${rotated})"
   fi
 }

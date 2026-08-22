@@ -33,7 +33,7 @@ To orchestrate the **fusionAIze Grid** autonomously, an AI Agent (Codex, Claude,
 ### Parameter Details
 
 *   **`global.force_overwrite`** (string: `"true"` | `"false"`):
-    *   If `"true"`, it passes the `--yes` flag to `install.sh`, autonomously overcoming destructive overwrite prompts during `Fresh Install` (Strategy 2). Extremely powerful.
+    *   If `"true"`, it passes the `--force` flag to `install.sh`, which bypasses destructive overwrite/wipe prompts. The `delete-all-data` uninstall confirmation is *always* required verbatim and is not bypassed by any flag.
 *   **`nodes[].role`** (string - REQUIRED):
     *   Accepts: `"edge"`, `"core"`, `"worker"`, `"backup"`, `"external"`.
 *   **`nodes[].strategy`** (string):

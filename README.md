@@ -100,6 +100,12 @@ bash install.sh
 ./install.sh --mode local --role core --strategy 1 --yes
 ```
 
+**Flags:**
+
+- `--yes` auto-confirms **non-destructive** prompts (role selection, mode, VNC, reinstall-over-nothing, etc.).
+- `--force` bypasses **destructive** overwrite/wipe prompts.
+- The uninstall `delete-all-data` confirmation is **always** required verbatim — no flag bypasses it.
+
 Node registry is stored at `~/.config/faigrid/registry/` and persists across reinstalls and Homebrew upgrades.
 
 ```bash

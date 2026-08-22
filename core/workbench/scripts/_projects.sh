@@ -6,8 +6,10 @@ PROJECTS_DIR="${PROJECTS_DIR:-/opt/faigrid/projects}"
 
 _ensure_projects_dir() {
     [[ -d "$PROJECTS_DIR" ]] && return 0
-    mkdir -p "$PROJECTS_DIR" 2>/dev/null \
-        || sudo mkdir -p "$PROJECTS_DIR" && sudo chown "$(id -u):$(id -g)" "$PROJECTS_DIR"
+    { mkdir -p "$PROJECTS_DIR" 2>/dev/null \
+        || sudo mkdir -p "$PROJECTS_DIR"; } \
+        && { sudo chown "$(id -u):$(id -g)" "$PROJECTS_DIR" 2>/dev/null \
+             || chown "$(id -u):$(id -g)" "$PROJECTS_DIR" 2>/dev/null; }
 }
 
 # Populate caller's project_list array with project directories
