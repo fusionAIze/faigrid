@@ -73,9 +73,46 @@ setup() {
     [ "$(wc -l < "${LOG_DIR}/grid-system.log" | tr -d ' ')" -eq 3 ]
 }
 
+@test "log_event failure path attempts sudo at most once per process" {
+    # Read-only LOG_DIR that exists but the current user cannot write, plus a
+    # failing sudo stub: the dir/file never become writable, so this exercises
+    # the failure path where setup can never succeed.
+    local readonly_dir="${BATS_TEST_TMPDIR}/readonly-log"
+    mkdir -p "$readonly_dir"
+    chmod 555 "$readonly_dir"
+
+    local failed_sudo_calls="${BATS_TEST_TMPDIR}/failed_sudo_calls"
+    : > "$failed_sudo_calls"
+    sudo() { echo 1 >> "$failed_sudo_calls"; return 1; }
+    export -f sudo
+
+    export LOG_DIR="$readonly_dir"
+
+    log_event "test" "ERROR" "first"
+    local calls_after_first
+    calls_after_first="$(failed_sudo_calls_count)"
+
+    log_event "test" "ERROR" "second"
+    log_event "test" "ERROR" "third"
+    local calls_after_third
+    calls_after_third="$(failed_sudo_calls_count)"
+
+    # One setup attempt's worth of sudo (<= 5), not repeated across calls.
+    [ "$calls_after_first" -le 5 ]
+    [ "$calls_after_first" -eq "$calls_after_third" ]
+}
+
 sudo_calls_count() {
     if [ -f "${BATS_TEST_TMPDIR}/sudo_calls" ]; then
         wc -l < "${BATS_TEST_TMPDIR}/sudo_calls" | tr -d ' '
+    else
+        echo 0
+    fi
+}
+
+failed_sudo_calls_count() {
+    if [ -f "${BATS_TEST_TMPDIR}/failed_sudo_calls" ]; then
+        wc -l < "${BATS_TEST_TMPDIR}/failed_sudo_calls" | tr -d ' '
     else
         echo 0
     fi

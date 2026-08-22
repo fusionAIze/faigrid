@@ -20,6 +20,7 @@ setup() {
     awk '/^_free_mb_darwin\(\)/,/^}/' "${REPO_ROOT}/scripts/grid-doctor.sh" > "${BATS_TEST_TMPDIR}/funcs.sh"
     awk '/^_free_mb_linux\(\)/,/^}/'  "${REPO_ROOT}/scripts/grid-doctor.sh" >> "${BATS_TEST_TMPDIR}/funcs.sh"
     awk '/^_memory_status\(\)/,/^}/'  "${REPO_ROOT}/scripts/grid-doctor.sh" >> "${BATS_TEST_TMPDIR}/funcs.sh"
+    awk '/^_count_log_errors\(\)/,/^}/' "${REPO_ROOT}/scripts/grid-doctor.sh" >> "${BATS_TEST_TMPDIR}/funcs.sh"
 
     # Reporting stubs: capture which branch fires without sourcing _lib.sh.
     cat >> "${BATS_TEST_TMPDIR}/funcs.sh" << 'EOF'
@@ -129,4 +130,54 @@ EOF
     [ "$status" -eq 0 ]
     [[ "$output" == SUCCESS:* ]]
     [[ "$output" == *"Memory:"* ]]
+}
+
+@test "log health - 0 ERROR events reports a clean count of 0" {
+    source "${BATS_TEST_TMPDIR}/funcs.sh"
+
+    cat > "${BATS_TEST_TMPDIR}/clean.log" << 'EOF'
+{"ts":"2026-08-22T00:00:00Z","severity":"INFO","msg":"boot"}
+{"ts":"2026-08-22T00:00:01Z","severity":"WARN","msg":"slow"}
+{"ts":"2026-08-22T00:00:02Z","severity":"INFO","msg":"ok"}
+EOF
+
+    run _count_log_errors "${BATS_TEST_TMPDIR}/clean.log"
+
+    [ "$status" -eq 0 ]
+    [[ "$output" =~ ^[0-9]+$ ]]
+    [ "$output" -eq 0 ]
+}
+
+@test "log health - 2 ERROR events reports 2" {
+    source "${BATS_TEST_TMPDIR}/funcs.sh"
+
+    cat > "${BATS_TEST_TMPDIR}/errors.log" << 'EOF'
+{"ts":"2026-08-22T00:00:00Z","severity":"INFO","msg":"boot"}
+{"ts":"2026-08-22T00:00:01Z","severity":"ERROR","msg":"boom 1"}
+{"ts":"2026-08-22T00:00:02Z","severity":"ERROR","msg":"boom 2"}
+{"ts":"2026-08-22T00:00:03Z","severity":"INFO","msg":"ok"}
+EOF
+
+    run _count_log_errors "${BATS_TEST_TMPDIR}/errors.log"
+
+    [ "$status" -eq 0 ]
+    [[ "$output" =~ ^[0-9]+$ ]]
+    [ "$output" -eq 2 ]
+}
+
+@test "log health - malformed lines do not crash and count 0" {
+    source "${BATS_TEST_TMPDIR}/funcs.sh"
+
+    cat > "${BATS_TEST_TMPDIR}/mixed.log" << 'EOF'
+{"ts":"2026-08-22T00:00:00Z","severity":"ERROR","msg":"boom 1"}
+not valid json at all
+{"ts":"2026-08-22T00:00:02Z","severity":"ERROR","msg":"boom 2"}
+{"ts":"2026-08-22T00:00:03Z","msg":"no severity field"}
+EOF
+
+    run _count_log_errors "${BATS_TEST_TMPDIR}/mixed.log"
+
+    [ "$status" -eq 0 ]
+    [[ "$output" =~ ^[0-9]+$ ]]
+    [ "$output" -eq 2 ]
 }

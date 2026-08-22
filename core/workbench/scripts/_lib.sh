@@ -91,6 +91,8 @@ _json_escape() {
 }
 
 # Centralized Logging Aggregator
+LOG_SETUP_ATTEMPTED=0
+
 log_event() {
   local COMPONENT=$1
   local SEVERITY=$2
@@ -99,20 +101,24 @@ log_event() {
   local LOG_FILE="${LOG_DIR}/grid-system.log"
   local EVENTS_FILE="${LOG_DIR}/grid-events.jsonl"
 
-  if [[ ! -d "$LOG_DIR" ]]; then
-    sudo mkdir -p "$LOG_DIR" 2>/dev/null || true
-    sudo chown root:adm "$LOG_DIR" 2>/dev/null || true
-    sudo chmod 750 "$LOG_DIR" 2>/dev/null || true
-  fi
-
-  if [[ ! -w "$EVENTS_FILE" ]]; then
-    if [[ -w "$LOG_DIR" ]]; then
-      touch "$EVENTS_FILE" 2>/dev/null || true
-    else
-      sudo touch "$EVENTS_FILE" 2>/dev/null || true
-      sudo chown root:adm "$EVENTS_FILE" 2>/dev/null || true
-      sudo chmod 640 "$EVENTS_FILE" 2>/dev/null || true
+  if [[ "${LOG_SETUP_ATTEMPTED:-0}" == 0 ]]; then
+    if [[ ! -d "$LOG_DIR" ]]; then
+      sudo mkdir -p "$LOG_DIR" 2>/dev/null || true
+      sudo chown root:adm "$LOG_DIR" 2>/dev/null || true
+      sudo chmod 750 "$LOG_DIR" 2>/dev/null || true
     fi
+
+    if [[ ! -w "$EVENTS_FILE" ]]; then
+      if [[ -w "$LOG_DIR" ]]; then
+        touch "$EVENTS_FILE" 2>/dev/null || true
+      else
+        sudo touch "$EVENTS_FILE" 2>/dev/null || true
+        sudo chown root:adm "$EVENTS_FILE" 2>/dev/null || true
+        sudo chmod 640 "$EVENTS_FILE" 2>/dev/null || true
+      fi
+    fi
+
+    LOG_SETUP_ATTEMPTED=1
   fi
 
   if [[ -w "$LOG_DIR" ]] || [[ -f "$LOG_FILE" && -w "$LOG_FILE" ]]; then

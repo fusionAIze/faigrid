@@ -45,6 +45,20 @@ _memory_status() {
     fi
 }
 
+# Count JSONL log lines carrying "severity":"ERROR". Returns exactly one integer:
+# grep -c prints "0" and exits 1 on zero matches, so `|| true` suppresses the
+# failure without appending a second value, and the regex guard normalizes any
+# unexpected/empty result (e.g. a missing file) back to 0.
+_count_log_errors() {
+    local file="$1"
+    local count
+    count=$(grep -c '"severity":"ERROR"' "$file" 2>/dev/null || true)
+    if [[ ! "$count" =~ ^[0-9]+$ ]]; then
+        count=0
+    fi
+    printf '%s\n' "$count"
+}
+
 # 1. Environment & Resources
 info "Checking system resources..."
 if [[ "$(uname -s)" == "Darwin" ]]; then
@@ -112,9 +126,9 @@ else
 fi
 
 # 5. Log Health
-LOG_FILE="/var/log/faigrid/grid-system.log"
+LOG_FILE="${LOG_FILE:-/var/log/faigrid/grid-system.log}"
 if [[ -f "$LOG_FILE" ]]; then
-    ERR_COUNT=$(grep -c "\[ERROR\]" "$LOG_FILE" || echo "0")
+    ERR_COUNT=$(_count_log_errors "$LOG_FILE")
     if [[ "$ERR_COUNT" -gt 0 ]]; then
         warn "Found ${ERR_COUNT} error(s) in the system logs. Run: tail -n 20 ${LOG_FILE}"
     else
