@@ -1,8 +1,19 @@
 name: Notify Homebrew Tap
 
+# FFR-600-2: the release producer moved off the mirror onto Forgejo (the
+# ops-engine ReleaseHandler). The mirror is read-only distribution, so this
+# workflow no longer keys on release-please's output. It fires on the push of
+# a `v*` tag, which is exactly what mirror.yml copies verbatim from Forgejo
+# when the ops-engine cuts a release. Only the producer changes; the tap
+# payload stays byte-for-byte identical.
+#
+# If the ops-engine has not yet cut a faigrid release, no `v*` tag is pushed
+# and this workflow simply never fires: no tap update, no error.
+
 on:
-  release:
-    types: [published]
+  push:
+    tags:
+      - "v*"
 
 jobs:
   notify:
@@ -12,8 +23,7 @@ jobs:
       - name: Compute SHA256
         id: sha
         run: |
-          VERSION="${{ github.event.release.tag_name }}"
-          VERSION="${VERSION#v}"   # strip leading v
+          VERSION="${GITHUB_REF_NAME#v}"
           URL="https://github.com/fusionAIze/faigrid/archive/refs/tags/v${VERSION}.tar.gz"
           SHA=$(curl -sL "$URL" | sha256sum | awk '{print $1}')
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"

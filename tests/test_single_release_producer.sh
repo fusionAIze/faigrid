@@ -2,27 +2,24 @@
 # ---------------------------------------------------------------------------
 # test_single_release_producer.sh
 #
-# Establishes, by evidence rather than inference, the release path invariants
-# that the FFR-600 division depends on:
+# Encodes the FFR-600-2 target-state release-path invariants:
 #
-#   1. release-please has a single producer: the GitHub mirror. The canonical
-#      origin (Forgejo) must not run release-please, otherwise two producers
-#      would race over the same tags.
-#   2. The Homebrew tap dispatch is wired as post-mirror distribution: a
-#      notify-tap workflow keyed on the GitHub release event, plus the
-#      release-please notify-tap fallback, both gated to github.com.
+#   1. The GitHub mirror has NO release producer. release-please is gone:
+#      `.github/workflows/release-please.yml` no longer exists, no workflow in
+#      `.github/workflows/` references release-please-action, and the
+#      release-please config files are absent. Faigrid produces releases on
+#      Forgejo (ops-engine), not on the mirror.
+#   2. Forgejo (`.forgejo/workflows/`) has no release-please producer either;
+#      its only workflow is the push-only mirror.yml.
+#   3. The Homebrew tap dispatch is post-mirror distribution: notify-tap.yml
+#      triggers on the push of a `v*` tag (what mirror.yml copies from Forgejo),
+#      is gated to github.com, and does NOT depend on any release-please job.
+#      The dispatch targets homebrew-tap with formula-update for faigrid.
 #
-# The producer check is split in two:
-#   - configuration: exactly one workflow invokes release-please-action, it is
-#     gated to github.com, and Forgejo has no release producer.
-#   - runtime: the git history contains a real release-please release commit
-#     (authored by github-actions[bot] or app/github-actions with subject
-#     "chore(main): release …"), which proves the action actually ran on
-#     GitHub rather than only being configured to.
-#
-# This test is offline: it reads only the repository. GitHub-side residue
-# (open release PRs, tag-shape drift) is documented in docs/release-path.md;
-# it is not asserted here because it requires a live GitHub token.
+# This test is offline: it reads only the repository and asserts the target
+# state. Historical evidence (the past release-please runs) is documented in
+# docs/release-path.md; it is not asserted here because the target state has
+# no release-please producer.
 # ---------------------------------------------------------------------------
 
 set -euo pipefail
@@ -30,6 +27,8 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 RP_WORKFLOW="${REPO_ROOT}/.github/workflows/release-please.yml"
 TAP_WORKFLOW="${REPO_ROOT}/.github/workflows/notify-tap.yml"
+RP_CONFIG="${REPO_ROOT}/release-please-config.json"
+RP_MANIFEST="${REPO_ROOT}/.release-please-manifest.json"
 GITHUB_WF_DIR="${REPO_ROOT}/.github/workflows"
 FORGEJO_WF_DIR="${REPO_ROOT}/.forgejo/workflows"
 
@@ -38,61 +37,59 @@ failures=0
 pass() { printf 'PASS: %s\n' "$1"; }
 fail() { printf 'FAIL: %s\n' "$1"; failures=$((failures + 1)); }
 
-# --- 1. the release-please workflow exists -------------------------------
+# --- 1. the release-please workflow must NOT exist -------------------------
 if [ -f "$RP_WORKFLOW" ]; then
-    pass "release-please workflow exists (.github/workflows/release-please.yml)"
+    fail "release-please workflow still present (.github/workflows/release-please.yml) — mirror must not produce releases"
 else
-    fail "release-please workflow missing (.github/workflows/release-please.yml)"
+    pass "release-please workflow removed (no mirror release producer)"
 fi
 
-# --- 2. exactly one workflow invokes release-please-action ---------------
+# --- 2. no workflow invokes release-please-action --------------------------
 count=$(grep -rl "release-please-action" "$GITHUB_WF_DIR" 2>/dev/null | wc -l | tr -d ' ' || true)
-if [ "$count" -eq 1 ]; then
-    pass "exactly one workflow invokes release-please-action ($count)"
+if [ "$count" -eq 0 ]; then
+    pass "no workflow in .github/workflows references release-please-action ($count)"
 else
-    fail "expected exactly 1 workflow to invoke release-please-action, found $count"
+    fail "expected 0 workflows to reference release-please-action, found $count"
 fi
 
-# --- 3. the release-please job is gated to the GitHub mirror --------------
-if grep -q "github.server_url == 'https://github.com'" "$RP_WORKFLOW"; then
-    pass "release-please workflow is gated to github.com (Forgejo skips it)"
+# --- 3. the release-please config files are gone ---------------------------
+if [ -f "$RP_CONFIG" ] || [ -f "$RP_MANIFEST" ]; then
+    fail "release-please config/manifest still present (dead configuration)"
 else
-    fail "release-please workflow is NOT gated to github.com"
+    pass "release-please config and manifest removed"
 fi
 
-# --- 4. Forgejo must not be a second release producer --------------------
+# --- 4. Forgejo must not be a release-please producer ----------------------
 count=$(grep -rl "release-please" "$FORGEJO_WF_DIR" 2>/dev/null | wc -l | tr -d ' ' || true)
 if [ "$count" -eq 0 ]; then
-    pass "no Forgejo workflow references release-please (single producer)"
+    pass "no Forgejo workflow references release-please (producer is the ops-engine, not release-please)"
 else
     fail "Forgejo workflow(s) reference release-please: $count"
 fi
 
-# --- 5. evidence release-please actually ran on the mirror ---------------
-release_lines="$(git -C "$REPO_ROOT" log --all --format='%an|%s' \
-    | grep -E 'github-actions\[bot\]\|chore\(main\): release|app/github-actions\|chore\(main\): release' || true)"
-if [ -n "$release_lines" ]; then
-    pass "git history shows release-please release commits (github-actions[bot]/app-github-actions, 'chore(main): release')"
-else
-    fail "no release-please release commit found in git history"
-fi
-
-# --- 6. the tap dispatch is wired as post-mirror distribution -------------
-#    The standalone notify-tap.yml keys on the GitHub release:publish event and
-#    must be gated to github.com.
+# --- 5. the tap dispatch is wired to the mirrored tag push ------------------
 if [ -f "$TAP_WORKFLOW" ]; then
-    if grep -q "types: \[published\]" "$TAP_WORKFLOW" \
+    if grep -q 'tags:' "$TAP_WORKFLOW" \
+       && grep -q '"v\*"' "$TAP_WORKFLOW" \
        && grep -q "github.server_url == 'https://github.com'" "$TAP_WORKFLOW"; then
-        pass "notify-tap.yml triggers on release.published and is gated to github.com"
+        pass "notify-tap.yml triggers on v* tag push and is gated to github.com"
     else
-        fail "notify-tap.yml missing release.published trigger or github.com gate"
+        fail "notify-tap.yml missing v* tag trigger or github.com gate"
     fi
 else
     fail "notify-tap.yml missing (.github/workflows/notify-tap.yml)"
 fi
 
-#    The dispatch must target the homebrew-tap repository with the
-#    formula-update event type for formula 'faigrid'.
+# --- 6. the tap dispatch must not depend on release-please ------------------
+#      (grep for a real `needs:` dependency or an action reference, not for
+#      the word in a comment, which is legitimate documentation)
+if grep -Eq 'needs:.*release-please|release-please-action' "$TAP_WORKFLOW"; then
+    fail "notify-tap.yml depends on release-please (needs:/action reference found)"
+else
+    pass "notify-tap.yml has no release-please dependency"
+fi
+
+# --- 7. the dispatch targets homebrew-tap for formula faigrid ----------------
 if grep -q "repo:  'homebrew-tap'" "$TAP_WORKFLOW" \
    && grep -q "event_type: 'formula-update'" "$TAP_WORKFLOW" \
    && grep -q "formula: 'faigrid'" "$TAP_WORKFLOW"; then
@@ -101,18 +98,9 @@ else
     fail "tap dispatch is not wired to homebrew-tap / formula-update / faigrid"
 fi
 
-#    Every tap-dispatch path must be gated to github.com, including the
-#    release-please notify-tap fallback job.
-if grep -q "notify-tap" "$RP_WORKFLOW" \
-   && grep -q "github.server_url == 'https://github.com'" "$RP_WORKFLOW"; then
-    pass "release-please notify-tap fallback present and gated to github.com"
-else
-    fail "release-please notify-tap fallback missing or not gated to github.com"
-fi
-
 echo
 if [ "$failures" -eq 0 ]; then
-    echo "release path verified (single producer + tap distribution): $failures failure(s)"
+    echo "release path verified (Forgejo producer, mirror distribution only): $failures failure(s)"
     exit 0
 else
     echo "release path NOT verified: $failures failure(s)"

@@ -3,103 +3,135 @@
 ## Question
 
 Where does faigrid cut releases, through which producer, and how does a release
-reach the Homebrew tap without leaking writes back onto a mirror that is
-supposed to stay a one-way copy? This document answers that from evidence, not
-from inference about the workflow configuration.
+reach the Homebrew tap when the GitHub mirror is read-only by contract? This
+document answers that from evidence and from the operator decision recorded in
+FFR-600-2.
 
-## The division (FFR-600)
+## The operator decision (FFR-600-2, 2026-08-23)
 
-faigrid has exactly **one** release producer, and it is the **GitHub mirror**
-via `release-please`. The canonical Forgejo origin is *not* a second producer:
-its only output toward GitHub is the push-only `mirror.yml` sync. There is one
-producer by construction and by runtime evidence.
+faigrid follows the standard fusionAIze model without exception:
+
+```
+local -> Forgejo (canonical) -> mirror -> GitHub does distribution only
+```
+
+Production releases are produced **on Forgejo** by the ops-engine
+`ReleaseHandler` (`release.enabled` + `name_template`). The GitHub mirror stops
+being a producer. It retains exactly one downstream-side responsibility:
+distribution to the Homebrew tap, keyed on the release tag that mirror.yml
+copies verbatim from Forgejo.
+
+This makes faigrid conform to the shape FAI-211 already records for faigate's
+`prerelease.yml` divergence: the mirror no longer writes releases, it only
+distributes what the canonical producer cut.
+
+## How it was (the divergence this decision closes)
+
+Dispatch-1/2/3 evidence established that, before this change, the opposite was
+true:
+
+- release-please produced releases on the GitHub mirror (1.6.1, 1.6.2, 1.7.0
+  by `github-actions[bot]`; 1.8.0 manually by a human).
+- There was **no** Forgejo producer.
+- The read-only mirror was being written to: open PR #22 for release 1.7.1 and
+  its branch `release-please--branches--main` were left open by a
+  release-please run.
+
+That evidence stands. The target state below replaces the mechanism, not the
+record.
+
+## Target state: one producer, on Forgejo
 
 | Aspect | Canonical (Forgejo) | Mirror (GitHub) |
 | --- | --- | --- |
-| Role | source of truth, canonical history | release producer + read-only public mirror |
-| Release producer | none | release-please (single) |
-| Tap distribution | n/a | `release.published` -> homebrew-tap |
+| Role | source of truth + release producer | read-only public mirror + distribution |
+| Release producer | ops-engine `ReleaseHandler` | none |
+| Tap distribution | n/a | tag push -> homebrew-tap |
 
-## Single producer
+### One producer, reducible to two file facts
 
-The release producer is defined in exactly one workflow:
+- `.github/workflows/release-please.yml` is **removed**. Nothing in this
+  repository invokes `googleapis/release-please-action` anymore. Removal (not
+  neutralization) is the only way to guarantee "no release object, no tag" is
+  ever produced from the mirror, because a workflow that cannot exist cannot
+  fire.
+- `.github/workflows/notify-tap.yml` no longer contains a release-please
+  fallback job. It triggers solely on the push of a `v*` tag to the mirror —
+  the exact event `mirror.yml` emits when it copies the ops-engine's release
+  tag across.
 
-- `.github/workflows/release-please.yml` is the only workflow that invokes
-  `googleapis/release-please-action` (line 21). No other workflow file
-  references `release-please-action`.
-- That job is gated to GitHub only: `if: ${{ github.server_url == 'https://github.com' }}`
-  (line 13). On Forgejo, `github.server_url` is the Forgejo URL, so Forgejo
-  skips the workflow entirely.
-- `.forgejo/workflows/` contains only `mirror.yml`, a push-only mirror that
-  force-pushes branches and tags to GitHub. It references no release-please
-  action, so Forgejo is not a second producer.
+The release-please configuration files (`release-please-config.json` and
+`.release-please-manifest.json`) are removed with the workflow. They are dead
+configuration once the action is gone; leaving them would imply a producer
+that no longer exists.
 
-### Runtime evidence
+### How the tap is triggered now
 
-Release-please runs as GitHub's Actions bot. Its identity is
-`github-actions[bot]` (older releases) and, after GitHub renamed the bot,
-`app/github-actions` (more recent runs). Its commit subject is
-`chore(main): release X.Y.Z`. Those two markers are the observable signature
-of a real release-please run on GitHub.
+`mirror.yml` (`.forgejo/workflows/mirror.yml`, which this change does not
+touch) force-pushes every Forgejo tag matching `v*` to GitHub on the `push`
+event. When the ops-engine cuts a release on Forgejo:
 
-| Release | Author | Producer |
-| --- | --- | --- |
-| 1.6.1 | `github-actions[bot]` | release-please (`chore(main): release 1.6.1 (#10)`) |
-| 1.6.2 | `github-actions[bot]` | release-please (`chore(main): release 1.6.2 (#13)`) |
-| 1.7.0 | `github-actions[bot]` | release-please (`chore(main): release 1.7.0 (#15)`) |
-| 1.8.0 | human | manual, git-cliff changelog |
+1. the ops-engine creates the annotated release tag `vX.Y.Z` on Forgejo,
+2. Forgejo's `mirror.yml` push event copies that tag to GitHub,
+3. GitHub sees the `vX.Y.Z` tag push and runs `notify-tap.yml`, which computes
+   the source-tarball SHA256 and dispatches `formula-update` to
+   `fusionAIze/homebrew-tap`.
 
-The GitHub PR list confirms the producer directly: PRs #10, #13, #15 are
-`chore(main): release …` authored by the bot identity, and PR #22
-`chore(main): release 1.7.1` is authored by `app/github-actions`. All of these
-came from release-please running on the mirror.
+The tap payload (`formula`, `version`, `sha256`) is unchanged; only the
+trigger moved from "release-please output" to "mirrored tag".
 
-## Homebrew tap distribution (post-mirror)
+### What breaks if the ops-engine release is absent
 
-Two wiring paths deliver a release to the Homebrew tap, both gated to
-`github.com` so they fire only on the mirror, after the release lands there:
+- If the ops-engine has not yet been configured to cut faigrid releases, no
+  `v*` tag is produced on Forgejo, so none is mirrored, so `notify-tap.yml`
+  never fires. **That is acceptable and intentional**: it is safe to produce
+  no release (and no tap update) in the window between this change and the
+  `fusionaize-ops` configuration. Nothing fails, nothing writes to the mirror.
+- The tag shape is the contract: the ops-engine must produce an **annotated**
+  tag so that a `v*` tag reaches the mirror. A tag that never lands on the
+  mirror cannot trigger the tap, and a release that exists only on Forgejo is
+  invisible to GitHub distribution until mirror sync runs.
+- The `fusionaize-ops` configuration itself (`release.enabled`,
+  `name_template` for the `ReleaseHandler`) is a *different repository* and is
+  out of scope for this change. Until it lands, faigrid cuts no releases at
+  all.
 
-1. `.github/workflows/notify-tap.yml` — triggers on the GitHub
-   `release: published` event. Its single job
-   (`if: github.server_url == 'https://github.com'`) computes the release
-   archive SHA256 and, via `actions/github-script`, dispatches a
-   `formula-update` repository-dispatch event to
-   `fusionAIze/homebrew-tap` with `{ formula: "faigrid", version, sha256 }`.
+## Mirror-write residue: named, with a cleanup path, NOT executed here
 
-2. `.github/workflows/release-please.yml`'s `notify-tap` job — the fallback
-   that runs only when release-please actually created the release
-   (`release_created == true`). It repeats the same SHA256 computation and
-   dispatch with a dedicated `TAP_GITHUB_TOKEN`.
+The following are outward-facing on GitHub (deleting a branch, closing a PR).
+They have visible effect and therefore belong to the operator, not to this
+repository change. This section names them and the required action; it does
+not perform them.
 
-The standalone `notify-tap.yml` is the primary path: it is keyed on the GitHub
-`release.published` event, which is the canonical "a release now exists on the
-mirror" signal, independent of which tool produced it. This is what keeps the
-tap working even when 1.8.0 was cut by a human instead of release-please.
+1. **Open PR #22** — `chore(main): release 1.7.1` (opened by
+   `app/github-actions` on 2026-06-30), never merged. The release line moved
+   on to a manual 1.8.0. **Action (operator):** close it on GitHub. It is a
+   stale release-please artifact with no producer backing it anymore.
+2. **Branch `release-please--branches--main`** — the head of that PR, present
+   on both `origin` and the mirror. **Action (operator):** delete it from
+   Forgejo; `mirror.yml`'s `prune=true` full-state dispatch then removes it
+   from GitHub, restoring the one-way mirror contract.
+3. **`v1.8.0` tag-shape drift** — `v1.8.0` is an *annotated* tag object
+   (`976adfc`) on Forgejo but a *lightweight* tag pointing straight at commit
+   `3520451` on GitHub; the annotated tag object was never mirrored.
+   **Action (operator):** re-run a full-state `workflow_dispatch` of
+   `mirror.yml` with the tag ref so the annotated object is mirrored verbatim,
+   then verify `git ls-remote --tags` agrees across both remotes. This matters
+   now because the tap fires on mirrored tags; a lightweight/annotated
+   mismatch is exactly the class of drift that can make tag identity diverge.
 
-## Writes back onto the read-only mirror
+Why these are operator actions rather than repository changes: deleting a
+branch or closing a PR on GitHub is a mutation of live remote state, not of
+the tracked tree. Doing it from a worktree change would conflate a source
+edit with an external side effect, and would be impossible to review as a
+single diff.
 
-The mirror is a *recovery copy* (see `mirror.yml` header comments): its
-contract is one-way, Forgejo -> GitHub. release-please is deliberately allowed
-to be the *one* exception — it runs on GitHub and writes release commits,
-branches, and PRs there. The rule is that those writes are **resolved**, not
-tolerated, into the canonical line:
+## Enforceability
 
-- release-please's release commits and tags flow back into the canonical
-  Forgejo history (they appear on `origin/main` and as tags `v1.6.1`,
-  `v1.6.2`, `v1.7.0`). A release-please run is only complete when its output
-  is reconciled onto Forgejo.
-- A release-please run that is **left open** is tolerated-write residue and
-  must be closed. Concrete case: PR #22 `chore(main): release 1.7.1`
-  (opened by `app/github-actions` on 2026-06-30) was never merged — the
-  release line moved on to a manual 1.8.0 instead. Its head branch
-  `release-please--branches--main` is still present on both `origin` and the
-  mirror. That open PR and its branch are the residue this document flags for
-  resolution.
-- Release tags must stay identical across the two remotes. Observed
-  discrepancy to resolve: `v1.8.0` is an *annotated* tag object (`976adfc`)
-  on Forgejo but a *lightweight* tag pointing straight at commit `3520451` on
-  GitHub — the annotated tag object itself was never mirrored.
-
-`tests/test_single_release_producer.sh` encodes the invariants that make this
-division enforceable: a single producer gated to GitHub, a tap dispatch wired
-on the release event, and no second producer on Forgejo.
+`tests/test_single_release_producer.sh` encodes the target-state invariants:
+there is **no** release producer on the mirror (release-please.yml absent, no
+workflow references release-please-action), the tap is wired to the `v*` tag
+push and gated to github.com with no release-please dependency, and Forgejo
+remains without its own release-please producer. The earlier "runtime
+evidence" assertions about release-please's historical commits are retired:
+they prove the *past* producer, not the target state.
