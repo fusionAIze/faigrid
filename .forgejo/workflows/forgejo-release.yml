@@ -262,6 +262,13 @@ jobs:
           FORGEJO_BASE_URL: "${{ github.server_url }}"
           FORGEJO_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
           GH_MIRROR_TOKEN: "${{ secrets.GH_MIRROR_TOKEN }}"
+          # The canonical tag identity is read from the forge that RUNS this
+          # workflow, not from the workspace checkout actions/checkout degraded.
+          # github.server_url resolves to https://git.langevc.com on Forgejo and
+          # https://github.com on the read-only mirror. The `.git` suffix is what
+          # makes it a fetchable remote for `git ls-remote` (the credential-less
+          # repo is public).
+          CANONICAL_GIT_URL: "${{ github.server_url }}/${{ github.repository }}.git"
         run: |
           set -euo pipefail
 
@@ -373,13 +380,19 @@ jobs:
           )
 
           # The mirror tag is pushed from the CANONICAL tag object, never invented
-          # by the release API. GitHub's POST /releases takes a `tag_name` and,
-          # when that tag does not yet exist on the mirror, CREATES it at the
-          # mirror's default-branch HEAD at that moment — so the mirror tag would
-          # point at a commit this repository never tagged. ops-engine shipped
-          # exactly that in v3.4.0: the mirror tag landed on the commit whose
-          # pyproject read 3.3.0. mirror.yml pushes tags too, but on its own
-          # schedule, and this step must not race it.
+          # by the release API. Two independent mechanisms can put a tag on the
+          # mirror that Forgejo never made:
+          #   - GitHub's POST /releases takes a `tag_name` and, when that tag does
+          #     not yet exist on the mirror, CREATES it at the mirror's default-
+          #     branch HEAD at that moment (ops-engine v3.4.0's subject);
+          #   - a DEGRADED workspace ref (actions/checkout re-fetches an annotated
+          #     tag as `+<commit>:refs/tags/X`, making it lightweight) pushed onto
+          #     the mirror would turn the annotated mirror tag lightweight with no
+          #     peel line.
+          # Both are answered the same way: read the tag identity from Forgejo,
+          # restore the workspace ref to the canonical OBJECT, and push that
+          # object. mirror.yml pushes tags too, but on its own schedule, and this
+          # step must not race it.
           #
           # git, not a forge API, decides where the tag points.
           mirror_dest = next(
@@ -396,26 +409,119 @@ jobs:
               )
 
           def _tag_refs() -> tuple:
-              """The canonical tag's object SHA and peeled commit SHA.
+              """The CANONICAL tag's object SHA and peeled commit SHA, read from
+              the canonical forge — never from the workspace checkout.
 
-              The object SHA (`git rev-parse refs/tags/X`) is the TAG OBJECT for
-              an annotated tag, or the commit itself for a lightweight tag. The
-              peel (`refs/tags/X^{}`) normalises both onto the commit. They MUST
-              be compared separately: comparing only the peel is exactly what
-              let an annotated canonical tag pass beside a lightweight mirror
-              tag, because both peel to the same commit."""
-              obj = subprocess.check_output(
-                  ["git", "rev-parse", "refs/tags/%s" % tag_name], text=True
-              ).strip()
-              peeled = subprocess.check_output(
-                  ["git", "rev-parse", "refs/tags/%s^{}" % tag_name], text=True
-              ).strip()
+              The workspace cannot answer this question. actions/checkout decides
+              identity with `testRef(ref) === revParse(ref)`, and for an ANNOTATED
+              tag `revParse(refs/tags/X)` is the TAG OBJECT, not the commit the
+              run is checked out at. The test therefore fails and the ref is
+              re-fetched as `+<commit>:refs/tags/X`, leaving a LIGHTWEIGHT local
+              ref. (input-helper.ts sets commit = context.sha, the commit;
+              ref-helper.ts then overwrites the tag.) `git rev-parse` in such a
+              workspace returns the COMMIT for both the ref and its peel, so the
+              object comparison below degrades to lightweight-vs-lightweight and
+              passes while Forgejo still holds the tag object. That is exactly
+              the FRL-007 divergence.
+
+              `git ls-remote <canonical>` reads what the Forgejo server actually
+              stores: the tag object under `refs/tags/X` and, only when the tag is
+              annotated, the peeled commit under `refs/tags/X^{}`. The canonical
+              side of the comparison is therefore taken from the forge, not from
+              the tree we were handed."""
+              src = os.environ["CANONICAL_GIT_URL"]
+              ls = subprocess.run(
+                  ["git", "ls-remote", src,
+                   "refs/tags/%s" % tag_name, "refs/tags/%s^{}" % tag_name],
+                  capture_output=True, text=True, check=True,
+              )
+              refs = {}
+              for line in ls.stdout.splitlines():
+                  sha, _, ref = line.partition("\t")
+                  refs[ref] = sha.strip()
+              obj = refs.get("refs/tags/%s" % tag_name, "")
+              peeled = refs.get("refs/tags/%s^{}" % tag_name, "")
+              if not obj:
+                  print(
+                      "::error::MissingCanonicalTagError: tag %s does not exist "
+                      "on the canonical forge %s; refusing before anything is "
+                      "pushed or published."
+                      % (tag_name, src),
+                      file=sys.stderr,
+                  )
+                  sys.exit(2)
+              # A lightweight canonical tag has no peel line; the tag object IS
+              # the commit. A workflow-dispatch run reaches here before the tag
+              # exists, so the absence is reported by name rather than silently
+              # normalised.
+              if not peeled:
+                  print(
+                      "::message::tag %s is lightweight on the canonical forge "
+                      "(no peel line); the mirror must match it lightweight."
+                      % tag_name
+                  )
+                  peeled = obj
               return obj, peeled
 
-          def _push_mirror_tag(remote: str) -> None:
+          def _rebuild_canonical_ref(obj: str, peel: str) -> None:
+              """Point the workspace tag at the CANONICAL tag OBJECT, so the push
+              below transfers the same identity the comparison expects.
+
+              Fixing only the comparison would leave the pre-publish push sending
+              the degraded lightweight ref — and that push is what corrupts the
+              mirror. The push remote advertises the bare canonical ref, so the
+              refspec would win the race and fail; at an empty mirror it would
+              quietly create the lightweight tag. Either way the degradation must
+              be undone before the push, not detected after it.
+
+              The tag object is already in the workspace: the fetch that degraded
+              the ref brought the object with it. `update-ref` simply re-points
+              the local ref at it. A missing object is a named refusal rather than
+              a silent fallback to the degraded ref."""
+              try:
+                  kind = subprocess.check_output(
+                      ["git", "cat-file", "-t", obj], text=True
+                  ).strip()
+                  actual_peel = subprocess.check_output(
+                      ["git", "rev-parse", "%s^{}" % obj], text=True
+                  ).strip()
+              except subprocess.CalledProcessError:
+                  print(
+                      "::error::MissingCanonicalTagObjectError: canonical object "
+                      "%s for tag %s is not in the workspace; refusing to push a "
+                      "tag whose identity cannot be established." % (obj, tag_name),
+                      file=sys.stderr,
+                  )
+                  sys.exit(2)
+              if actual_peel != peel:
+                  print(
+                      "::error::CanonicalTagUnreachableError: canonical object %s "
+                      "for tag %s peels to %s, expected %s; refusing to push an "
+                      "unverified tag object." % (obj, tag_name, actual_peel, peel),
+                      file=sys.stderr,
+                  )
+                  sys.exit(2)
+              subprocess.run(
+                  ["git", "update-ref", "refs/tags/%s" % tag_name, obj],
+                  check=True,
+              )
+              print(
+                  "canonical tag object restored in workspace: %s -> %s (%s)"
+                  % (tag_name, obj, kind)
+              )
+
+          def _push_mirror_tag(remote: str, obj: str) -> None:
+              """Push the canonical tag OBJECT onto the mirror.
+
+              The source is the canonical object SHA, not the workspace ref name.
+              `git push remote <sha>:refs/tags/X` sends that object and only
+              succeeds if the remote accepts it under the tag name — a forged or
+              foreign object is refused by the push itself. Pushing the ref NAME
+              instead would forward whatever the workspace ref happens to be, and
+              a degraded lightweight ref is precisely what we must not send."""
               subprocess.run(
                   ["git", "push", "--force", remote,
-                   "refs/tags/%s:refs/tags/%s" % (tag_name, tag_name)],
+                   "%s:refs/tags/%s" % (obj, tag_name)],
                   check=True,
               )
 
@@ -478,17 +584,23 @@ jobs:
               )
 
           async def main():
-              # Push the canonical tag object onto the mirror BEFORE the engine
+              # The canonical tag ref is pushed onto the mirror BEFORE the engine
               # publishes, so the github create_release cannot invent a tag. The
-              # mirror is re-checked IMMEDIATELY after the push, object-for-object:
-              # the GitHub POST /releases creates a lightweight tag at the default
-              # branch HEAD when the tag is absent, so a push that landed late or
-              # not at all would let the API invent the exact lightweight/annotated
-              # divergence this check exists to stop (ops-engine 3.4.1's subject).
+              # sequence is deliberate and ordered:
+              #   1. read the canonical identity from Forgejo (object + peel),
+              #   2. rebuild the workspace ref to that OBJECT, undoing any
+              #      checkout degradation,
+              #   3. push the OBJECT (not the ref name) to the mirror,
+              #   4. re-check the mirror object-for-object.
+              # Step 2 is what stops the corruption; step 4 is the proof it did
+              # not happen. Without step 2 a degraded workspace ref would be the
+              # thing pushed (lightweight mirror tag), and the check would pass
+              # because it compared lightweight against lightweight.
               if mirror_dest is not None:
                   mirror_remote = _mirror_remote(mirror_dest.repo)
                   canon_obj, canon_peel = _tag_refs()
-                  _push_mirror_tag(mirror_remote)
+                  _rebuild_canonical_ref(canon_obj, canon_peel)
+                  _push_mirror_tag(mirror_remote, canon_obj)
                   _verify_mirror_tag(canon_obj, canon_peel, mirror_remote)
 
               credentials = {
@@ -526,7 +638,9 @@ jobs:
 
               # After publication, refuse by name if the mirror tag is not the
               # SAME OBJECT the canonical tag is (annotated vs lightweight), or
-              # if the peels disagree. Object identity is what a peel-only
+              # if the peels disagree. The canonical side is re-read from Forgejo,
+              # not from the workspace, so the comparison cannot be satisfied by a
+              # degraded local ref. Object identity is what a peel-only
               # comparison cannot see, and it is what this run just proved.
               if mirror_dest is not None:
                   canon_obj, canon_peel = _tag_refs()
