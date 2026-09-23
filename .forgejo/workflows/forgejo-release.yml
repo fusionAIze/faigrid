@@ -255,8 +255,13 @@ jobs:
       # in .ops.yaml lines 43-49 and in ops-engine's CONTRACT.md lines 457-464).
       # The host comes from .ops.yaml's forge_hosts and the path from the
       # destination whose forge is forgejo; the `.git` suffix is what makes it a
-      # fetchable remote for `git ls-remote` (the credential-less repo is
-      # public). The file is read the way the audience gate above reads
+      # fetchable remote for `git ls-remote`. The canonical repository is NOT
+      # anonymously readable, whatever .ops.yaml's visibility field claims:
+      # a credential-less HTTPS ls-remote is refused by the forge (measured
+      # "Repository not found") and the API answers "Only signed in user is
+      # allowed to call APIs." (403). The ls-remote therefore authenticates with
+      # the FORGEJO_TOKEN this release job already holds. The file is read the
+      # way the audience gate above reads
       # tracker_prefixes: stdlib only, line by line, because the bare runner
       # carries neither yaml nor pydantic.
       - name: Derive the canonical git URL from the config layer
@@ -503,6 +508,32 @@ jobs:
                   % (os.environ["GH_MIRROR_TOKEN"], github_repo)
               )
 
+          def _authenticated_url(url: str, token: str) -> str:
+              """Embed the forge credential this workflow already holds into a
+              URL for a single git invocation.
+
+              The canonical repository is not anonymously readable, so a
+              credential-less ls-remote reads nothing and criterion 2 is
+              unprovable. The credential is `secrets.GITHUB_TOKEN`, exposed to
+              this step as FORGEJO_TOKEN; it is carried in the userinfo exactly
+              as `_mirror_remote` carries GH_MIRROR_TOKEN, with the same literal
+              username. The forge accepts a token in the password field with any
+              username (verified against the canonical forge itself).
+
+              The credential-bearing string is handed to git and never formatted
+              into a log line: every message names the credential-free URL.
+
+              Only an absolute URL is authenticated. A value without a scheme is
+              NOT a forge URL — the canonical URL is composed as
+              `https://<host>/<path>.git` from .ops.yaml — and prefixing the
+              userinfo onto a bare path produces a hostless URL git rejects. Such
+              a value is returned unchanged rather than given a credential, and
+              the caller still refuses by name if the read yields no tag."""
+              scheme, sep, rest = url.partition("://")
+              if not sep:
+                  return url
+              return "%s://x-access-token:%s@%s" % (scheme, token, rest)
+
           def _tag_refs() -> tuple:
               """The CANONICAL tag's object SHA and peeled commit SHA, read from
               the canonical forge — never from the workspace checkout.
@@ -523,13 +554,43 @@ jobs:
               stores: the tag object under `refs/tags/X` and, only when the tag is
               annotated, the peeled commit under `refs/tags/X^{}`. The canonical
               side of the comparison is therefore taken from the forge, not from
-              the tree we were handed."""
+              the tree we were handed.
+
+              The forge refuses the anonymous read, so this ls-remote carries the
+              credential the workflow already holds. A missing credential, or a
+              credential the forge rejects, is a NAMED refusal: it never falls
+              back to the degraded workspace ref or to github.server_url. The
+              credential-free URL is the only URL ever printed."""
               src = os.environ["CANONICAL_GIT_URL"]
+              token = os.environ.get("FORGEJO_TOKEN", "").strip()
+              if not token:
+                  print(
+                      "::error::MissingForgejoCredentialError: FORGEJO_TOKEN is "
+                      "empty; the canonical forge %s is not anonymously readable, "
+                      "so its tag identity cannot be read and criterion 2 cannot "
+                      "be proven. Refusing to fall back to the degraded workspace "
+                      "ref or to github.server_url." % src,
+                      file=sys.stderr,
+                  )
+                  sys.exit(2)
+              auth_src = _authenticated_url(src, token)
+              # No check=True: a rejected credential must be reported by name, not
+              # raised as a CalledProcessError whose text carries the auth URL.
               ls = subprocess.run(
-                  ["git", "ls-remote", src,
+                  ["git", "ls-remote", auth_src,
                    "refs/tags/%s" % tag_name, "refs/tags/%s^{}" % tag_name],
-                  capture_output=True, text=True, check=True,
+                  capture_output=True, text=True,
               )
+              if ls.returncode != 0:
+                  print(
+                      "::error::CanonicalTagUnreadableError: git ls-remote against "
+                      "the canonical forge %s failed (exit %s); the tag identity "
+                      "could not be read. Refusing before anything is pushed or "
+                      "published. git diagnostics are withheld because they can "
+                      "carry the credential." % (src, ls.returncode),
+                      file=sys.stderr,
+                  )
+                  sys.exit(2)
               refs = {}
               for line in ls.stdout.splitlines():
                   sha, _, ref = line.partition("\t")
