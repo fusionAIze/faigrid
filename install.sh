@@ -188,6 +188,7 @@ VNC_CHOICE=""
 ROLE_CHOICE=""
 ACTION_NAME=""
 MODE_CHOICE=""
+EXEC_MODE=""
 SSH_TARGET=""
 ROLE_NAME=""
 BOOTSTRAP_MODE="false"
@@ -197,7 +198,13 @@ RUN_STATUS="false"
 
 while [[ $# -gt 0 ]]; do
   case $1 in
-    --mode)      MODE_CHOICE="$2"; shift 2 ;;
+    --mode)
+        MODE_CHOICE="$2"
+        case "$MODE_CHOICE" in
+            local|remote) EXEC_MODE="$MODE_CHOICE" ;;
+            *) error "Invalid --mode value: '${MODE_CHOICE}' (expected local|remote)" ;;
+        esac
+        shift 2 ;;
     --target)    SSH_TARGET="$2"; shift 2 ;;
     --role)      ROLE_NAME="$2"; shift 2 ;;
     --action)    ACTION_NAME="$2"; shift 2 ;;
@@ -575,15 +582,15 @@ if [[ -z "$MODE_CHOICE" ]]; then
     echo -e "    ${BOLD}2)${NC}  Remote Push   ${DIM}— Push to a remote node via SSH from this workstation${NC}"
     echo ""
     prompt "Select mode (1/2): " MODE_CHOICE
-    
-    if [[ "$MODE_CHOICE" == "1" ]]; then
-        EXEC_MODE="local"
-    elif [[ "$MODE_CHOICE" == "2" ]]; then
-        EXEC_MODE="remote"
-    fi
+
+    # Numeric mapping is the interactive form; the words are accepted too.
+    case "$MODE_CHOICE" in
+        1|local)  EXEC_MODE="local" ;;
+        2|remote) EXEC_MODE="remote" ;;
+    esac
 fi
 
-if [[ "$EXEC_MODE" == "remote" ]]; then
+if [[ "${EXEC_MODE:-}" == "remote" ]]; then
     if [[ -z "$SSH_TARGET" ]]; then
         default_ip="192.168.178.10"
         case "$ROLE_NAME" in

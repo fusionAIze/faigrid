@@ -186,3 +186,88 @@ EOF
     grep -q 'STATE_DIR="${HOME}/.config/faigrid/registry"' "${REPO_ROOT}/install.sh"
     grep -q 'STATE_FILE="${STATE_DIR}/state.env"' "${REPO_ROOT}/install.sh"
 }
+
+# ==============================================================================
+# FAI-208 (PR-001) — install.sh completes non-interactively
+#
+# The deploy-mode block used to be guarded by `if [[ -z "$MODE_CHOICE" ]]`, so
+# `--mode <value>` filled MODE_CHOICE, the block was skipped, EXEC_MODE was never
+# assigned and `set -u` aborted at the read. A stub `docker`/`ssh` makes service
+# discovery deterministic across hosts: install.sh then adopts the unregistered
+# node non-interactively and persists the registry, without running any installer.
+# ==============================================================================
+
+_stub_service_discovery() {
+    local bindir="$1"
+    mkdir -p "$bindir"
+    printf '#!/usr/bin/env bash\nexit 0\n' > "${bindir}/docker"
+    chmod +x "${bindir}/docker"
+}
+
+@test "FAI-208 - documented non-interactive install writes state.env (C3)" {
+    local bindir="${BATS_TEST_TMPDIR}/stub-bin"
+    _stub_service_discovery "$bindir"
+
+    # Documented invocation (README.md), stdin at EOF, sandboxed HOME.
+    run env PATH="${bindir}:${PATH}" bash "${REPO_ROOT}/install.sh" \
+        --mode local --role core --yes </dev/null
+
+    [ "$status" -eq 0 ]
+    [ -f "$STATE_FILE" ]
+    grep -q 'GRID_ROLE=core' "$STATE_FILE"
+}
+
+@test "FAI-208 - --mode local sets EXEC_MODE directly (C1)" {
+    local bindir="${BATS_TEST_TMPDIR}/stub-bin"
+    _stub_service_discovery "$bindir"
+
+    run env PATH="${bindir}:${PATH}" bash "${REPO_ROOT}/install.sh" \
+        --mode local --role core --yes </dev/null
+
+    [ "$status" -eq 0 ]
+    [ -f "${STATE_DIR}/core.state" ]
+    grep -q 'EXEC_MODE=local' "${STATE_DIR}/core.state"
+}
+
+@test "FAI-208 - --mode remote sets EXEC_MODE directly (C1)" {
+    local bindir="${BATS_TEST_TMPDIR}/stub-bin"
+    mkdir -p "$bindir"
+    # A stub ssh reports success so the remote path needs no real host.
+    printf '#!/usr/bin/env bash\nexit 0\n' > "${bindir}/ssh"
+    chmod +x "${bindir}/ssh"
+
+    run env PATH="${bindir}:${PATH}" bash "${REPO_ROOT}/install.sh" \
+        --mode remote --target grid@example --role core --yes </dev/null
+
+    [ "$status" -eq 0 ]
+    [ -f "${STATE_DIR}/core.state" ]
+    grep -q 'EXEC_MODE=remote' "${STATE_DIR}/core.state"
+    grep -q 'SSH_TARGET=grid@example' "${STATE_DIR}/core.state"
+}
+
+@test "FAI-208 - no --mode does not abort on an unbound EXEC_MODE (C2)" {
+    local bindir="${BATS_TEST_TMPDIR}/stub-bin"
+    _stub_service_discovery "$bindir"
+
+    run env PATH="${bindir}:${PATH}" bash "${REPO_ROOT}/install.sh" \
+        --role core --yes </dev/null
+
+    [ "$status" -eq 0 ]
+    [[ "$output" != *"unbound variable"* ]]
+    [ -f "$STATE_FILE" ]
+}
+
+@test "FAI-208 - README and runbook invoke the parser's flags only" {
+    # README.md:100 is the documented call site; it must not carry the retired
+    # --strategy flag, and the runbook must use the documented local|remote form.
+    ! grep -q -- '--strategy' "${REPO_ROOT}/README.md"
+    grep -q -- '--mode local --role core --yes' "${REPO_ROOT}/README.md"
+    grep -q -- '--mode remote' "${REPO_ROOT}/docs/runbooks/09-external-cloud.md"
+
+    # Every documented flag exists in the parser.
+    grep -q -- '--mode)' "${REPO_ROOT}/install.sh"
+    grep -q -- '--target)' "${REPO_ROOT}/install.sh"
+    grep -q -- '--role)' "${REPO_ROOT}/install.sh"
+    grep -q -- '--action)' "${REPO_ROOT}/install.sh"
+    grep -q -- '--yes)' "${REPO_ROOT}/install.sh"
+}

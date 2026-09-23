@@ -97,7 +97,7 @@ git clone https://github.com/fusionAIze/faigrid.git && cd faigrid
 bash install.sh
 
 # Deploy a specific role, e.g. Core
-./install.sh --mode local --role core --strategy 1 --yes
+./install.sh --mode local --role core --yes
 ```
 
 **Flags:**
