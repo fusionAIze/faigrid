@@ -15,11 +15,13 @@ faigrid follows the standard fusionAIze model without exception:
 local -> Forgejo (canonical) -> mirror -> GitHub does distribution only
 ```
 
-Production releases are produced **on Forgejo** by the ops-engine
-`ReleaseHandler` (`release.enabled` + `name_template`). The GitHub mirror stops
-being a producer. It retains exactly one downstream-side responsibility:
-distribution to the Homebrew tap, keyed on the release tag that mirror.yml
-copies verbatim from Forgejo.
+Production releases are produced **on Forgejo** by the repository-local
+producer `.forgejo/workflows/forgejo-release.yml`, which drives the ops-engine
+`ReleaseHandler` (v3.4.2) with the committed `.ops.yaml` destinations and
+`.release-title-prefix` name template. The GitHub mirror stops being a
+producer. It retains exactly one downstream-side responsibility: distribution
+to the Homebrew tap, keyed on the release tag that mirror.yml copies verbatim
+from Forgejo.
 
 This makes faigrid conform to the shape FAI-211 already records for faigate's
 `prerelease.yml` divergence: the mirror no longer writes releases, it only
@@ -40,12 +42,37 @@ true:
 That evidence stands. The target state below replaces the mechanism, not the
 record.
 
+## The Forgejo producer exists now (shipped, not future)
+
+The producer this repository was waiting on is present:
+
+- `.forgejo/workflows/forgejo-release.yml` — the repo-local producer, adapted
+  from ops-engine's own workflow. It runs a `gate` job (release title, CHANGELOG
+  notes, external audience) and a `release` job carrying `needs: gate`, pinned to
+  ops-engine v3.4.2, reading the committed `.ops.yaml` and
+  `.release-title-prefix`.
+- `.ops.yaml` and `.release-title-prefix` — the two committed files the workflow
+  reads.
+
+Prior versions of this document stated there was no Forgejo producer and that
+faigrid would cut no release until the `fusionaize-ops` configuration landed.
+That statement is no longer true and is replaced by the shipped state above:
+the producer is a repository-local workflow, not something the
+`fusionaize-ops` configuration supplies, and it is checked in now.
+
+Separately, the configuration this document named as a blocker landed on
+**2026-05-21** (`997ea86`), and `v1.8.0` was tagged on 2026-08-22 with no
+engine-produced release. The stated blocker was therefore never the blocker.
+Why the layover stayed silent for that tag is a runtime question, recorded and
+assigned to its own line of investigation rather than asserted here from file
+evidence.
+
 ## Target state: one producer, on Forgejo
 
 | Aspect | Canonical (Forgejo) | Mirror (GitHub) |
 | --- | --- | --- |
 | Role | source of truth + release producer | read-only public mirror + distribution |
-| Release producer | ops-engine `ReleaseHandler` | none |
+| Release producer | repository-local `forgejo-release.yml` (ops-engine `ReleaseHandler`) | none |
 | Tap distribution | n/a | tag push -> homebrew-tap |
 
 ### One producer, reducible to two file facts
@@ -82,19 +109,19 @@ trigger moved from "release-please output" to "mirrored tag".
 
 ### What breaks if the ops-engine release is absent
 
-- If the ops-engine has not yet been configured to cut faigrid releases, no
-  `v*` tag is produced on Forgejo, so none is mirrored, so `notify-tap.yml`
-  never fires. **That is acceptable and intentional**: it is safe to produce
-  no release (and no tap update) in the window between this change and the
-  `fusionaize-ops` configuration. Nothing fails, nothing writes to the mirror.
-- The tag shape is the contract: the ops-engine must produce an **annotated**
-  tag so that a `v*` tag reaches the mirror. A tag that never lands on the
-  mirror cannot trigger the tap, and a release that exists only on Forgejo is
+- If the release producer fails to run — a refused gate, a tag with no
+  CHANGELOG section — no `v*` tag is produced on Forgejo, so none is mirrored,
+  so `notify-tap.yml` never fires. **That is acceptable and intentional**: it
+  is safe to produce no release (and no tap update). Nothing fails, nothing
+  writes to the mirror.
+- The tag shape is the contract: the producer creates an **annotated** tag so
+  that a `v*` tag reaches the mirror. A tag that never lands on the mirror
+  cannot trigger the tap, and a release that exists only on Forgejo is
   invisible to GitHub distribution until mirror sync runs.
-- The `fusionaize-ops` configuration itself (`release.enabled`,
-  `name_template` for the `ReleaseHandler`) is a *different repository* and is
-  out of scope for this change. Until it lands, faigrid cuts no releases at
-  all.
+- The `fusionaize-ops` configuration that used to gate this window is no
+  longer the producer. It landed on 2026-05-21 and is a *different repository*
+  whose continuing role for faigrid is resolved separately; the producer for
+  the tag that reaches the tap is the repository-local workflow above.
 
 ## Mirror-write residue: named, with a cleanup path, NOT executed here
 
@@ -130,8 +157,10 @@ single diff.
 
 `tests/test_single_release_producer.sh` encodes the target-state invariants:
 there is **no** release producer on the mirror (release-please.yml absent, no
-workflow references release-please-action), the tap is wired to the `v*` tag
-push and gated to github.com with no release-please dependency, and Forgejo
-remains without its own release-please producer. The earlier "runtime
-evidence" assertions about release-please's historical commits are retired:
-they prove the *past* producer, not the target state.
+workflow references release-please-action), Forgejo has no release-please
+producer and instead carries the repository-local producer
+(`.forgejo/workflows/forgejo-release.yml` present, with its `gate` -> `release`
+split and the v3.4.2 pin), and the tap is wired to the `v*` tag push and gated
+to github.com with no release-please dependency. The earlier "runtime evidence"
+assertions about release-please's historical commits are retired: they prove
+the *past* producer, not the target state.
