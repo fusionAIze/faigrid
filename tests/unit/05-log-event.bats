@@ -4,11 +4,18 @@ load ../.libs/bats-support/load.bash 2>/dev/null || true
 load ../.libs/bats-assert/load.bash 2>/dev/null || true
 
 # ==============================================================================
-# log_event() — write path reaches disk as an unprivileged caller
+# log_event() — the write path goes through sudo (model (b), FAI-209)
 #
-# Proves that a non-root caller's event reaches BOTH grid-system.log and
-# grid-events.jsonl by overriding LOG_DIR to a writable sandbox path, and
-# that the sudo setup block is not re-run once the events file is writable.
+# /var/log/faigrid is 750 root:adm and its files are 640 root:adm, so those
+# modes grant read but never write. A non-root caller reaches disk only through
+# sudo. These cases prove:
+#   1. with sudo working, one call lands in BOTH files, via sudo;
+#   2. with sudo failing, the failure is NAMED on stderr, never discarded;
+#   3. C3.3 survives: the setup guard runs once per process while the writes
+#      stay a separate path (one write per call).
+#
+# sudo is stubbed. LOG_SETUP_ATTEMPTED is process state, so each test starts
+# from a fresh `source` of _lib.sh.
 # ==============================================================================
 
 setup() {
@@ -16,25 +23,30 @@ setup() {
     export CORE_ROOT="${REPO_ROOT}/core"
 
     # Override LOG_DIR to a per-test sandbox the current (unprivileged) user
-    # can write — no root, no sudo, no /var/log.
+    # can write, so the stubbed sudo's `tee -a` lands exactly as it would on a
+    # real host where LOG_DIR is root:adm.
     export LOG_DIR="${BATS_TEST_TMPDIR}/log"
     mkdir -p "$LOG_DIR"
 
     source "${CORE_ROOT}/workbench/scripts/_lib.sh"
 
-    # Stub sudo so any unexpected sudo call is observable (and harmless),
-    # and tally every invocation for the "no re-run" assertion.
-    _sudo_calls="${BATS_TEST_TMPDIR}/sudo_calls"
+    # sudo stub: tally the invocation, then run the command as the current
+    # (unprivileged) user.
+    export _sudo_calls="${BATS_TEST_TMPDIR}/sudo_calls"
     : > "$_sudo_calls"
-    sudo() { echo "sudo: $*" >&2; echo 1 >> "$_sudo_calls"; return 0; }
+    sudo() { echo "$*" >> "$_sudo_calls"; "$@"; }
     export -f sudo
 }
 
-@test "log_event writes a valid JSONL line to both files" {
+@test "log_event writes a valid JSONL line to both files through sudo" {
     run log_event "test" "INFO" "hello"
+    [ "$status" -eq 0 ]
 
     [ -f "${LOG_DIR}/grid-system.log" ]
     [ -f "${LOG_DIR}/grid-events.jsonl" ]
+
+    # The append went through sudo, not a direct write.
+    grep -q 'tee' "$_sudo_calls"
 
     # Both files must contain the same single JSONL line.
     [ "$(wc -l < "${LOG_DIR}/grid-system.log" | tr -d ' ')" -eq 1 ]
@@ -55,51 +67,58 @@ setup() {
     grep -q '"severity":"INFO"' "${LOG_DIR}/grid-events.jsonl"
 }
 
-@test "log_event does not re-run sudo once events file is writable" {
-    log_event "test" "INFO" "first"
-
-    local sudo_calls_before
-    sudo_calls_before="$(sudo_calls_count)"
-    log_event "test" "INFO" "second"
-    log_event "test" "INFO" "third"
-    local sudo_calls_after
-    sudo_calls_after="$(sudo_calls_count)"
-
-    # No additional sudo invocations on subsequent calls.
-    [ "$sudo_calls_before" -eq "$sudo_calls_after" ]
-
-    # All three events still landed in both files.
-    [ "$(wc -l < "${LOG_DIR}/grid-events.jsonl" | tr -d ' ')" -eq 3 ]
-    [ "$(wc -l < "${LOG_DIR}/grid-system.log" | tr -d ' ')" -eq 3 ]
-}
-
-@test "log_event failure path attempts sudo at most once per process" {
-    # Read-only LOG_DIR that exists but the current user cannot write, plus a
-    # failing sudo stub: the dir/file never become writable, so this exercises
-    # the failure path where setup can never succeed.
+@test "log_event names the failure when sudo is unavailable" {
+    # A LOG_DIR the caller cannot write plus a failing sudo: the write can
+    # never succeed, so the failure must be reported by name.
     local readonly_dir="${BATS_TEST_TMPDIR}/readonly-log"
     mkdir -p "$readonly_dir"
     chmod 555 "$readonly_dir"
-
-    local failed_sudo_calls="${BATS_TEST_TMPDIR}/failed_sudo_calls"
-    : > "$failed_sudo_calls"
-    sudo() { echo 1 >> "$failed_sudo_calls"; return 1; }
-    export -f sudo
-
     export LOG_DIR="$readonly_dir"
 
-    log_event "test" "ERROR" "first"
-    local calls_after_first
-    calls_after_first="$(failed_sudo_calls_count)"
+    sudo() { echo "$*" >> "$_sudo_calls"; return 1; }
+    export -f sudo
 
-    log_event "test" "ERROR" "second"
-    log_event "test" "ERROR" "third"
-    local calls_after_third
-    calls_after_third="$(failed_sudo_calls_count)"
+    run log_event "test" "ERROR" "boom"
+    [ "$status" -ne 0 ]
 
-    # One setup attempt's worth of sudo (<= 5), not repeated across calls.
-    [ "$calls_after_first" -le 5 ]
-    [ "$calls_after_first" -eq "$calls_after_third" ]
+    # Both the emitter and the cause appear on stderr.
+    [[ "$output" == *"log_event"* ]]
+    [[ "$output" == *"sudo"* ]]
+
+    # Not discarded in silence: no event line reached the file.
+    [ ! -s "${readonly_dir}/grid-events.jsonl" ]
+}
+
+@test "setup runs once per process while each write stays separate" {
+    # Read-only LOG_DIR that exists but the current user cannot write, plus a
+    # sudo stub that never succeeds: setup can never take effect, which is
+    # exactly the path that used to re-run sudo on every call.
+    local readonly_dir="${BATS_TEST_TMPDIR}/readonly-log"
+    mkdir -p "$readonly_dir"
+    chmod 555 "$readonly_dir"
+    export LOG_DIR="$readonly_dir"
+
+    sudo() { echo "$*" >> "$_sudo_calls"; "$@" 2>/dev/null || true; }
+    export -f sudo
+
+    log_event "test" "ERROR" "1" || true
+    local setup_after_first
+    setup_after_first="$(setup_calls_count)"
+
+    local i
+    for i in 2 3 4 5; do
+        log_event "test" "ERROR" "$i" || true
+    done
+    local setup_after_all
+    setup_after_all="$(setup_calls_count)"
+
+    # Setup was attempted (>0) but never repeated across the five calls.
+    [ "$setup_after_first" -gt 0 ]
+    [ "$setup_after_first" -eq "$setup_after_all" ]
+    [ "$setup_after_first" -le 3 ]
+
+    # The writes are a separate path: one tee per call, not folded into setup.
+    [ "$(grep -c 'tee' "$_sudo_calls")" -eq 5 ]
 }
 
 @test "rotate_logs rotates both grid-system.log and grid-events.jsonl" {
@@ -124,18 +143,6 @@ setup() {
     [ -f "$evt_log" ]
 }
 
-sudo_calls_count() {
-    if [ -f "${BATS_TEST_TMPDIR}/sudo_calls" ]; then
-        wc -l < "${BATS_TEST_TMPDIR}/sudo_calls" | tr -d ' '
-    else
-        echo 0
-    fi
-}
-
-failed_sudo_calls_count() {
-    if [ -f "${BATS_TEST_TMPDIR}/failed_sudo_calls" ]; then
-        wc -l < "${BATS_TEST_TMPDIR}/failed_sudo_calls" | tr -d ' '
-    else
-        echo 0
-    fi
+setup_calls_count() {
+    grep -Ec 'mkdir|chown|chmod|touch' "$_sudo_calls" || true
 }
