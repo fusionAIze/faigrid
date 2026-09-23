@@ -54,17 +54,24 @@ Prefer:
 
 Release flow is `local → Forgejo (canonical) → mirror to GitHub → GitHub only
 for distribution triggers (Homebrew, etc.)`. The release object is created on
-**Forgejo** by the **ops-engine** (`ReleaseHandler`, via the org layover
-`fusionaize-ops`) on `tag_push`. Do not create releases repo-locally on GitHub;
-it is a read-only mirror.
+**Forgejo** by the **ops-engine** `ReleaseHandler`, invoked from this
+repository's own `.forgejo/workflows/forgejo-release.yml` on `tag_push`. Do not
+create releases repo-locally on GitHub; it is a read-only mirror.
+
+  faigrid's layover release block (`fusionaize-ops/config.yml`) is deliberately
+  `enabled: false` (FAI-229/FRL-008). Two producers on one tag would race on the
+  same release object under two different names. The layover writes ONE forge —
+  the adapter the webhook arrived on — while `publish_release` resolves every
+  destination in `.ops.yaml`, and the Homebrew tap keys on the mirror.
 
 - **Release name convention: `fusionAIze Grid vX.Y.Z`** — identical on Forgejo
   and GitHub. No bare `vX.Y.Z`, no `faigrid vX.Y.Z` prefix.
 - Version bump (`VERSION`, `install.sh`, `CHANGELOG.md`, release manifest) is
   done on Forgejo as part of the release stream, not by hand on GitHub. Do not
   bump `VERSION` or `CHANGELOG.md` outside the release process owned by ops-engine.
-- The `release-please` workflow is a GitHub-only legacy; the ops-engine is the
-  single release owner across all langevc orgs (see lvc `LVC-229`).
+- `release-please` is removed from this repository (workflow and both config
+  files). The ops-engine is the single release owner across all langevc orgs
+  (see lvc `LVC-229`).
 
 ## Code quality rules
 
