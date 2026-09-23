@@ -1,0 +1,141 @@
+# core-heart reconstructed compose definition
+#
+# Reconstructed on 2026-09-23 by lane VT-001b (sequence veeona-tenant-substrate)
+# from `docker inspect` of the five running containers on nexus-core. It is NOT
+# derived from the current repository compose files, which describe a different,
+# later stack: what runs on the node predates current main and was started from a
+# temp directory (/tmp/grid-install/core/heart/compose) that was later cleaned up.
+#
+# Project name is pinned to `compose`: the running containers carry
+#   com.docker.compose.project = compose
+# so `docker compose ps` recognises them only when the project resolves to
+# `compose`. The top-level `name:` guarantees this regardless of the directory
+# this file is invoked from.
+#
+# SECRETS: every environment value is an interpolation reference into
+# /opt/faigrid/core-heart/.env (loaded via `--env-file`). No secret value is
+# written here. The two MINIO_* references below are NOT present in that .env —
+# they exist only in the running grid-minio container and must be supplied if the
+# stack is ever recreated. See docs/runbooks/11-nexus-core-workloads.md.
+
+name: compose
+
+services:
+  postgres:
+    image: postgres:16 # digest sha256:ce5c12ac6952df86affd04ade354cfcb9a0aa1171cd7912e6dbd81578a989a63
+    container_name: grid-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB:-n8n}
+      - POSTGRES_USER=${POSTGRES_USER:-n8n}
+      - TZ=${TZ:-Europe/Berlin}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - grid_net
+
+  redis:
+    image: redis:7-alpine # digest sha256:8b81dd37ff027bec4e516d41acfbe9fe2460070dc6d4a4570a2ac5b9d59df065
+    container_name: grid-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    networks:
+      - grid_net
+
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:latest # digest sha256:1e764de257f2b1eb6fc0e2477bd82cf8f5de9e68b82ac243b1a2db1551426723
+    container_name: grid-core-n8n
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_started
+        required: false
+      redis:
+        condition: service_started
+        required: false
+    environment:
+      - TZ=${TZ:-Europe/Berlin}
+      - N8N_HOST=${N8N_HOST}
+      - N8N_PORT=${N8N_PORT:-5678}
+      - N8N_PROTOCOL=${N8N_PROTOCOL:-http}
+      - N8N_EDITOR_BASE_URL=${N8N_EDITOR_BASE_URL}
+      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}
+      - N8N_BASIC_AUTH_ACTIVE=${N8N_BASIC_AUTH_ACTIVE:-false}
+      - N8N_BASIC_AUTH_USER=${N8N_BASIC_AUTH_USER:-admin}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD}
+      - EXECUTIONS_MODE=queue
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=${POSTGRES_HOST:-postgres}
+      - DB_POSTGRESDB_PORT=${POSTGRES_PORT:-5432}
+      - DB_POSTGRESDB_DATABASE=${POSTGRES_DB:-n8n}
+      - DB_POSTGRESDB_USER=${POSTGRES_USER:-n8n}
+      - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD}
+      - QUEUE_BULL_REDIS_HOST=${REDIS_HOST:-redis}
+      - QUEUE_BULL_REDIS_PORT=${REDIS_PORT:-6379}
+    ports:
+      - "127.0.0.1:5678:5678"
+    volumes:
+      - n8n_data:/home/node/.n8n
+    networks:
+      - grid_net
+
+  n8n-worker:
+    image: docker.n8n.io/n8nio/n8n:latest # digest sha256:1e764de257f2b1eb6fc0e2477bd82cf8f5de9e68b82ac243b1a2db1551426723
+    container_name: grid-core-n8n-worker
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_started
+        required: false
+      redis:
+        condition: service_started
+        required: false
+    command: worker
+    environment:
+      - TZ=${TZ:-Europe/Berlin}
+      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}
+      - EXECUTIONS_MODE=queue
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=${POSTGRES_HOST:-postgres}
+      - DB_POSTGRESDB_PORT=${POSTGRES_PORT:-5432}
+      - DB_POSTGRESDB_DATABASE=${POSTGRES_DB:-n8n}
+      - DB_POSTGRESDB_USER=${POSTGRES_USER:-n8n}
+      - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD}
+      - QUEUE_BULL_REDIS_HOST=${REDIS_HOST:-redis}
+      - QUEUE_BULL_REDIS_PORT=${REDIS_PORT:-6379}
+    networks:
+      - grid_net
+
+  # NOT part of the original March 2026 compose project. grid-minio was started
+  # 2026-09-08 via `docker run` (no com.docker.compose.* labels) and only joins
+  # the same network. It is captured here so the full stack is described, but it
+  # is not managed by compose today and `docker compose ps` does not list it.
+  minio:
+    image: minio/minio:latest # digest sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
+    container_name: grid-minio
+    restart: unless-stopped
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - grid_net
+
+networks:
+  grid_net:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  n8n_data:
+  minio_data:
+    external: true
