@@ -248,6 +248,103 @@ jobs:
       # unauthenticated publication. Publication never parses a webhook, so the
       # webhook secret stays empty.
       #
+      # The canonical git URL is composed from the config layer, never from
+      # github.server_url. On this repository's self-hosted Forgejo runner,
+      # github.server_url resolves to the runner-internal container address
+      # (http://forgejo:3000) — not the organisation's forge (REL-023; declared
+      # in .ops.yaml lines 43-49 and in ops-engine's CONTRACT.md lines 457-464).
+      # The host comes from .ops.yaml's forge_hosts and the path from the
+      # destination whose forge is forgejo; the `.git` suffix is what makes it a
+      # fetchable remote for `git ls-remote` (the credential-less repo is
+      # public). The file is read the way the audience gate above reads
+      # tracker_prefixes: stdlib only, line by line, because the bare runner
+      # carries neither yaml nor pydantic.
+      - name: Derive the canonical git URL from the config layer
+        run: |
+          set -euo pipefail
+          python3 - <<'CANONICAL_URL_PY' >> "$GITHUB_ENV"
+          import re
+          import sys
+          from pathlib import Path
+
+          HOST_HAS_DOT = re.compile(r"\.")
+
+          ops = Path(".ops.yaml")
+          if not ops.exists():
+              sys.stderr.write(
+                  "::error::MissingOpsYamlError: no .ops.yaml at the repository "
+                  "root; the canonical forge host and repository are a committed "
+                  "file, not a CI variable. Refusing to derive a canonical git "
+                  "URL from github.server_url.\n"
+              )
+              sys.exit(2)
+
+          hosts = []
+          forgejo_repo = ""
+          current_forge = ""
+          for raw in ops.read_text(encoding="utf-8").splitlines():
+              line = raw.split("#", 1)[0].strip()
+              if line.startswith("forge_hosts:"):
+                  value = line[len("forge_hosts:"):].strip()
+                  if value.startswith("[") and value.endswith("]"):
+                      value = value[1:-1]
+                  for item in value.split(","):
+                      item = item.strip().strip("'\"")
+                      if item:
+                          hosts.append(item)
+                  continue
+              match = re.match(r"^-\s*forge:\s*(\S+)\s*$", line)
+              if match:
+                  current_forge = match.group(1).strip("'\"")
+                  continue
+              match = re.match(r"^repo:\s*(\S+)\s*$", line)
+              if match and current_forge:
+                  if current_forge.lower() == "forgejo":
+                      forgejo_repo = match.group(1).strip("'\"")
+                  current_forge = ""
+
+          # A missing or empty forge_hosts entry is refused by name. The host is
+          # organisation knowledge (ops-engine CONTRACT.md lines 457-464): with no
+          # entry there is nothing to compose the URL from, and the runner's
+          # internal address must never stand in for the organisation's forge.
+          if not hosts:
+              sys.stderr.write(
+                  "::error::MissingForgeHostError: .ops.yaml declares no "
+                  "forge_hosts; the organisation's forge host belongs in the "
+                  "config layer, not on the runner. Refusing to derive a "
+                  "canonical git URL from github.server_url.\n"
+              )
+              sys.exit(2)
+
+          # A dotless entry is refused by name at the register boundary, exactly
+          # as ops-engine 3.4.2 does: a bare label is a forge type, a header
+          # prefix or a container name before it is anybody's hostname.
+          for host in hosts:
+              if not HOST_HAS_DOT.search(host):
+                  sys.stderr.write(
+                      "::error::ForgeHostRegisterError: %r carries no dot, so it "
+                      "is a forge type, a header prefix or a package name rather "
+                      "than a hostname; an internal address must not silently "
+                      "become an organisation's forge. Refusing to derive a "
+                      "canonical git URL from github.server_url.\n" % host
+                  )
+                  sys.exit(2)
+
+          if not forgejo_repo:
+              sys.stderr.write(
+                  "::error::MissingForgejoDestinationError: .ops.yaml declares no "
+                  "destination whose forge is forgejo; the canonical repository is "
+                  "resolved from the config layer, not from github.repository.\n"
+              )
+              sys.exit(2)
+
+          canonical_git_url = "https://%s/%s.git" % (hosts[0], forgejo_repo)
+          sys.stdout.write("CANONICAL_GIT_URL=%s\n" % canonical_git_url)
+          sys.stderr.write(
+              "canonical git URL from .ops.yaml: %s\n" % canonical_git_url
+          )
+          CANONICAL_URL_PY
+
       # faigrid publishes no built distribution — it is an installer repository,
       # there is no PyPI claim, and distribution to the Homebrew tap runs from
       # the mirror side (notify-tap.yml). The assets directory is created and
@@ -262,13 +359,11 @@ jobs:
           FORGEJO_BASE_URL: "${{ github.server_url }}"
           FORGEJO_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
           GH_MIRROR_TOKEN: "${{ secrets.GH_MIRROR_TOKEN }}"
-          # The canonical tag identity is read from the forge that RUNS this
-          # workflow, not from the workspace checkout actions/checkout degraded.
-          # github.server_url resolves to https://git.langevc.com on Forgejo and
-          # https://github.com on the read-only mirror. The `.git` suffix is what
-          # makes it a fetchable remote for `git ls-remote` (the credential-less
-          # repo is public).
-          CANONICAL_GIT_URL: "${{ github.server_url }}/${{ github.repository }}.git"
+          # CANONICAL_GIT_URL is not set here: it is derived by the step above
+          # from .ops.yaml's forge_hosts and the forgejo destination's repo, and
+          # exported to this step through $GITHUB_ENV. github.server_url is never
+          # a fallback — on the self-hosted Forgejo runner it is the internal
+          # container address, not the organisation's forge.
         run: |
           set -euo pipefail
 
