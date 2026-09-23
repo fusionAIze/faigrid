@@ -1,22 +1,31 @@
 # core-heart reconstructed compose definition
 #
 # Reconstructed on 2026-09-23 by lane VT-001b (sequence veeona-tenant-substrate)
-# from `docker inspect` of the five running containers on nexus-core. It is NOT
+# from `docker inspect` of the four running core-heart containers on nexus-core:
+# grid-postgres, grid-redis, grid-core-n8n and grid-core-n8n-worker. It is NOT
 # derived from the current repository compose files, which describe a different,
 # later stack: what runs on the node predates current main and was started from a
 # temp directory (/tmp/grid-install/core/heart/compose) that was later cleaned up.
 #
-# Project name is pinned to `compose`: the running containers carry
+# SCOPE: these FOUR containers are faigrid's core-heart project. They carry
 #   com.docker.compose.project = compose
 # so `docker compose ps` recognises them only when the project resolves to
 # `compose`. The top-level `name:` guarantees this regardless of the directory
 # this file is invoked from.
 #
+# A fifth container runs on the same host and the same network, grid-minio, and
+# is deliberately NOT part of this file. It is veeona's object store - a tenant
+# preliminary requirement, deployed by veeona's own scripts/deploy_core_minio.sh,
+# carrying buckets veeona-artifacts-dev and veeona-masters-dev. It carries zero
+# com.docker.compose.* labels (started 2026-09-08 via `docker run`, five months
+# after the four above) and is not faigrid's to define. Its root credentials live
+# in veeona's deploy script, not in faigrid's .env; a reference to them from this
+# file would resolve to an empty string with exit 0 and degrade silently. See
+# docs/runbooks/11-nexus-core-workloads.md.
+#
 # SECRETS: every environment value is an interpolation reference into
 # /opt/faigrid/core-heart/.env (loaded via `--env-file`). No secret value is
-# written here. The two MINIO_* references below are NOT present in that .env —
-# they exist only in the running grid-minio container and must be supplied if the
-# stack is ever recreated. See docs/runbooks/11-nexus-core-workloads.md.
+# written here, and no reference in this file is unsatisfied by that .env.
 
 name: compose
 
@@ -109,26 +118,6 @@ services:
     networks:
       - grid_net
 
-  # NOT part of the original March 2026 compose project. grid-minio was started
-  # 2026-09-08 via `docker run` (no com.docker.compose.* labels) and only joins
-  # the same network. It is captured here so the full stack is described, but it
-  # is not managed by compose today and `docker compose ps` does not list it.
-  minio:
-    image: minio/minio:latest # digest sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
-    container_name: grid-minio
-    restart: unless-stopped
-    command: ["server", "/data", "--console-address", ":9001"]
-    environment:
-      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
-      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
-    ports:
-      - "9000:9000"
-      - "9001:9001"
-    volumes:
-      - minio_data:/data
-    networks:
-      - grid_net
-
 networks:
   grid_net:
     driver: bridge
@@ -137,5 +126,3 @@ volumes:
   postgres_data:
   redis_data:
   n8n_data:
-  minio_data:
-    external: true
