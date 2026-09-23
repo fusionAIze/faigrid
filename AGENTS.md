@@ -49,7 +49,22 @@ Prefer:
 - systemd / cron for watchdogs
 - Shellcheck for linting (respect `.shellcheckrc`)
 - Bats-core for testing (`tests/`)
-- GitHub Actions (`release-please` for versioning)
+
+## Release rules — Forgejo canonical, ops-engine owned
+
+Release flow is `local → Forgejo (canonical) → mirror to GitHub → GitHub only
+for distribution triggers (Homebrew, etc.)`. The release object is created on
+**Forgejo** by the **ops-engine** (`ReleaseHandler`, via the org layover
+`fusionaize-ops`) on `tag_push`. Do not create releases repo-locally on GitHub;
+it is a read-only mirror.
+
+- **Release name convention: `fusionAIze Grid vX.Y.Z`** — identical on Forgejo
+  and GitHub. No bare `vX.Y.Z`, no `faigrid vX.Y.Z` prefix.
+- Version bump (`VERSION`, `install.sh`, `CHANGELOG.md`, release manifest) is
+  done on Forgejo as part of the release stream, not by hand on GitHub. Do not
+  bump `VERSION` or `CHANGELOG.md` outside the release process owned by ops-engine.
+- The `release-please` workflow is a GitHub-only legacy; the ops-engine is the
+  single release owner across all langevc orgs (see lvc `LVC-229`).
 
 ## Code quality rules
 
@@ -77,7 +92,7 @@ After each major implementation block:
 Follow the repository branch workflow (if applicable):
 - `main` is the protected production branch.
 - Feature branches for implementations.
-- All commits must follow **Conventional Commits** (e.g., `feat:`, `fix:`, `chore:`) to trigger the `release-please` automated Semantic Versioning bot.
+- All commits must follow **Conventional Commits** (e.g., `feat:`, `fix:`, `chore:`).
 
 ## RTK shell command preference
 
