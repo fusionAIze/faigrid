@@ -93,12 +93,43 @@ _json_escape() {
 # Centralized Logging Aggregator
 LOG_SETUP_ATTEMPTED=0
 
+# Append one JSONL line to BOTH log files.
+#
+# Model (b), operator decision 2026-09-23: /var/log/faigrid is 750 root:adm and
+# the files are 640 root:adm, so those modes grant read but never write to the
+# `adm` group. A non-root caller therefore cannot write the files directly and
+# every write goes through sudo. This is the WRITE path, deliberately separate
+# from the once-per-process SETUP guard in log_event(): setup (mkdir/chown/chmod/
+# touch) must not repeat per call, but each write needs privilege. Folding the
+# writes into the guard would silently drop every event after the first.
+#
+# A single sudo invocation (tee -a) writes the same line to both files, so the
+# write path costs one sudo per event, not a storm. If sudo is missing or fails,
+# the event is never discarded in silence: the failure is named on stderr.
+_log_emit() {
+  local json="$1"
+  local LOG_DIR="${LOG_DIR:-/var/log/faigrid}"
+  local LOG_FILE="${LOG_DIR}/grid-system.log"
+  local EVENTS_FILE="${LOG_DIR}/grid-events.jsonl"
+
+  if ! command -v sudo >/dev/null 2>&1; then
+    error "log_event: sudo not found; cannot append to ${EVENTS_FILE} (passwordless sudo is required for the log path)"
+    return 1
+  fi
+
+  if printf '%s\n' "$json" | sudo tee -a "$LOG_FILE" "$EVENTS_FILE" >/dev/null; then
+    return 0
+  fi
+
+  error "log_event: sudo failed to append to ${LOG_FILE} and ${EVENTS_FILE} (passwordless sudo is required for the log path)"
+  return 1
+}
+
 log_event() {
   local COMPONENT=$1
   local SEVERITY=$2
   local MESSAGE=$3
   local LOG_DIR="${LOG_DIR:-/var/log/faigrid}"
-  local LOG_FILE="${LOG_DIR}/grid-system.log"
   local EVENTS_FILE="${LOG_DIR}/grid-events.jsonl"
 
   if [[ "${LOG_SETUP_ATTEMPTED:-0}" == 0 ]]; then
@@ -121,18 +152,14 @@ log_event() {
     LOG_SETUP_ATTEMPTED=1
   fi
 
-  if [[ -w "$LOG_DIR" ]] || [[ -f "$LOG_FILE" && -w "$LOG_FILE" ]]; then
-    local json
-    json=$(printf '{"ts":"%s","component":"%s","severity":"%s","message":"%s"}' \
-      "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
-      "$(_json_escape "$COMPONENT")" \
-      "$(_json_escape "$SEVERITY")" \
-      "$(_json_escape "$MESSAGE")")
-    printf '%s\n' "$json" >> "$LOG_FILE"
-    if [[ -f "$EVENTS_FILE" ]] && [[ -w "$EVENTS_FILE" ]]; then
-      printf '%s\n' "$json" >> "$EVENTS_FILE"
-    fi
-  fi
+  local json
+  json=$(printf '{"ts":"%s","component":"%s","severity":"%s","message":"%s"}' \
+    "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
+    "$(_json_escape "$COMPONENT")" \
+    "$(_json_escape "$SEVERITY")" \
+    "$(_json_escape "$MESSAGE")")
+
+  _log_emit "$json"
 }
 
 # Simple Log Rotation

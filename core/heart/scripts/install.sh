@@ -75,10 +75,20 @@ fi
 echo "[grid-core-heart] Add grid user to docker group (logout/login required)"
 sudo usermod -aG docker grid
 
-echo "[grid-core-heart] Add grid user to adm group (logdir write access)"
-if getent group adm >/dev/null 2>&1 && id -u grid >/dev/null 2>&1; then
-  sudo usermod -aG adm grid
-fi
+# ── Log path privilege (model (b), operator decision 2026-09-23) ──────────────
+# /var/log/faigrid is 750 root:adm and its files 640 root:adm. Those modes grant
+# read/execute to `adm`, never write, so the `grid` service user is deliberately
+# NOT added to `adm`: membership would assert a write capability the modes do not
+# carry. log_event() writes through sudo instead, which makes passwordless sudo
+# for the log path a deployment requirement. Without it log_event() fails by
+# name — it never discards an event in silence.
+#
+# Grant it out of band, host-specific and audited — for example a sudoers
+# drop-in validated with `visudo -cf`, allowing the log path's commands:
+#   /usr/bin/tee -a /var/log/faigrid/grid-system.log /var/log/faigrid/grid-events.jsonl
+#   /usr/bin/mkdir, /usr/bin/chown, /usr/bin/chmod, /usr/bin/touch under /var/log/faigrid
+# See docs/reference/event-schema.md for the file contract.
+echo "[grid-core-heart] Log path: passwordless sudo is required for log_event (see docs/reference/event-schema.md)"
 
 echo "[grid-core-heart] Starting stack..."
 cd "${COMPOSE_DIR}" || exit 1 || exit
