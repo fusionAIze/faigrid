@@ -4,15 +4,25 @@
 # workflow reads this file via config_loader.load_ops_yaml and resolves BOTH
 # destinations from it; nothing here is restated as a literal in .forgejo/.
 #
-# Visibilities follow fusionaize-ops/config.yml, which already declares
-# faigrid's GitHub mirror as public and has no private Forgejo twin: the
-# canonical Forgejo repository IS fusionaize/faigrid, and the org's only
-# declared destination for it is the GitHub mirror, fusionAIze/faigrid.
+# Visibilities are the MEASURED state of each forge, not an inference from the
+# org's GitHub-mirror declaration alone. Measured 2026-09-23 against Forgejo
+# 16.0.2+gitea-1.22.0 and the GitHub API:
+#   - canonical Forgejo fusionaize/faigrid: PRIVATE.
+#     GET /api/v1/repos/fusionaize/faigrid (authenticated) returns
+#     "private": true; the fusionaize org itself is "visibility": "private" and
+#     every repository in it is private, which is why an anonymous
+#     `git ls-remote https://git.langevc.com/fusionaize/faigrid.git` answers
+#     "Repository not found". fusionaize-ops/config.yml declares only the
+#     GitHub mirror for this repo — a different destination on a different
+#     forge, and not evidence about the Forgejo one.
+#   - GitHub mirror fusionAIze/faigrid: public.
+#     GET https://api.github.com/repos/fusionAIze/faigrid returns
+#     "private": false, "visibility": "public".
 destinations:
   - forge: forgejo
     repo: fusionaize/faigrid
     role: release
-    visibility: public
+    visibility: private
   - forge: github
     repo: fusionAIze/faigrid
     role: release
