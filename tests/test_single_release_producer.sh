@@ -10,8 +10,12 @@
 #      release-please config files are absent. Faigrid produces releases on
 #      Forgejo (ops-engine), not on the mirror.
 #   2. Forgejo (`.forgejo/workflows/`) has no release-please producer either;
-#      its only workflow is the push-only mirror.yml.
-#   3. The Homebrew tap dispatch is post-mirror distribution: notify-tap.yml
+#      mirror.yml is push-only and the release producer is the ops-engine
+#      workflow `.forgejo/workflows/forgejo-release.yml`.
+#   3. The Forgejo producer exists and carries ops-engine's two-job shape: a
+#      `gate` job and a `release` job with `needs: gate`, pinned to v3.4.2 and
+#      reading the committed `.ops.yaml` / `.release-title-prefix`.
+#   4. The Homebrew tap dispatch is post-mirror distribution: notify-tap.yml
 #      triggers on the push of a `v*` tag (what mirror.yml copies from Forgejo),
 #      is gated to github.com, and does NOT depend on any release-please job.
 #      The dispatch targets homebrew-tap with formula-update for faigrid.
@@ -31,6 +35,7 @@ RP_CONFIG="${REPO_ROOT}/release-please-config.json"
 RP_MANIFEST="${REPO_ROOT}/.release-please-manifest.json"
 GITHUB_WF_DIR="${REPO_ROOT}/.github/workflows"
 FORGEJO_WF_DIR="${REPO_ROOT}/.forgejo/workflows"
+FP_WORKFLOW="${FORGEJO_WF_DIR}/forgejo-release.yml"
 
 failures=0
 
@@ -67,7 +72,28 @@ else
     fail "Forgejo workflow(s) reference release-please: $count"
 fi
 
-# --- 5. the tap dispatch is wired to the mirrored tag push ------------------
+# --- 5. the Forgejo producer exists --------------------------------
+if [ -f "$FP_WORKFLOW" ]; then
+    pass "Forgejo producer present (.forgejo/workflows/forgejo-release.yml)"
+else
+    fail "Forgejo producer missing (.forgejo/workflows/forgejo-release.yml)"
+fi
+
+# --- 6. the producer carries the two-job gate -> release split ---------------
+if grep -q '^\s*needs:\s*gate' "$FP_WORKFLOW"; then
+    pass "release job carries 'needs: gate' (a failing gate stops publication)"
+else
+    fail "release job does not depend on gate (3.4.2's two-job split missing)"
+fi
+
+# --- 7. the producer is pinned to ops-engine v3.4.2 --------------------------
+if grep -q 'v3\.4\.2' "$FP_WORKFLOW"; then
+    pass "producer pins ops-engine v3.4.2"
+else
+    fail "producer does not pin ops-engine v3.4.2"
+fi
+
+# --- 8. the tap dispatch is wired to the mirrored tag push ------------------
 if [ -f "$TAP_WORKFLOW" ]; then
     if grep -q 'tags:' "$TAP_WORKFLOW" \
        && grep -q '"v\*"' "$TAP_WORKFLOW" \
@@ -80,7 +106,7 @@ else
     fail "notify-tap.yml missing (.github/workflows/notify-tap.yml)"
 fi
 
-# --- 6. the tap dispatch must not depend on release-please ------------------
+# --- 9. the tap dispatch must not depend on release-please ------------------
 #      (grep for a real `needs:` dependency or an action reference, not for
 #      the word in a comment, which is legitimate documentation)
 if grep -Eq 'needs:.*release-please|release-please-action' "$TAP_WORKFLOW"; then
@@ -89,7 +115,7 @@ else
     pass "notify-tap.yml has no release-please dependency"
 fi
 
-# --- 7. the dispatch targets homebrew-tap for formula faigrid ----------------
+# --- 10. the dispatch targets homebrew-tap for formula faigrid ----------------
 if grep -q "repo:  'homebrew-tap'" "$TAP_WORKFLOW" \
    && grep -q "event_type: 'formula-update'" "$TAP_WORKFLOW" \
    && grep -q "formula: 'faigrid'" "$TAP_WORKFLOW"; then
