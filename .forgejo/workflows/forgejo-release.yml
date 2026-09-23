@@ -1,0 +1,808 @@
+name: Create Forgejo Release
+
+# Forgejo is canonical; GitHub is the public mirror. This workflow adopts
+# ops-engine's OWN shape: a `gate` job runs the pre-publication checks (release
+# title, CHANGELOG notes, external audience) and the `release` job carries
+# `needs: gate`, so a failing gate stops publication instead of running beside
+# it. ops-engine introduced that split in v3.4.2; faigate's derivative kept the
+# gate as ordered steps inside ONE job and did not adopt the fix. This file
+# adapts the source, not the derivative. Production releases are cut here, on
+# Forgejo, by the ops-engine ReleaseHandler — the GitHub mirror does
+# distribution only and never writes a release object.
+#
+# The five defects this replaces, and where each is now answered:
+#   commit dump       -> the body is the CHANGELOG section for the tag, never
+#                        `git log --oneline`
+#   literal \n        -> the notes cross job boundaries as a heredoc-delimited
+#                        output value; `printf %s` never touches them
+#   bare-tag title    -> the title gate refuses a non-conforming name before any
+#                        release object exists on either forge
+#   one forge only    -> destinations come from the committed .ops.yaml; BOTH are
+#                        published and a partial publication goes red
+#   invented mirror   -> the canonical tag ref is pushed onto the mirror BEFORE
+#   tag (v3.4.1)         publication, and both tags are peeled and compared after
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: "Tag to create release for (e.g. v1.0.0)"
+        required: true
+        type: string
+
+jobs:
+  # The gate is a GATE: the release job cannot run unless this job passes. A
+  # refused title, a missing CHANGELOG section, or a body addressed at an
+  # internal audience stops publication before any release object exists on
+  # either forge.
+  gate:
+    runs-on: ubuntu-latest
+    outputs:
+      release_name: ${{ steps.title.outputs.release_name }}
+      release_name_template: ${{ steps.title.outputs.release_name_template }}
+      notes: ${{ steps.notes.outputs.notes }}
+    steps:
+      # The shorthand form is accepted by the Forgejo runner and by actionlint;
+      # this repository's own mirror.yml uses it in the same way.
+      - uses: actions/checkout@v4
+
+      # The release title is a GATE, not an agreement. The name must be exactly
+      # "fusionAIze Grid vX.Y.Z", or the taught prerelease form
+      # "fusionAIze Grid vX.Y.Z-rcN"; a tag whose rendered title does not
+      # conform is refused here with a named error, before any release object
+      # exists on either forge. The prefix is committed (.release-title-prefix),
+      # never a literal in this file, so FRL-006 can check it against the
+      # layover's name_template.
+      - name: Gate the release title
+        id: title
+        env:
+          TAG_NAME: "${{ github.event.inputs.tag_name || github.ref_name }}"
+        run: |
+          set -euo pipefail
+          PREFIX="$(cat .release-title-prefix)"
+          RELEASE_NAME="${PREFIX} ${TAG_NAME}"
+          python3 - "${RELEASE_NAME}" "${PREFIX}" <<'TITLE_GATE_PY'
+          import re
+          import sys
+
+          name, prefix = sys.argv[1], sys.argv[2]
+          NAME_RE = re.compile(
+              r"^%s v[0-9]+\.[0-9]+\.[0-9]+(?:-rc[0-9]+)?$" % re.escape(prefix)
+          )
+          if not NAME_RE.match(name):
+              sys.stderr.write(
+                  "ReleaseTitleError: release name %r does not match the required "
+                  "convention ^%s v[0-9]+\\.[0-9]+\\.[0-9]+$ or its prerelease "
+                  "form ...-rc[0-9]+$. Refusing before any release object exists "
+                  "on either forge.\n" % (name, prefix)
+              )
+              sys.exit(2)
+          sys.stdout.write("title gate: %r conforms\n" % name)
+          TITLE_GATE_PY
+          echo "release_name=${RELEASE_NAME}" >> "$GITHUB_OUTPUT"
+          # The release job renders its own title from NAME_TEMPLATE. Emitting
+          # the template here, from the same PREFIX the gate just checked, is
+          # what makes the gate binding: otherwise it validates one string while
+          # another is published.
+          echo "release_name_template=${PREFIX} {tag_name}" >> "$GITHUB_OUTPUT"
+
+      # The release body is the CHANGELOG entry for this version, never commit
+      # subjects. A tag whose version has no `## X.Y.Z` section fails here,
+      # before any release object exists — which is the correct outcome: a
+      # release with no authored notes is a release nobody can read.
+      #
+      # The extractor is a byte-for-byte copy of the one in ops-engine's own
+      # release workflow, and it is stdlib-only on purpose: importing
+      # ops_engine at this point would pull yaml and pydantic, which the bare
+      # runner image does not carry. The heading pattern accepts every form
+      # CHANGELOG.md uses, including the bracketed `## [1.8.0](...) (2026-08-22)`.
+      - name: Extract release notes from CHANGELOG
+        id: notes
+        env:
+          TAG_NAME: "${{ github.event.inputs.tag_name || github.ref_name }}"
+        run: |
+          set -euo pipefail
+
+          NOTES="$(python3 - "$TAG_NAME" <<'PY'
+          import re
+          import sys
+
+          HEADER_PATTERN = re.compile(
+              r"^##\s+"
+              r"(?:\[)?(?:[\w-]+\s+)?v?"
+              r"(\d+\.\d+\.\d+(?:[-.\w]*)?)"
+              r"(?:\])?"
+              r".*$",
+              re.MULTILINE,
+          )
+
+          tag = sys.argv[1]
+          version = tag.lstrip("v")
+          with open("CHANGELOG.md", encoding="utf-8") as fh:
+              content = fh.read()
+          matches = list(HEADER_PATTERN.finditer(content))
+          target_match = None
+          target_idx = -1
+          for idx, m in enumerate(matches):
+              if m.group(1) == version:
+                  target_match = m
+                  target_idx = idx
+                  break
+          if target_match is None:
+              notes = ""
+          else:
+              start = target_match.end()
+              if target_idx + 1 < len(matches):
+                  end = matches[target_idx + 1].start()
+              else:
+                  end = len(content)
+              notes = content[start:end].strip()
+          if not notes:
+              sys.stderr.write(
+                  "MissingChangelogEntryError: no '## %s' section in CHANGELOG.md; "
+                  "a release with no notes would post commit subjects, so the "
+                  "release is refused.\n" % version
+              )
+              sys.exit(2)
+          sys.stdout.write(notes)
+          PY
+          )"
+
+          {
+            echo "notes<<EOF"
+            echo "${NOTES}"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      # Generic tooling lives in the open base. ops-engine is OSS and publicly
+      # mirrored, so this needs no credential — the same fetch the version gate
+      # in mirror.yml already uses.
+      #
+      # Pinned to the v3.4.2 tag. ops-engine closed the mirror-tag drift at its
+      # source in v3.4.1: its own release job pushes the canonical tag ref onto
+      # the mirror before publishing and refuses by name when the two peel to
+      # different commits. The tag is a fixed point again, so the pin follows it.
+      - name: Fetch the audience gate (canonical, ops-engine)
+        run: |
+          set -euo pipefail
+          curl -fsSL \
+            "https://raw.githubusercontent.com/LangeVC/ops-engine/v3.4.2/scripts/release_notes_audience_gate.py" \
+            -o "$RUNNER_TEMP/release_notes_audience_gate.py"
+
+          # Prove what arrived. Without this the step reports success even when
+          # it fetched an HTML page: a redirect to a login page returns 200 and
+          # curl -f never triggers, so the failure surfaces later as a
+          # SyntaxError on "<!DOCTYPE html>".
+          python3 -c "import ast,sys; ast.parse(open(sys.argv[1]).read())" \
+            "$RUNNER_TEMP/release_notes_audience_gate.py" \
+            || { echo "fetched file is not Python — first three lines:"; \
+                 head -3 "$RUNNER_TEMP/release_notes_audience_gate.py"; exit 1; }
+
+      # The release body is addressed at an external reader. A section that
+      # still names an internal ticket addresses the tracker that produced the
+      # release, not the consumer the body is for.
+      #
+      # The engine classifies nothing by shape: the code-and-number form is
+      # shared by internal ticket ids and by identifiers a reader legitimately
+      # needs (CVE, RFC, ISO, PEP-8, UTF-8, SHA-256, TLS-1.3). It refuses a
+      # ticket-shaped token only when its prefix appears in the vocabulary THIS
+      # repository declares — the committed .ops.yaml's tracker_prefixes
+      # (FAI, FFR, OPS, ADR), a reviewer-visible file rather than a shell
+      # literal. The same single-line extractor the workflow layer owns is used
+      # here, so the prefixes never become a literal in .forgejo/.
+      - name: Gate the release notes for an external audience
+        env:
+          NOTES: "${{ steps.notes.outputs.notes }}"
+        run: |
+          set -euo pipefail
+          NOTES_FILE="$(mktemp)"
+          PREFIXES_FILE="$(mktemp)"
+          trap 'rm -f "$NOTES_FILE" "$PREFIXES_FILE"' EXIT
+          printf '%s\n' "$NOTES" > "$NOTES_FILE"
+          python3 - "$PREFIXES_FILE" <<'PREFIXES_PY'
+          import sys
+          from pathlib import Path
+
+          out = sys.argv[1]
+          prefixes = []
+          ops = Path(".ops.yaml")
+          if ops.exists():
+              for raw in ops.read_text(encoding="utf-8").splitlines():
+                  line = raw.split("#", 1)[0].strip()
+                  if not line.startswith("tracker_prefixes:"):
+                      continue
+                  value = line[len("tracker_prefixes:"):].strip()
+                  if value.startswith("[") and value.endswith("]"):
+                      value = value[1:-1]
+                  for item in value.split(","):
+                      item = item.strip().strip("'\"")
+                      if item:
+                          prefixes.append(item)
+          Path(out).write_text("\n".join(prefixes) + ("\n" if prefixes else ""),
+                               encoding="utf-8")
+          PREFIXES_PY
+          python3 "$RUNNER_TEMP/release_notes_audience_gate.py" \
+            --ticket-prefixes "$PREFIXES_FILE" \
+            "$NOTES_FILE"
+
+  # The release job runs only after the gate passed. It calls the engine to
+  # publish; it does not reimplement publication.
+  release:
+    needs: gate
+    runs-on: ubuntu-latest
+    steps:
+      # fetch-depth 0 so the tag ref is present and can be peeled
+      # (`refs/tags/<tag>^{}`) for the mirror-tag comparison below.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # ReleaseHandler.publish_release creates the release on EVERY destination
+      # resolved from the committed .ops.yaml and reports a partial publication
+      # rather than swallowing it. Two forges carry two credentials, so the
+      # adapter factory is given one credential per forge value; a destination
+      # whose forge has no credential is a named refusal, never a silent
+      # unauthenticated publication. Publication never parses a webhook, so the
+      # webhook secret stays empty.
+      #
+      # The canonical git URL is composed from the config layer, never from
+      # github.server_url. On this repository's self-hosted Forgejo runner,
+      # github.server_url resolves to the runner-internal container address
+      # (http://forgejo:3000) — not the organisation's forge (REL-023; declared
+      # in .ops.yaml lines 43-49 and in ops-engine's CONTRACT.md lines 457-464).
+      # The host comes from .ops.yaml's forge_hosts and the path from the
+      # destination whose forge is forgejo; the `.git` suffix is what makes it a
+      # fetchable remote for `git ls-remote`. The canonical repository is NOT
+      # anonymously readable, whatever .ops.yaml's visibility field claims:
+      # a credential-less HTTPS ls-remote is refused by the forge (measured
+      # "Repository not found") and the API answers "Only signed in user is
+      # allowed to call APIs." (403). The ls-remote therefore authenticates with
+      # the FORGEJO_TOKEN this release job already holds. The file is read the
+      # way the audience gate above reads
+      # tracker_prefixes: stdlib only, line by line, because the bare runner
+      # carries neither yaml nor pydantic.
+      - name: Derive the canonical git URL from the config layer
+        run: |
+          set -euo pipefail
+          python3 - <<'CANONICAL_URL_PY' >> "$GITHUB_ENV"
+          import re
+          import sys
+          from pathlib import Path
+
+          HOST_HAS_DOT = re.compile(r"\.")
+
+          ops = Path(".ops.yaml")
+          if not ops.exists():
+              sys.stderr.write(
+                  "::error::MissingOpsYamlError: no .ops.yaml at the repository "
+                  "root; the canonical forge host and repository are a committed "
+                  "file, not a CI variable. Refusing to derive a canonical git "
+                  "URL from github.server_url.\n"
+              )
+              sys.exit(2)
+
+          hosts = []
+          forgejo_repo = ""
+          current_forge = ""
+          for raw in ops.read_text(encoding="utf-8").splitlines():
+              line = raw.split("#", 1)[0].strip()
+              if line.startswith("forge_hosts:"):
+                  value = line[len("forge_hosts:"):].strip()
+                  if value.startswith("[") and value.endswith("]"):
+                      value = value[1:-1]
+                  for item in value.split(","):
+                      item = item.strip().strip("'\"")
+                      if item:
+                          hosts.append(item)
+                  continue
+              match = re.match(r"^-\s*forge:\s*(\S+)\s*$", line)
+              if match:
+                  current_forge = match.group(1).strip("'\"")
+                  continue
+              match = re.match(r"^repo:\s*(\S+)\s*$", line)
+              if match and current_forge:
+                  if current_forge.lower() == "forgejo":
+                      forgejo_repo = match.group(1).strip("'\"")
+                  current_forge = ""
+
+          # A missing or empty forge_hosts entry is refused by name. The host is
+          # organisation knowledge (ops-engine CONTRACT.md lines 457-464): with no
+          # entry there is nothing to compose the URL from, and the runner's
+          # internal address must never stand in for the organisation's forge.
+          if not hosts:
+              sys.stderr.write(
+                  "::error::MissingForgeHostError: .ops.yaml declares no "
+                  "forge_hosts; the organisation's forge host belongs in the "
+                  "config layer, not on the runner. Refusing to derive a "
+                  "canonical git URL from github.server_url.\n"
+              )
+              sys.exit(2)
+
+          # A dotless entry is refused by name at the register boundary, exactly
+          # as ops-engine 3.4.2 does: a bare label is a forge type, a header
+          # prefix or a container name before it is anybody's hostname.
+          for host in hosts:
+              if not HOST_HAS_DOT.search(host):
+                  sys.stderr.write(
+                      "::error::ForgeHostRegisterError: %r carries no dot, so it "
+                      "is a forge type, a header prefix or a package name rather "
+                      "than a hostname; an internal address must not silently "
+                      "become an organisation's forge. Refusing to derive a "
+                      "canonical git URL from github.server_url.\n" % host
+                  )
+                  sys.exit(2)
+
+          if not forgejo_repo:
+              sys.stderr.write(
+                  "::error::MissingForgejoDestinationError: .ops.yaml declares no "
+                  "destination whose forge is forgejo; the canonical repository is "
+                  "resolved from the config layer, not from github.repository.\n"
+              )
+              sys.exit(2)
+
+          canonical_git_url = "https://%s/%s.git" % (hosts[0], forgejo_repo)
+          sys.stdout.write("CANONICAL_GIT_URL=%s\n" % canonical_git_url)
+          sys.stderr.write(
+              "canonical git URL from .ops.yaml: %s\n" % canonical_git_url
+          )
+          CANONICAL_URL_PY
+
+      # faigrid publishes no built distribution — it is an installer repository,
+      # there is no PyPI claim, and distribution to the Homebrew tap runs from
+      # the mirror side (notify-tap.yml). The assets directory is created and
+      # left empty so the engine attaches nothing rather than failing on a
+      # missing path.
+      - name: Publish the release to every destination
+        env:
+          TAG_NAME: "${{ github.event.inputs.tag_name || github.ref_name }}"
+          NOTES: "${{ needs.gate.outputs.notes }}"
+          NAME_TEMPLATE: "${{ needs.gate.outputs.release_name_template }}"
+          FORGEJO_REPOSITORY: "${{ github.repository }}"
+          FORGEJO_BASE_URL: "${{ github.server_url }}"
+          FORGEJO_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+          GH_MIRROR_TOKEN: "${{ secrets.GH_MIRROR_TOKEN }}"
+          # CANONICAL_GIT_URL is not set here: it is derived by the step above
+          # from .ops.yaml's forge_hosts and the forgejo destination's repo, and
+          # exported to this step through $GITHUB_ENV. github.server_url is never
+          # a fallback — on the self-hosted Forgejo runner it is the internal
+          # container address, not the organisation's forge.
+        run: |
+          set -euo pipefail
+
+          mkdir -p release-assets
+
+          # The engine installs into an isolated venv outside the source tree:
+          # the runner's system interpreter is PEP 668 externally managed, and an
+          # in-tree venv would become part of anything this repository packages.
+          ENGINE_VENV="$(mktemp -d)/engine-venv"
+          python3 -m venv "$ENGINE_VENV"
+          "$ENGINE_VENV/bin/python" -m pip install --quiet \
+            "git+https://github.com/LangeVC/ops-engine@v3.4.2"
+
+          # Prove what was installed. A silently older engine is the failure
+          # mode this whole step exists to remove: v3.4.2 is the version whose
+          # `needs: gate` stops a red gate while the release published anyway.
+          "$ENGINE_VENV/bin/python" - <<'VERSION_GATE_PY'
+          import importlib.metadata as md
+          import sys
+
+          REQUIRED = "3.4.2"
+          got = md.version("ops-engine")
+          if got != REQUIRED:
+              sys.stderr.write(
+                  "EngineVersionError: installed ops-engine %s, required %s. "
+                  "Refusing to publish with an engine other than the pinned one.\n"
+                  % (got, REQUIRED)
+              )
+              sys.exit(2)
+          from ops_engine.adapters.factory import Credential  # noqa: F401
+          sys.stdout.write(
+              "engine: ops-engine %s, per-destination Credential present\n" % got
+          )
+          VERSION_GATE_PY
+
+          "$ENGINE_VENV/bin/python" - <<'PUBLISH_PY'
+          import asyncio
+          import os
+          import subprocess
+          import sys
+
+          from ops_engine.adapters.factory import Credential, adapters_for
+          from ops_engine.config_loader import (
+              OpsEngineConfig,
+              OpsYamlError,
+              load_ops_yaml,
+          )
+          from ops_engine.modules.release import ReleaseHandler
+
+          # Destinations come from the committed .ops.yaml at the repository
+          # root. A missing or empty file is a named refusal, never a silently
+          # narrowed release: "no destinations" resolving to a Forgejo-only
+          # publication that reports success is exactly what must not ship.
+          try:
+              layer3 = load_ops_yaml(".")
+          except OpsYamlError as exc:
+              print(f"::error::OpsYamlError: {exc}", file=sys.stderr)
+              sys.exit(2)
+
+          if layer3 is None:
+              print(
+                  "::error::MissingOpsYamlError: no .ops.yaml at the repository "
+                  "root; the release destination is a committed file, not a CI "
+                  "variable. Refusing to publish with no declared destinations.",
+                  file=sys.stderr,
+              )
+              sys.exit(2)
+
+          destinations = layer3.destinations
+          if not destinations:
+              print(
+                  "::error::MissingReleaseDestinationsError: .ops.yaml declares "
+                  "no destinations; refusing to publish to zero forges rather "
+                  "than silently narrowing the release.",
+                  file=sys.stderr,
+              )
+              sys.exit(2)
+
+          repo = os.environ["FORGEJO_REPOSITORY"]
+          tag_name = os.environ["TAG_NAME"]
+          release_notes = os.environ["NOTES"]
+          name_template = os.environ["NAME_TEMPLATE"]
+          forgejo_base_url = os.environ["FORGEJO_BASE_URL"]
+
+          # Materialise the Layer-3 destinations into a typed Layer-2 config so
+          # that publish_release's internal resolve_destinations re-resolves the
+          # same list.
+          org, _, repo_name = repo.partition("/")
+          config = OpsEngineConfig.load(
+              {
+                  "orgs": {
+                      org: {
+                          "repositories": {
+                              repo_name: {
+                                  "destinations": [
+                                      {
+                                          "forge": d.forge,
+                                          "repo": d.repo,
+                                          "role": d.role,
+                                          "visibility": d.visibility,
+                                      }
+                                      for d in destinations
+                                  ]
+                              }
+                          }
+                      }
+                  }
+              }
+          )
+
+          # The mirror tag is pushed from the CANONICAL tag object, never invented
+          # by the release API. Two independent mechanisms can put a tag on the
+          # mirror that Forgejo never made:
+          #   - GitHub's POST /releases takes a `tag_name` and, when that tag does
+          #     not yet exist on the mirror, CREATES it at the mirror's default-
+          #     branch HEAD at that moment (ops-engine v3.4.0's subject);
+          #   - a DEGRADED workspace ref (actions/checkout re-fetches an annotated
+          #     tag as `+<commit>:refs/tags/X`, making it lightweight) pushed onto
+          #     the mirror would turn the annotated mirror tag lightweight with no
+          #     peel line.
+          # Both are answered the same way: read the tag identity from Forgejo,
+          # restore the workspace ref to the canonical OBJECT, and push that
+          # object. mirror.yml pushes tags too, but on its own schedule, and this
+          # step must not race it.
+          #
+          # git, not a forge API, decides where the tag points.
+          mirror_dest = next(
+              (d for d in destinations if d.forge.strip().lower() == "github"), None
+          )
+
+          def _mirror_remote(github_repo: str) -> str:
+              """The github destination's push remote, built from the repo value
+              the config layer resolved plus the mirror credential. The repository
+              itself is never a literal here — it came from load_ops_yaml above."""
+              return (
+                  "https://x-access-token:%s@github.com/%s.git"
+                  % (os.environ["GH_MIRROR_TOKEN"], github_repo)
+              )
+
+          def _authenticated_url(url: str, token: str) -> str:
+              """Embed the forge credential this workflow already holds into a
+              URL for a single git invocation.
+
+              The canonical repository is not anonymously readable, so a
+              credential-less ls-remote reads nothing and criterion 2 is
+              unprovable. The credential is `secrets.GITHUB_TOKEN`, exposed to
+              this step as FORGEJO_TOKEN; it is carried in the userinfo exactly
+              as `_mirror_remote` carries GH_MIRROR_TOKEN, with the same literal
+              username. The forge accepts a token in the password field with any
+              username (verified against the canonical forge itself).
+
+              The credential-bearing string is handed to git and never formatted
+              into a log line: every message names the credential-free URL.
+
+              Only an absolute URL is authenticated. A value without a scheme is
+              NOT a forge URL — the canonical URL is composed as
+              `https://<host>/<path>.git` from .ops.yaml — and prefixing the
+              userinfo onto a bare path produces a hostless URL git rejects. Such
+              a value is returned unchanged rather than given a credential, and
+              the caller still refuses by name if the read yields no tag."""
+              scheme, sep, rest = url.partition("://")
+              if not sep:
+                  return url
+              return "%s://x-access-token:%s@%s" % (scheme, token, rest)
+
+          def _tag_refs() -> tuple:
+              """The CANONICAL tag's object SHA and peeled commit SHA, read from
+              the canonical forge — never from the workspace checkout.
+
+              The workspace cannot answer this question. actions/checkout decides
+              identity with `testRef(ref) === revParse(ref)`, and for an ANNOTATED
+              tag `revParse(refs/tags/X)` is the TAG OBJECT, not the commit the
+              run is checked out at. The test therefore fails and the ref is
+              re-fetched as `+<commit>:refs/tags/X`, leaving a LIGHTWEIGHT local
+              ref. (input-helper.ts sets commit = context.sha, the commit;
+              ref-helper.ts then overwrites the tag.) `git rev-parse` in such a
+              workspace returns the COMMIT for both the ref and its peel, so the
+              object comparison below degrades to lightweight-vs-lightweight and
+              passes while Forgejo still holds the tag object. That is exactly
+              the FRL-007 divergence.
+
+              `git ls-remote <canonical>` reads what the Forgejo server actually
+              stores: the tag object under `refs/tags/X` and, only when the tag is
+              annotated, the peeled commit under `refs/tags/X^{}`. The canonical
+              side of the comparison is therefore taken from the forge, not from
+              the tree we were handed.
+
+              The forge refuses the anonymous read, so this ls-remote carries the
+              credential the workflow already holds. A missing credential, or a
+              credential the forge rejects, is a NAMED refusal: it never falls
+              back to the degraded workspace ref or to github.server_url. The
+              credential-free URL is the only URL ever printed."""
+              src = os.environ["CANONICAL_GIT_URL"]
+              token = os.environ.get("FORGEJO_TOKEN", "").strip()
+              if not token:
+                  print(
+                      "::error::MissingForgejoCredentialError: FORGEJO_TOKEN is "
+                      "empty; the canonical forge %s is not anonymously readable, "
+                      "so its tag identity cannot be read and criterion 2 cannot "
+                      "be proven. Refusing to fall back to the degraded workspace "
+                      "ref or to github.server_url." % src,
+                      file=sys.stderr,
+                  )
+                  sys.exit(2)
+              auth_src = _authenticated_url(src, token)
+              # No check=True: a rejected credential must be reported by name, not
+              # raised as a CalledProcessError whose text carries the auth URL.
+              ls = subprocess.run(
+                  ["git", "ls-remote", auth_src,
+                   "refs/tags/%s" % tag_name, "refs/tags/%s^{}" % tag_name],
+                  capture_output=True, text=True,
+              )
+              if ls.returncode != 0:
+                  print(
+                      "::error::CanonicalTagUnreadableError: git ls-remote against "
+                      "the canonical forge %s failed (exit %s); the tag identity "
+                      "could not be read. Refusing before anything is pushed or "
+                      "published. git diagnostics are withheld because they can "
+                      "carry the credential." % (src, ls.returncode),
+                      file=sys.stderr,
+                  )
+                  sys.exit(2)
+              refs = {}
+              for line in ls.stdout.splitlines():
+                  sha, _, ref = line.partition("\t")
+                  refs[ref] = sha.strip()
+              obj = refs.get("refs/tags/%s" % tag_name, "")
+              peeled = refs.get("refs/tags/%s^{}" % tag_name, "")
+              if not obj:
+                  print(
+                      "::error::MissingCanonicalTagError: tag %s does not exist "
+                      "on the canonical forge %s; refusing before anything is "
+                      "pushed or published."
+                      % (tag_name, src),
+                      file=sys.stderr,
+                  )
+                  sys.exit(2)
+              # A lightweight canonical tag has no peel line; the tag object IS
+              # the commit. A workflow-dispatch run reaches here before the tag
+              # exists, so the absence is reported by name rather than silently
+              # normalised.
+              if not peeled:
+                  print(
+                      "::message::tag %s is lightweight on the canonical forge "
+                      "(no peel line); the mirror must match it lightweight."
+                      % tag_name
+                  )
+                  peeled = obj
+              return obj, peeled
+
+          def _rebuild_canonical_ref(obj: str, peel: str) -> None:
+              """Point the workspace tag at the CANONICAL tag OBJECT, so the push
+              below transfers the same identity the comparison expects.
+
+              Fixing only the comparison would leave the pre-publish push sending
+              the degraded lightweight ref — and that push is what corrupts the
+              mirror. The push remote advertises the bare canonical ref, so the
+              refspec would win the race and fail; at an empty mirror it would
+              quietly create the lightweight tag. Either way the degradation must
+              be undone before the push, not detected after it.
+
+              The tag object is already in the workspace: the fetch that degraded
+              the ref brought the object with it. `update-ref` simply re-points
+              the local ref at it. A missing object is a named refusal rather than
+              a silent fallback to the degraded ref."""
+              try:
+                  kind = subprocess.check_output(
+                      ["git", "cat-file", "-t", obj], text=True
+                  ).strip()
+                  actual_peel = subprocess.check_output(
+                      ["git", "rev-parse", "%s^{}" % obj], text=True
+                  ).strip()
+              except subprocess.CalledProcessError:
+                  print(
+                      "::error::MissingCanonicalTagObjectError: canonical object "
+                      "%s for tag %s is not in the workspace; refusing to push a "
+                      "tag whose identity cannot be established." % (obj, tag_name),
+                      file=sys.stderr,
+                  )
+                  sys.exit(2)
+              if actual_peel != peel:
+                  print(
+                      "::error::CanonicalTagUnreachableError: canonical object %s "
+                      "for tag %s peels to %s, expected %s; refusing to push an "
+                      "unverified tag object." % (obj, tag_name, actual_peel, peel),
+                      file=sys.stderr,
+                  )
+                  sys.exit(2)
+              subprocess.run(
+                  ["git", "update-ref", "refs/tags/%s" % tag_name, obj],
+                  check=True,
+              )
+              print(
+                  "canonical tag object restored in workspace: %s -> %s (%s)"
+                  % (tag_name, obj, kind)
+              )
+
+          def _push_mirror_tag(remote: str, obj: str) -> None:
+              """Push the canonical tag OBJECT onto the mirror.
+
+              The source is the canonical object SHA, not the workspace ref name.
+              `git push remote <sha>:refs/tags/X` sends that object and only
+              succeeds if the remote accepts it under the tag name — a forged or
+              foreign object is refused by the push itself. Pushing the ref NAME
+              instead would forward whatever the workspace ref happens to be, and
+              a degraded lightweight ref is precisely what we must not send."""
+              subprocess.run(
+                  ["git", "push", "--force", remote,
+                   "%s:refs/tags/%s" % (obj, tag_name)],
+                  check=True,
+              )
+
+          def _verify_mirror_tag(canonical_obj: str, canonical_peel: str,
+                                 remote: str) -> None:
+              """Compare the mirror tag's OBJECT, not just its peel, and refuse
+              by name on divergence.
+
+              `ls-remote` emits both `refs/tags/X` (the tag object for an
+              annotated tag, or the commit for a lightweight one) and, only when
+              annotated, `refs/tags/X^{}` (the peeled commit). The raw object
+              SHA is the identity that MUST agree: an annotated canonical tag
+              (object = tag object) beside a lightweight mirror tag (object =
+              commit) differs in its raw SHA even when the peels agree, which is
+              precisely the divergence a peel-only comparison cannot see."""
+              ls = subprocess.run(
+                  ["git", "ls-remote", remote,
+                   "refs/tags/%s" % tag_name, "refs/tags/%s^{}" % tag_name],
+                  capture_output=True, text=True,
+              )
+              targets = {}
+              for line in ls.stdout.splitlines():
+                  sha, _, ref = line.partition("\t")
+                  targets[ref] = sha.strip()
+              mirror_obj = targets.get("refs/tags/%s" % tag_name, "")
+              mirror_peel = targets.get("refs/tags/%s^{}" % tag_name)
+
+              if not mirror_obj:
+                  print(
+                      "::error::MirrorTagDriftError: tag %s has no mirror ref; "
+                      "the mirror tag does not exist. Refusing the release."
+                      % tag_name,
+                      file=sys.stderr,
+                  )
+                  sys.exit(1)
+
+              if mirror_obj != canonical_obj:
+                  print(
+                      "::error::MirrorTagObjectMismatchError: tag %s has object "
+                      "%s on the canonical forge but object %s on the mirror; "
+                      "the mirror tag is not the same tag object (annotated vs "
+                      "lightweight divergence). Refusing the release."
+                      % (tag_name, canonical_obj, mirror_obj),
+                      file=sys.stderr,
+                  )
+                  sys.exit(1)
+
+              if mirror_peel is not None and mirror_peel != canonical_peel:
+                  print(
+                      "::error::MirrorTagDriftError: tag %s peels to %s on the "
+                      "canonical forge but %s on the mirror. Refusing the release."
+                      % (tag_name, canonical_peel, mirror_peel),
+                      file=sys.stderr,
+                  )
+                  sys.exit(1)
+
+              print(
+                  "mirror tag verified: %s -> object %s (peel %s)"
+                  % (tag_name, mirror_obj, mirror_peel or mirror_obj)
+              )
+
+          async def main():
+              # The canonical tag ref is pushed onto the mirror BEFORE the engine
+              # publishes, so the github create_release cannot invent a tag. The
+              # sequence is deliberate and ordered:
+              #   1. read the canonical identity from Forgejo (object + peel),
+              #   2. rebuild the workspace ref to that OBJECT, undoing any
+              #      checkout degradation,
+              #   3. push the OBJECT (not the ref name) to the mirror,
+              #   4. re-check the mirror object-for-object.
+              # Step 2 is what stops the corruption; step 4 is the proof it did
+              # not happen. Without step 2 a degraded workspace ref would be the
+              # thing pushed (lightweight mirror tag), and the check would pass
+              # because it compared lightweight against lightweight.
+              if mirror_dest is not None:
+                  mirror_remote = _mirror_remote(mirror_dest.repo)
+                  canon_obj, canon_peel = _tag_refs()
+                  _rebuild_canonical_ref(canon_obj, canon_peel)
+                  _push_mirror_tag(mirror_remote, canon_obj)
+                  _verify_mirror_tag(canon_obj, canon_peel, mirror_remote)
+
+              credentials = {
+                  "forgejo": Credential(token=os.environ["FORGEJO_TOKEN"]),
+                  "github": Credential(token=os.environ["GH_MIRROR_TOKEN"]),
+              }
+              adapters = adapters_for(
+                  destinations,
+                  credentials=credentials,
+                  base_url=forgejo_base_url,
+              )
+
+              report = await ReleaseHandler.publish_release(
+                  config,
+                  repo,
+                  tag_name,
+                  release_notes,
+                  "release-assets",
+                  name_template=name_template,
+                  adapters=adapters,
+              )
+
+              published = ", ".join(report.published) or "(none)"
+              failed = ", ".join(report.failed) or "(none)"
+              print(f"published destinations: {published}")
+              print(f"failed destinations:    {failed}")
+              if report.failed:
+                  # A partial publication is a reported failure, never a silent
+                  # success: the run goes red so the operator sees the drift.
+                  print(
+                      "::error::PartialPublicationError: the release was not "
+                      "published to every destination; failed: " + failed
+                  )
+                  sys.exit(1)
+
+              # After publication, refuse by name if the mirror tag is not the
+              # SAME OBJECT the canonical tag is (annotated vs lightweight), or
+              # if the peels disagree. The canonical side is re-read from Forgejo,
+              # not from the workspace, so the comparison cannot be satisfied by a
+              # degraded local ref. Object identity is what a peel-only
+              # comparison cannot see, and it is what this run just proved.
+              if mirror_dest is not None:
+                  canon_obj, canon_peel = _tag_refs()
+                  _verify_mirror_tag(
+                      canon_obj, canon_peel, _mirror_remote(mirror_dest.repo)
+                  )
+
+          asyncio.run(main())
+          PUBLISH_PY

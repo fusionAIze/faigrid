@@ -1,19 +1,26 @@
 name: Notify Homebrew Tap
 
-# FFR-600-2: the release producer moved off the mirror onto Forgejo (the
-# ops-engine ReleaseHandler). The mirror is read-only distribution, so this
-# workflow no longer keys on release-please's output. It fires on the push of
-# a `v*` tag, which is exactly what mirror.yml copies verbatim from Forgejo
-# when the ops-engine cuts a release. Only the producer changes; the tap
-# payload stays byte-for-byte identical.
+# FFR-600-2 moved the release producer off the mirror onto Forgejo (the
+# ops-engine ReleaseHandler) and re-keyed this workflow onto the push of a
+# `v*` tag. mirror.yml copies every `v*` tag verbatim, whether or not the
+# release gate passed — so a tag whose release the gate REFUSED still reached
+# the mirror and fired a formula-update at the tap. The gate refuses the
+# RELEASE OBJECT, not the tag; the mirror carries no release object unless
+# publication succeeded. This file keys on that object again.
 #
-# If the ops-engine has not yet cut a faigrid release, no `v*` tag is pushed
-# and this workflow simply never fires: no tap update, no error.
+# WHAT TRIGGERS THIS WORKFLOW: the publication of a release on GitHub — the
+# mirror destination of the ops-engine ReleaseHandler. A refused tag produces
+# no release object on GitHub, so no `published` event exists and nothing is
+# dispatched. A tag whose release succeeded produces the object and reaches the
+# tap exactly as before; the tap payload below is byte-for-byte unchanged.
+#
+# The run is resolved from the released tag's commit, so the version is read
+# from the release object (`github.event.release.tag_name`), never from the
+# pushed ref name.
 
 on:
-  push:
-    tags:
-      - "v*"
+  release:
+    types: [published]
 
 jobs:
   notify:
@@ -23,7 +30,8 @@ jobs:
       - name: Compute SHA256
         id: sha
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
+          VERSION="${{ github.event.release.tag_name }}"
+          VERSION="${VERSION#v}"
           URL="https://github.com/fusionAIze/faigrid/archive/refs/tags/v${VERSION}.tar.gz"
           SHA=$(curl -sL "$URL" | sha256sum | awk '{print $1}')
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"

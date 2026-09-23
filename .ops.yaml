@@ -1,0 +1,59 @@
+# Layer-3 repository override (DST-002): the release destinations for faigrid.
+# The forge is a value, not a key name (DST-001). This is the config layer —
+# the only place a forge repository or a visibility is declared. The release
+# workflow reads this file via config_loader.load_ops_yaml and resolves BOTH
+# destinations from it; nothing here is restated as a literal in .forgejo/.
+#
+# Visibilities are the MEASURED state of each forge, not an inference from the
+# org's GitHub-mirror declaration alone. Measured 2026-09-23 against Forgejo
+# 16.0.2+gitea-1.22.0 and the GitHub API:
+#   - canonical Forgejo fusionaize/faigrid: PRIVATE.
+#     GET /api/v1/repos/fusionaize/faigrid (authenticated) returns
+#     "private": true; the fusionaize org itself is "visibility": "private" and
+#     every repository in it is private, which is why an anonymous
+#     `git ls-remote https://git.langevc.com/fusionaize/faigrid.git` answers
+#     "Repository not found". fusionaize-ops/config.yml declares only the
+#     GitHub mirror for this repo — a different destination on a different
+#     forge, and not evidence about the Forgejo one.
+#   - GitHub mirror fusionAIze/faigrid: public.
+#     GET https://api.github.com/repos/fusionAIze/faigrid returns
+#     "private": false, "visibility": "public".
+destinations:
+  - forge: forgejo
+    repo: fusionaize/faigrid
+    role: release
+    visibility: private
+  - forge: github
+    repo: fusionAIze/faigrid
+    role: release
+    visibility: public
+
+# The tracker prefixes the audience gate refuses in a release body (REL-021).
+# READ THE EXTRACTOR BEFORE EDITING: the release workflow's prefix step scans
+# this file for a SINGLE line whose stripped content starts with
+# ``tracker_prefixes:``; a prefix written on a second line is invisible to that
+# extractor, so the audience gate would silently receive nothing and refuse
+# nothing. Keep the declaration on exactly one line.
+#
+# MEASURED, not copied from faigate. Derived from faigrid's own commit
+# subjects/bodies and from the planning backlog for this repository:
+#   git log --format='%s%n%b' | grep -oE '[A-Z]{2,5}-[0-9]+' | sort | uniq -c
+#     -> FAI-207 (7), FFR-600 (4), OPS-002 (1), ADR-0001 (1)
+#   git log --format=%s                     -> FFR-600, OPS-002, ADR-0001
+#                                        (ADR-0001 is the migration ledger id)
+#   planning backlog (.skillweave/planning): FAI-229, FAI-211 and the remaining
+#     FAI-2xx tickets carry faigrid
+# Retaining the whole family is deliberate: a release body that happens to be
+# sliced from pre-FFR-600-2 history (CHANGELOG.md still names FAI-207) would
+# otherwise leak an internal ticket to the external reader this gate protects.
+# The organisation-wide prefixes (LVC, OME, CORE, LNF, DST, REL, CFG, ADP) are
+# NOT copied here: they appear in faigrid neither as commits nor as tickets.
+tracker_prefixes: [FAI, FFR, OPS, ADR]
+
+# faigrid's canonical forge host (REL-023). The release gate reads this from
+# here — the config layer, not the workflow — and refuses a hardcoded forge
+# host. A dotless entry is refused by name: a bare label is a forge type or a
+# container name before it is ever a hostname, and github.server_url on the
+# Forgejo runner resolves to the internal container address (http://forgejo:3000),
+# which is not the organisation's forge.
+forge_hosts: [git.langevc.com]
