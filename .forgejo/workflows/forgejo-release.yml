@@ -395,13 +395,22 @@ jobs:
                   % (os.environ["GH_MIRROR_TOKEN"], github_repo)
               )
 
-          def _canonical_tag_target() -> str:
-              """The commit the canonical tag peels to. The peel normalises
-              annotated and lightweight tags onto their commit, so the comparison
-              below is always commit-vs-commit."""
-              return subprocess.check_output(
+          def _tag_refs() -> tuple:
+              """The canonical tag's object SHA and peeled commit SHA.
+
+              The object SHA (`git rev-parse refs/tags/X`) is the TAG OBJECT for
+              an annotated tag, or the commit itself for a lightweight tag. The
+              peel (`refs/tags/X^{}`) normalises both onto the commit. They MUST
+              be compared separately: comparing only the peel is exactly what
+              let an annotated canonical tag pass beside a lightweight mirror
+              tag, because both peel to the same commit."""
+              obj = subprocess.check_output(
+                  ["git", "rev-parse", "refs/tags/%s" % tag_name], text=True
+              ).strip()
+              peeled = subprocess.check_output(
                   ["git", "rev-parse", "refs/tags/%s^{}" % tag_name], text=True
               ).strip()
+              return obj, peeled
 
           def _push_mirror_tag(remote: str) -> None:
               subprocess.run(
@@ -410,11 +419,18 @@ jobs:
                   check=True,
               )
 
-          def _verify_mirror_tag(canonical: str, remote: str) -> None:
-              """Peel the tag on both forges and refuse by name when they differ.
-              For an annotated mirror tag `ls-remote` emits the peeled line; for a
-              lightweight one it emits none and the bare ref IS the commit. Query
-              both and prefer the peeled form."""
+          def _verify_mirror_tag(canonical_obj: str, canonical_peel: str,
+                                 remote: str) -> None:
+              """Compare the mirror tag's OBJECT, not just its peel, and refuse
+              by name on divergence.
+
+              `ls-remote` emits both `refs/tags/X` (the tag object for an
+              annotated tag, or the commit for a lightweight one) and, only when
+              annotated, `refs/tags/X^{}` (the peeled commit). The raw object
+              SHA is the identity that MUST agree: an annotated canonical tag
+              (object = tag object) beside a lightweight mirror tag (object =
+              commit) differs in its raw SHA even when the peels agree, which is
+              precisely the divergence a peel-only comparison cannot see."""
               ls = subprocess.run(
                   ["git", "ls-remote", remote,
                    "refs/tags/%s" % tag_name, "refs/tags/%s^{}" % tag_name],
@@ -424,26 +440,56 @@ jobs:
               for line in ls.stdout.splitlines():
                   sha, _, ref = line.partition("\t")
                   targets[ref] = sha.strip()
-              mirror_target = (
-                  targets.get("refs/tags/%s^{}" % tag_name)
-                  or targets.get("refs/tags/%s" % tag_name, "")
-              )
-              if not mirror_target or mirror_target != canonical:
+              mirror_obj = targets.get("refs/tags/%s" % tag_name, "")
+              mirror_peel = targets.get("refs/tags/%s^{}" % tag_name)
+
+              if not mirror_obj:
                   print(
-                      "::error::MirrorTagDriftError: tag %s targets %s on the "
-                      "canonical forge but %s on the mirror; the mirror tag does "
-                      "not mirror the canonical tag. Refusing the release."
-                      % (tag_name, canonical, mirror_target or "(absent)"),
+                      "::error::MirrorTagDriftError: tag %s has no mirror ref; "
+                      "the mirror tag does not exist. Refusing the release."
+                      % tag_name,
                       file=sys.stderr,
                   )
                   sys.exit(1)
-              print("mirror tag verified: %s -> %s" % (tag_name, mirror_target))
+
+              if mirror_obj != canonical_obj:
+                  print(
+                      "::error::MirrorTagObjectMismatchError: tag %s has object "
+                      "%s on the canonical forge but object %s on the mirror; "
+                      "the mirror tag is not the same tag object (annotated vs "
+                      "lightweight divergence). Refusing the release."
+                      % (tag_name, canonical_obj, mirror_obj),
+                      file=sys.stderr,
+                  )
+                  sys.exit(1)
+
+              if mirror_peel is not None and mirror_peel != canonical_peel:
+                  print(
+                      "::error::MirrorTagDriftError: tag %s peels to %s on the "
+                      "canonical forge but %s on the mirror. Refusing the release."
+                      % (tag_name, canonical_peel, mirror_peel),
+                      file=sys.stderr,
+                  )
+                  sys.exit(1)
+
+              print(
+                  "mirror tag verified: %s -> object %s (peel %s)"
+                  % (tag_name, mirror_obj, mirror_peel or mirror_obj)
+              )
 
           async def main():
               # Push the canonical tag object onto the mirror BEFORE the engine
-              # publishes, so the github create_release cannot invent a tag.
+              # publishes, so the github create_release cannot invent a tag. The
+              # mirror is re-checked IMMEDIATELY after the push, object-for-object:
+              # the GitHub POST /releases creates a lightweight tag at the default
+              # branch HEAD when the tag is absent, so a push that landed late or
+              # not at all would let the API invent the exact lightweight/annotated
+              # divergence this check exists to stop (ops-engine 3.4.1's subject).
               if mirror_dest is not None:
-                  _push_mirror_tag(_mirror_remote(mirror_dest.repo))
+                  mirror_remote = _mirror_remote(mirror_dest.repo)
+                  canon_obj, canon_peel = _tag_refs()
+                  _push_mirror_tag(mirror_remote)
+                  _verify_mirror_tag(canon_obj, canon_peel, mirror_remote)
 
               credentials = {
                   "forgejo": Credential(token=os.environ["FORGEJO_TOKEN"]),
@@ -478,11 +524,14 @@ jobs:
                   )
                   sys.exit(1)
 
-              # After publication, refuse by name if the mirror tag does not
-              # target the same commit the canonical tag does.
+              # After publication, refuse by name if the mirror tag is not the
+              # SAME OBJECT the canonical tag is (annotated vs lightweight), or
+              # if the peels disagree. Object identity is what a peel-only
+              # comparison cannot see, and it is what this run just proved.
               if mirror_dest is not None:
+                  canon_obj, canon_peel = _tag_refs()
                   _verify_mirror_tag(
-                      _canonical_tag_target(), _mirror_remote(mirror_dest.repo)
+                      canon_obj, canon_peel, _mirror_remote(mirror_dest.repo)
                   )
 
           asyncio.run(main())
