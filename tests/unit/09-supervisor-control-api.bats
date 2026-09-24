@@ -38,9 +38,11 @@ setup() {
     # Must be set BEFORE sourcing supervisor.sh so the start function reads it.
     # Both RECOVERY_JOURNAL_DIR (recovery-journal.sh) and
     # SUPERVISOR_RECOVERY_JOURNAL_DIR (supervisor.sh) must point to the same path.
-    export RECOVERY_JOURNAL_DIR="${BATS_TEST_TMPDIR}/journal"
+    # NOTE: /tmp/ is used instead of BATS_TEST_TMPDIR because macOS Docker
+    # Desktop cannot resolve BATS_TEST_TMPDIR (/var/folders/...) through
+    # container bind mounts.
+    export RECOVERY_JOURNAL_DIR="$(mktemp -d /tmp/faigrid-test-journal-XXXXXXXXXX)"
     export SUPERVISOR_RECOVERY_JOURNAL_DIR="${RECOVERY_JOURNAL_DIR}"
-    mkdir -p "$RECOVERY_JOURNAL_DIR"
 }
 
 teardown() {
@@ -51,6 +53,10 @@ teardown() {
     # Network cleanup (force-remove for tests that create bare networks)
     docker network rm "$CONTROL_NET" "$INFERENCE_NET" >/dev/null 2>&1 || true
     faigrid_networks_remove >/dev/null 2>&1 || true
+    # Journal cleanup
+    if [[ -n "${RECOVERY_JOURNAL_DIR:-}" && -d "$RECOVERY_JOURNAL_DIR" ]]; then
+        rm -rf "$RECOVERY_JOURNAL_DIR"
+    fi
 }
 
 # ── C1: Surface endpoints on control_net ───────────────────────────────────────
