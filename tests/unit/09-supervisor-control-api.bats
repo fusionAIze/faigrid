@@ -36,8 +36,11 @@ setup() {
 
     # Sandbox the recovery journal so no test touches /var/lib.
     # Must be set BEFORE sourcing supervisor.sh so the start function reads it.
-    export SUPERVISOR_RECOVERY_JOURNAL_DIR="${BATS_TEST_TMPDIR}/journal"
-    mkdir -p "$SUPERVISOR_RECOVERY_JOURNAL_DIR"
+    # Both RECOVERY_JOURNAL_DIR (recovery-journal.sh) and
+    # SUPERVISOR_RECOVERY_JOURNAL_DIR (supervisor.sh) must point to the same path.
+    export RECOVERY_JOURNAL_DIR="${BATS_TEST_TMPDIR}/journal"
+    export SUPERVISOR_RECOVERY_JOURNAL_DIR="${RECOVERY_JOURNAL_DIR}"
+    mkdir -p "$RECOVERY_JOURNAL_DIR"
 }
 
 teardown() {
@@ -153,13 +156,13 @@ teardown() {
     faigrid_supervisor_wait_ready "$CONTROL_NET" || fail "supervisor did not become ready on control_net"
 
     local files_before
-    files_before="$(ls -1 "$SUPERVISOR_RECOVERY_JOURNAL_DIR" 2>/dev/null || true)"
+    files_before="$(ls -1 "$RECOVERY_JOURNAL_DIR" 2>/dev/null || true)"
 
     run faigrid_supervisor_recovery_history "$CONTROL_NET" "test-worker"
     [ "$status" -eq 0 ] || fail "recovery_history probe failed (status=$status)"
 
     local files_after
-    files_after="$(ls -1 "$SUPERVISOR_RECOVERY_JOURNAL_DIR" 2>/dev/null || true)"
+    files_after="$(ls -1 "$RECOVERY_JOURNAL_DIR" 2>/dev/null || true)"
 
     # No new file was created by the API call
     [ "$files_before" == "$files_after" ] || fail "recovery_history created a new file in the journal directory: before=[${files_before}] after=[${files_after}]"
@@ -177,8 +180,8 @@ teardown() {
     cid="$(docker run -d --rm \
         --name faigrid-supervisor \
         --label "com.fusionaize.faigrid.role=supervisor" \
-        -e "SUPERVISOR_RECOVERY_JOURNAL_DIR=${SUPERVISOR_RECOVERY_JOURNAL_DIR}" \
-        -v "${SUPERVISOR_RECOVERY_JOURNAL_DIR}:${SUPERVISOR_RECOVERY_JOURNAL_DIR}:ro" \
+        -e "SUPERVISOR_RECOVERY_JOURNAL_DIR=${RECOVERY_JOURNAL_DIR}" \
+        -v "${RECOVERY_JOURNAL_DIR}:${RECOVERY_JOURNAL_DIR}:ro" \
         python:3.10-slim \
         python3 -c "$(_supervisor_server)")"
 
