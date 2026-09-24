@@ -40,8 +40,10 @@ setup() {
     # SUPERVISOR_RECOVERY_JOURNAL_DIR (supervisor.sh) must point to the same path.
     # NOTE: /tmp/ is used instead of BATS_TEST_TMPDIR because macOS Docker
     # Desktop cannot resolve BATS_TEST_TMPDIR (/var/folders/...) through
-    # container bind mounts.
+    # container bind mounts. The `cd -P` resolves /tmp -> /private/tmp so
+    # the bind mount target matches what Docker Desktop resolves on the host.
     export RECOVERY_JOURNAL_DIR="$(mktemp -d /tmp/faigrid-test-journal-XXXXXXXXXX)"
+    RECOVERY_JOURNAL_DIR="$(cd -P "$RECOVERY_JOURNAL_DIR" && pwd)"
     export SUPERVISOR_RECOVERY_JOURNAL_DIR="${RECOVERY_JOURNAL_DIR}"
 }
 
