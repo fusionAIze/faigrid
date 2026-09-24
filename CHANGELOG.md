@@ -3,6 +3,32 @@
 All notable changes to fusionAIze Grid are documented in this file.
 Generated from conventional commits using [git-cliff](https://git-cliff.org).
 
+## [1.9.0](https://github.com/fusionAIze/faigrid/compare/v1.8.0...v1.9.0) (2026-09-24)
+
+
+### Features
+
+* **tenant substrate:** faigrid can host a nested tenant. Five new modules under `core/tenant/`: isolated control and inference networks, a preflight that refuses a tenant start on an unready substrate, tenant routing with attributable cost, a dual-homed credential mediator with IP forwarding off, and an append-only recovery journal a tenant can poll for gaps
+* **tenant networks:** `core/tenant/networks.sh` provisions `faigrid_control_net` and `faigrid_inference_net` as separate bridges, each labelled with its creator. Isolation is verified by a refused cross-network connection, not by reading configuration
+* **preflight:** a tenant start is refused by name when either network is absent or unhealthy, before any container is created
+* **tenant routing:** a request carrying an organisation and tenant identifier is routed and recorded by value. A request with no tenant identifier is refused or attributed to an explicit default, never silently attributed to nobody
+* **credential mediator:** exactly one dual-homed container bridges the two networks with IP forwarding off. Workers obtain scoped tokens through it and cannot reach the broker directly; no long-lived secret is held in a worker environment
+* **recovery journal:** a worker restart appends an event preserving the original correlation id, with a readable write position so a consumer can detect a gap from its own cursor. With the notification webhook unreachable the event is still recorded and the job continues
+
+
+### Bug Fixes
+
+* **install:** `install.sh` completes non-interactively. `--mode local|remote` now sets the execution mode directly; previously passing `--mode` skipped the block that assigned it and the run aborted under `set -u`. The numeric prompt mapping remains for interactive use
+* **logging:** `log_event` writes through `sudo` to both log files. The `750 root:adm` permission model granted the `adm` group read access but never write, so every non-root event was discarded silently. Where passwordless sudo for the log path is unavailable, `log_event` now fails by name instead of discarding. The misleading `adm` group membership is removed — the modes never granted write
+* **release:** the Forgejo release producer publishes to every destination declared in `.ops.yaml` and gates publication on the release title and the presence of a changelog section for the tag. A refused release no longer reaches the Homebrew tap: the tap notifier keys on the published release object rather than on the tag push
+
+
+### Documentation
+
+* runbooks for the node install and for reconstructing a compose definition from running containers
+* a substrate readiness report stating, per handover clause, met / not met / out of scope
+
+
 ## [1.8.0](https://github.com/fusionAIze/faigrid/compare/v1.7.0...v1.8.0) (2026-08-22)
 
 

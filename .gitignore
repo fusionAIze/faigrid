@@ -46,3 +46,7 @@ tests/.libs/
 # SkillWeave runtime is local; only the helper is tracked.
 .skillweave/*
 !.skillweave/agents.md
+
+# Python bytecode caches
+__pycache__/
+*.py[cod]
