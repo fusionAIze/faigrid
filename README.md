@@ -1,8 +1,7 @@
 # fusionAIze Grid (faigrid)
 
 [![repo-safety](https://github.com/fusionAIze/faigrid/actions/workflows/repo-safety.yml/badge.svg)](https://github.com/fusionAIze/faigrid/actions/workflows/repo-safety.yml)
-[![Lint](https://github.com/fusionAIze/faigrid/actions/workflows/lint.yml/badge.svg)](https://github.com/fusionAIze/faigrid/actions/workflows/lint.yml)
-[![Test](https://github.com/fusionAIze/faigrid/actions/workflows/test.yml/badge.svg)](https://github.com/fusionAIze/faigrid/actions/workflows/test.yml)
+[![CI](https://github.com/fusionAIze/faigrid/actions/workflows/ci.yml/badge.svg)](https://github.com/fusionAIze/faigrid/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/fusionAIze/faigrid?display_name=tag)](https://github.com/fusionAIze/faigrid/releases)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![OpenClaw-friendly](https://img.shields.io/badge/OpenClaw-friendly-111827.svg)](https://openclaw.ai/)
