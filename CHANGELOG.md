@@ -3,6 +3,13 @@
 All notable changes to fusionAIze Grid are documented in this file.
 Generated from conventional commits using [git-cliff](https://git-cliff.org).
 
+## [1.10.1](https://github.com/fusionAIze/faigrid/compare/v1.10.0...v1.10.1) (2026-09-25)
+
+
+### Bug Fixes
+
+* **installer:** `install.sh` announced the previous version. Its header comment and the version it prints on start both read 1.9.0 while the release was 1.10.0, so an operator running the installer saw a version that did not match the artifact they had fetched. The repository already carried a test asserting the two agree; it is now green again
+
 ## [1.10.0](https://github.com/fusionAIze/faigrid/compare/v1.9.0...v1.10.0) (2026-09-25)
 
 
