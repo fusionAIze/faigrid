@@ -1,0 +1,62 @@
+# faigate on the tenant inference network.
+#
+# veeona's z1 and z2 zones address the gate as http://faigate:8090/v1. On the
+# inference plane that name must resolve, so faigate has to run as a container
+# attached to faigrid_inference_net, not as a host process: only a co-attached
+# container is named by Docker's embedded DNS, and only then can veeona resolve
+# `faigate` without an entry of its own.
+#
+# Reachability, not exposure
+# --------------------------
+# The service publishes no host port and joins exactly one network,
+# faigrid_inference_net. It is reachable from every container on the inference
+# plane and from nowhere else: not from the host, and not from
+# faigrid_control_net. The SEC-001 separation between the two tenant networks
+# therefore extends to this gateway by construction.
+# tests/integration/07-faigate-inference-reachability.bats proves that by a
+# refused probe, not by reading this file.
+#
+# Why the inline config exists
+# ----------------------------
+# faigate's shipped default binds 127.0.0.1. Inside a container that is the
+# container's own loopback and would be unreachable from the inference plane, so
+# the `server.host` override is not cosmetic. The `configs` block below carries
+# only that override: faigate's model catalog is compiled into the image, so
+# /v1/models answers with a catalog model list without any provider credential.
+# No secret is required for this deployment and none is written here.
+#
+# Image provenance
+# ----------------
+# Built from faigate's canonical source. The release tag v2.9.3 is not immutable,
+# so the build context is pinned to the commit it points at
+# (c8404484a3d1697fa821cf45349d570d859b25f8).
+
+name: faigate-inference
+
+services:
+  faigate:
+    image: faigate:2.9.3
+    build:
+      context: https://github.com/fusionAIze/faigate.git#c8404484a3d1697fa821cf45349d570d859b25f8
+    container_name: faigate
+    restart: unless-stopped
+    environment:
+      FAIGATE_CONFIG_FILE: /etc/faigate/config.yaml
+      FAIGATE_DB_PATH: /var/lib/faigate/faigate.db
+    configs:
+      - source: faigate_server_config
+        target: /etc/faigate/config.yaml
+    networks:
+      - faigrid_inference_net
+
+configs:
+  faigate_server_config:
+    content: |
+      server:
+        host: 0.0.0.0
+        port: 8090
+        log_level: info
+
+networks:
+  faigrid_inference_net:
+    external: true

@@ -172,3 +172,35 @@ the reconstructed YAML into the prepared `compose/` directory.
   and no reference to its credentials was written into any faigrid file.
 - `/opt/faigrid/core-heart/.env` was not modified and its contents were not
   copied into anything committed.
+
+## 9. Preflight verification against the live substrate (GO-005)
+
+`core/tenant/preflight.sh` validates the tenant substrate before any tenant
+workload spawns. It checks that both external tenant networks
+(`faigrid_control_net`, `faigrid_inference_net`) are present, use the `bridge`
+driver, carry the faigrid creator label, and have at least one IPAM subnet.
+
+The integration test `tests/integration/08-preflight-live-substrate.bats`
+proves three criteria against the live nexus-core docker daemon:
+
+| Criterion | Proof |
+| --- | --- |
+| C1 | `preflight.sh` returns exit 0 against the live substrate |
+| C2 | With one tenant network removed, it refuses BY NAME and creates nothing — `docker ps -a` is identical before and after, and the network is restored |
+| C3 | The refusal precedes any tenant container creation — no container with the `faigrid-tenant-*` prefix ever existed |
+
+**How it runs:** the test addresses the nexus-core daemon via
+`docker -H ssh://nexus-core`, so no bats installation is needed on the node.
+The test removes `faigrid_inference_net` (disconnecting the faigate container
+first), runs preflight to confirm the refusal, restores the network and
+reconnects faigate, then verifies preflight passes again. `compose_grid_net`
+and the five incumbent containers are never touched.
+
+**Red proof:** the C2+C3 test exits 1 if preflight passes with a network
+missing — a guard against regressions that would silently authorise an
+incomplete substrate.
+
+**Node state note:** `/opt/faigrid-src/core/tenant/*.sh` are byte-identical to
+v1.9.0 (all five sha256 match, measured 2026-09-24) while `VERSION` and
+`~/.config/faigrid/registry/state.env` both read 1.8.0. That metadata mismatch
+is a known defect (same class as LVC-268) and is not resolved by this lane.

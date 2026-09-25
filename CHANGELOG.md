@@ -3,6 +3,26 @@
 All notable changes to fusionAIze Grid are documented in this file.
 Generated from conventional commits using [git-cliff](https://git-cliff.org).
 
+## [1.10.0](https://github.com/fusionAIze/faigrid/compare/v1.9.0...v1.10.0) (2026-09-25)
+
+
+### Features
+
+* **supervisor:** faigrid gains its first HTTP surface. The Supervisor presents the Scheduler, the Runner Pool and the Recovery Engine through a Control API on `faigrid-core:5000` — register a worker, poll status, read a job's recovery history, ask for the worker ceiling. It answers on the control network only; the same request from the inference network is refused, so the first API does not weaken the isolation between the two planes. `recovery_history` reads the journal the recovery engine already writes and preserves its correlation ids rather than keeping a second record of the same events
+* **inference gateway:** a gateway can now run as a container on the tenant inference network, where a nested tenant resolves it by name. It publishes no host port and joins exactly one network, so it is reachable from the inference plane and from nowhere else
+* **worker, llama.cpp:** `worker/scripts/install.sh` recognises llama.cpp alongside Ollama and LM Studio, names its tunnel port the way it already named the other two, and states the 8GB guidance in llama.cpp's own terms. A worker with none of the three engines present is now told so by engine name instead of completing silently
+* **worker, reusable library:** `worker/lib/worker-env.sh` carries the machine-independent half of a worker setup — engine resolution by absolute path, a fail-closed API-key read, a caffeinate-wrapped server command that keeps the key in the environment rather than in the process arguments, an HTTP health check and a liveness helper. Nothing in it names a particular machine
+* **worker, health:** `worker/scripts/verify.sh` probes the inference endpoint over HTTP. It previously checked only whether an engine's CLI was installed, which a stopped server passes
+
+### Documentation
+
+* **runbooks:** installing and supervising a worker as a durable service, deploying the gateway on the inference network, delivering tenant images from a registry, and a reference separating what a worker setup contributes generically from what belongs to one machine
+
+### Tests
+
+* the tenant preflight is now proven against a live substrate rather than a local daemon: it succeeds on a ready substrate, and with one tenant network removed it refuses by name and creates nothing, shown by an unchanged container list
+* a worker's reachability is asserted from another host — that the endpoint answers without a session holding it open, that the machine is kept awake while the server runs, and that an unreachable worker is named by endpoint instead of failing generically
+
 ## [1.9.0](https://github.com/fusionAIze/faigrid/compare/v1.8.0...v1.9.0) (2026-09-24)
 
 
