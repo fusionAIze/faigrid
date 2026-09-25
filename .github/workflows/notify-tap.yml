@@ -18,19 +18,54 @@ name: Notify Homebrew Tap
 # from the release object (`github.event.release.tag_name`), never from the
 # pushed ref name.
 
+# WHY workflow_dispatch EXISTS HERE, given the paragraph above:
+# the release-object rule is not weakened by it. A manual run still RESOLVES the
+# release object for the tag it is given and refuses a tag that has none, so a
+# refused tag stays undispatchable by hand exactly as it is automatically. What
+# it adds is a way to re-notify a release that DID publish but whose dispatch
+# failed for a reason outside the release itself - an expired TAP_GITHUB_TOKEN
+# being the case that prompted it, which left v1.9.0, v1.10.0 and v1.10.1
+# unannounced with no way to catch up short of cutting another release.
 on:
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag of an ALREADY PUBLISHED release to re-notify, e.g. v1.10.1"
+        required: true
+        type: string
 
 jobs:
   notify:
     if: ${{ github.server_url == 'https://github.com' }}
     runs-on: ubuntu-latest
     steps:
+      # The tag comes from the release object on an automatic run and from the
+      # input on a manual one. A manual run must not be able to invent a
+      # version: the tag is looked up as a release, and a tag with no release
+      # object fails here by name, before any dispatch.
+      - name: Resolve the released tag
+        id: tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ inputs.tag }}"
+            gh release view "$TAG" --repo "${{ github.repository }}" --json tagName >/dev/null 2>&1 || {
+              echo "::error::No published release exists for tag ${TAG} - nothing to re-notify."
+              exit 1
+            }
+          else
+            TAG="${{ github.event.release.tag_name }}"
+          fi
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+
       - name: Compute SHA256
         id: sha
         run: |
-          VERSION="${{ github.event.release.tag_name }}"
+          VERSION="${{ steps.tag.outputs.tag }}"
           VERSION="${VERSION#v}"
           URL="https://github.com/fusionAIze/faigrid/archive/refs/tags/v${VERSION}.tar.gz"
           SHA=$(curl -sL "$URL" | sha256sum | awk '{print $1}')
