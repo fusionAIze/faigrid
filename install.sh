@@ -345,6 +345,7 @@ resolve_role_dir() {
         "backup")   echo "backup" ;;
         "external") echo "external" ;;
         "runner")   echo "core/runners" ;;
+        "supervisor") echo "core/supervisor" ;;
         *) error "Unknown role: $role" ;;
     esac
 }
@@ -357,10 +358,11 @@ GRID_STATUS_worker="○"
 GRID_STATUS_backup="○"
 GRID_STATUS_external="○"
 GRID_STATUS_runner="○"
+GRID_STATUS_supervisor="○"
 
 probe_grid_status() {
     # Check local registry only (instant)
-    local roles=("core" "edge" "worker" "backup" "external" "runner")
+    local roles=("core" "edge" "worker" "backup" "external" "runner" "supervisor")
     for role in "${roles[@]}"; do
         if [[ -f "$LOCAL_REGISTRY/${role}.state" ]]; then
             # Bash 3.2 lacks associative arrays; role comes from the hardcoded array
@@ -467,6 +469,7 @@ _grid_icon() {
         backup)   status="$GRID_STATUS_backup" ;;
         external) status="$GRID_STATUS_external" ;;
         runner)   status="$GRID_STATUS_runner" ;;
+        supervisor) status="$GRID_STATUS_supervisor" ;;
         *)        status="○" ;;
     esac
     if [[ "$status" == "✔" ]]; then
@@ -482,6 +485,7 @@ echo -e "    $(_grid_icon worker)  ${BOLD}grid-worker${NC}     ${DIM}Local LLM i
 echo -e "    $(_grid_icon backup)  ${BOLD}grid-backup${NC}     ${DIM}Offsite storage vault — Synology, S3, USB${NC}      ${DIM}[optional]${NC}"
 echo -e "    $(_grid_icon external)  ${BOLD}grid-external${NC}   ${DIM}Cloud extension — ext. n8n, Plane PM${NC}           ${DIM}[optional]${NC}"
 echo -e "    $(_grid_icon runner)  ${BOLD}grid-runner${NC}     ${DIM}Isolated shell/browser execution environments${NC}  ${DIM}[optional]${NC}"
+echo -e "    $(_grid_icon supervisor)  ${BOLD}grid-supervisor${NC}  ${DIM}Control API — Scheduler, Runner Pool, Recovery${NC}  ${DIM}[optional]${NC}"
 echo ""
 echo -e "  ${DIM}Tip: Start with grid-core. Add other nodes as your grid grows.${NC}"
 
@@ -503,6 +507,7 @@ if [[ -z "$ROLE_NAME" ]]; then
     echo -e "    ${BOLD}4)${NC}  grid-backup     ${DIM}Restic vault (NAS, USB disk, S3 bucket)${NC}"
     echo -e "    ${BOLD}5)${NC}  grid-external   ${DIM}Public cloud node (VPS, agency server)${NC}"
     echo -e "    ${BOLD}6)${NC}  grid-runner     ${DIM}Isolated secure execution runners${NC}"
+    echo -e "    ${BOLD}7)${NC}  grid-supervisor ${DIM}Control API for Scheduler, Runner Pool, Recovery${NC}"
     echo ""
     echo -e "    ${BOLD}q)${NC}  Quit"
     echo ""
@@ -515,6 +520,7 @@ if [[ -z "$ROLE_NAME" ]]; then
         4) ROLE_NAME="backup" ;;
         5) ROLE_NAME="external" ;;
         6) ROLE_NAME="runner" ;;
+        7) ROLE_NAME="supervisor" ;;
         [Qq]|"") _quit ;;
         *) warning "Invalid choice. Please enter 1-6 or q." ;;
     esac
@@ -594,9 +600,10 @@ if [[ "${EXEC_MODE:-}" == "remote" ]]; then
     if [[ -z "$SSH_TARGET" ]]; then
         default_ip="192.168.178.10"
         case "$ROLE_NAME" in
-            core)   default_ip="192.168.178.20" ;;
-            worker) default_ip="192.168.178.30" ;;
-            backup) default_ip="192.168.178.40" ;;
+            core)       default_ip="192.168.178.20" ;;
+            worker)     default_ip="192.168.178.30" ;;
+            backup)     default_ip="192.168.178.40" ;;
+            supervisor) default_ip="192.168.178.20" ;;
         esac
         echo ""
         prompt "SSH target (e.g. grid@${default_ip}): " SSH_TARGET
@@ -992,6 +999,15 @@ _show_help() {
             echo -e "    Local URL  : http://${ip}:11434"
             if [[ "$mode" == "remote" ]]; then
                 echo -e "    SSH Tunnel : ${CYAN}ssh -L 11434:localhost:11434 ${ssh_target}${NC}"
+            fi
+            ;;
+        supervisor)
+            echo -e "  ${BOLD}Supervisor Control API:${NC}"
+            echo -e "    URL        : http://${ip}:5000"
+            echo -e "    Endpoints  : /v1/supervisor/register, /v1/supervisor/poll,"
+            echo -e "                 /v1/supervisor/recovery_history/{job_id}, /v1/supervisor/max_workers"
+            if [[ "$mode" == "remote" ]]; then
+                echo -e "    SSH Tunnel : ${CYAN}ssh -L 5000:localhost:5000 ${ssh_target}${NC}"
             fi
             ;;
         *)
