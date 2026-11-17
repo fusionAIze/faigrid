@@ -40,7 +40,7 @@ config block is the only place an operator reads faigrid's release role, and it 
 release-enabled entry — while FAI-229 says the engine path is the producer. Criterion 2
 resolves it by putting the layover in line with the one writer that is live.
 
-## Belegt (measured)
+## Proven (measured)
 
 ### B1 — The live producer on Forgejo is the repo-local engine workflow
 
@@ -183,7 +183,7 @@ The GitHub release is created by `publish_release`'s GitHub destination in `.ops
 not by a GitHub workflow: the mirror's `notify-tap.yml` only reads it. This is the
 "one release object per destination, publisher is the engine bot" shape RFL-002 narrowed.
 
-## Plausibel (supported, not proven here)
+## Plausible (supported, not proven here)
 
 - **P1 — FAI-229's "ops-engine 3.4.2" is the same pin as `.forgejo/workflows/forgejo-release.yml`.**
   FAI-229's subject names 3.4.2 and its FRL-003 criterion 3 requires the workflow "engine
@@ -202,7 +202,7 @@ not by a GitHub workflow: the mirror's `notify-tap.yml` only reads it. This is t
   runs `ReleaseHandler.process_event` whenever `release.enabled` is true. The deployed
   engine version is the operator's measurement, not re-measured here.
 
-## Unbestaetigt (not established by this measurement)
+## Unproven (not established by this measurement)
 
 - **U1 — Why the layover's webhook deliveries for faigrid never produced a release.** FRL-008
   records 502s from a crash-looping bot on an empty `GITHUB_WEBHOOK_SECRET`. That is a
