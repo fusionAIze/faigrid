@@ -3,6 +3,12 @@
 All notable changes to fusionAIze Grid are documented in this file.
 Generated from conventional commits using [git-cliff](https://git-cliff.org).
 
+## [1.10.2](https://github.com/fusionAIze/faigrid/compare/v1.10.1...v1.10.2) (2026-11-18)
+
+### Bug Fixes
+
+* the Homebrew tap notification can be re-sent for a release whose dispatch failed
+
 ## [1.10.1](https://github.com/fusionAIze/faigrid/compare/v1.10.0...v1.10.1) (2026-09-25)
 
 
