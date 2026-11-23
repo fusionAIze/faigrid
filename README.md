@@ -10,6 +10,12 @@
 [![Docker-ready](https://img.shields.io/badge/docker-ready-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
 [![Bash-powered](https://img.shields.io/badge/Language-Bash-4EAA25.svg)](https://www.gnu.org/software/bash/)
 
+> [!NOTE]
+> **Public mirror.** The canonical repository is hosted on our self-hosted git.
+> This GitHub copy is a read-only mirror kept in sync for visibility and
+> installation. Bug reports are welcome via Issues; pull requests are applied
+> upstream and synced back here.
+
 > **The sovereign execution substrate for AI-native operations.**
 
 **fusionAIze Grid** defines *where* AI-native work runs, under *what constraints*, with *what isolation*, through which *queues and runners*, and with which *observability and recovery patterns*. It is the execution layer of the fusionAIze ecosystem — not the context, memory, or routing layer.
@@ -262,6 +268,6 @@ Apache 2.0 — see [LICENSE](LICENSE) for details.
 
 ## Repository & Contributing
 
-Canonical repository: **self-hosted Forgejo** — `git.langevc.com/fusionaize/faigrid`
-(`git clone git@git.langevc.com:fusionaize/faigrid.git`). Develop against the Forgejo
-clone and open pull requests there. The GitHub copy is a read-only mirror.
+The canonical repository is maintained on self-hosted infrastructure. This GitHub
+repository is the public release and distribution mirror. Bug reports are welcome
+via Issues; pull requests are applied upstream and synced back here.
