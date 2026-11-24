@@ -45,9 +45,18 @@ jobs:
       release_name_template: ${{ steps.title.outputs.release_name_template }}
       notes: ${{ steps.notes.outputs.notes }}
     steps:
+      # A dispatch checks out the tag named by its input; a tag push keeps the
+      # pushed ref, which is that same tag. The gate must read the TREE BEING
+      # RELEASED, not the branch that dispatched it: on a dispatch the branch
+      # could carry edits the tag does not (measured in the ledger, FM-001), so
+      # without this the gate would validate one CHANGELOG and the release
+      # publish the other. A tag push is unchanged.
+      #
       # The shorthand form is accepted by the Forgejo runner and by actionlint;
       # this repository's own mirror.yml uses it in the same way.
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag_name || github.ref }}
 
       # The release title is a GATE, not an agreement. The name must be exactly
       # "fusionAIze Grid vX.Y.Z", or the taught prerelease form
