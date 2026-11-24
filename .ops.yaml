@@ -18,15 +18,48 @@
 #   - GitHub mirror fusionAIze/faigrid: public.
 #     GET https://api.github.com/repos/fusionAIze/faigrid returns
 #     "private": false, "visibility": "public".
+#
+# Each release destination names the environment variable that carries its
+# credential (P36-002). Without it the adapter factory keys the credential on
+# the bare forge label ("forgejo" / "github"); the workflow exports the two
+# tokens under these names, so the declaration and the environment agree.
 destinations:
   - forge: forgejo
     repo: fusionaize/faigrid
     role: release
     visibility: private
+    credential_variable: FORGEJO_TOKEN
   - forge: github
     repo: fusionAIze/faigrid
     role: release
     visibility: public
+    credential_variable: GH_MIRROR_TOKEN
+
+# The release block this repository's own workflow hands to
+# `python -m ops_engine.release_attach` (FM-004). Declared WHOLE because a
+# Layer-3 block replaces the Layer-2 block whole rather than merging into it.
+#
+# `enabled: true` here does NOT create a second producer: the layover's faigrid
+# block in fusionaize-ops/config.yml stays `enabled: false` (FAI-229/FRL-008),
+# and the webhook path gates on that flag, so only this repository's workflow
+# publishes.
+#
+# `name_template` is the same string the gate job renders from
+# `.release-title-prefix` ("fusionAIze Grid {tag_name}"). It is declared here
+# AND passed on the command line from the gate output; the CLI value wins, so
+# the gate remains the single source and a missing template can never silently
+# rewrite an existing title.
+#
+# `assets: none`: measured — none of the 36 release objects per forge carries an
+# asset, and `notify-tap.yml` hashes the source archive instead. The engine
+# reads a bare `none` as "no required assets", and `release-assets` stays empty.
+release:
+  enabled: true
+  trigger: tag_push
+  tag_pattern: "v*"
+  changelog_path: CHANGELOG.md
+  name_template: "fusionAIze Grid {tag_name}"
+  assets: none
 
 # The tracker prefixes the audience gate refuses in a release body (REL-021).
 # READ THE EXTRACTOR BEFORE EDITING: the release workflow's prefix step scans
