@@ -247,11 +247,93 @@ jobs:
     needs: gate
     runs-on: ubuntu-latest
     steps:
+      # A dispatch checks out the tag named by its input; a tag push keeps the
+      # pushed ref, which is that same tag (github.ref is refs/tags/vX). The
+      # expression selects the input for a dispatch and the pushed ref
+      # otherwise, so a tag push checks out exactly what it did before. Without
+      # this, a dispatch built the branch and published a tree that is not the
+      # tag (measured: ledger FM-001 run 48745; elementeer-pro run 48583).
+      #
       # fetch-depth 0 so the tag ref is present and can be peeled
       # (`refs/tags/<tag>^{}`) for the mirror-tag comparison below.
       - uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.inputs.tag_name || github.ref }}
           fetch-depth: 0
+
+      # A dispatch names an EXISTING tag to release. The input is validated
+      # before any build or publish: it must match v*, be a legal git ref name,
+      # name a tag that exists on origin, and be the commit that was checked
+      # out. A missing input falls back to the branch name and is refused by the
+      # v* check rather than publishing a branch. A tag push runs no gate here
+      # and is unchanged.
+      - name: Resolve and validate the release tag
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          DISPATCH_TAG: "${{ github.event.inputs.tag_name }}"
+        run: |
+          set -euo pipefail
+          TAG_NAME="$DISPATCH_TAG"
+          case "$TAG_NAME" in
+            v*) ;;
+            *)
+              echo "TagPatternError: '$TAG_NAME' does not match the v* tag pattern; refusing before any publish." >&2
+              exit 2
+              ;;
+          esac
+          if ! git check-ref-format "refs/tags/$TAG_NAME"; then
+            echo "TagNameError: '$TAG_NAME' is not a legal tag name; refusing before any publish." >&2
+            exit 2
+          fi
+          # Existence on origin, not just locally: for a lightweight tag origin
+          # lists refs/tags/<tag> as the commit, for an annotated tag the peeled
+          # refs/tags/<tag>^{} is the commit HEAD (the checked-out tag) resolves
+          # to.
+          TAG_SHA=$(git ls-remote --tags origin "refs/tags/$TAG_NAME" "refs/tags/$TAG_NAME^{}" 2>/dev/null \
+            | awk '{ if ($2 ~ /\^\{\}$/) peeled=$1; else plain=$1 } END { print (peeled != "" ? peeled : plain) }' || true)
+          if [ -z "$TAG_SHA" ]; then
+            echo "UnknownTagError: '$TAG_NAME' is not an existing tag on origin; create the tag first. Refusing before any publish." >&2
+            exit 2
+          fi
+          HEAD_SHA=$(git rev-parse HEAD)
+          if [ "$HEAD_SHA" != "$TAG_SHA" ]; then
+            echo "CheckoutMismatchError: HEAD $HEAD_SHA is not the commit of tag $TAG_NAME ($TAG_SHA); refusing before any publish." >&2
+            exit 2
+          fi
+          echo "TAG_NAME=$TAG_NAME" >> "$GITHUB_ENV"
+          echo "release tag: $TAG_NAME (commit $TAG_SHA)"
+
+      # An older tag tree can predate the release chain: v1.10.2 carries no
+      # release block in .ops.yaml and no credential_variable on either
+      # destination — both were added to the branch after it. On a dispatch
+      # only, the branch that runs this workflow supplies exactly those gate
+      # files where the tag tree lacks them; the source tree that is published
+      # stays the tag's, because nothing else is taken from the branch. A tag
+      # push reads the tree as before and runs nothing here.
+      - name: Take the release gates from the branch the tag tree predates
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          SOURCE_BRANCH: "${{ github.ref_name }}"
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin "$SOURCE_BRANCH"
+          if [ "$(git rev-parse FETCH_HEAD)" = "$(git rev-parse HEAD)" ]; then
+            # The dispatch ref is the tag itself: it cannot carry what it
+            # predates. Dispatch from the branch that carries the release gates.
+            echo "GateSourceError: dispatch ref '$SOURCE_BRANCH' is the tag's own commit and cannot supply the release gates; dispatch from the branch that carries them." >&2
+            exit 2
+          fi
+          NEED=()
+          if ! { grep -q '^release:' .ops.yaml 2>/dev/null \
+                 && grep -q '^[[:space:]]*credential_variable:' .ops.yaml 2>/dev/null; }; then
+            NEED+=(.ops.yaml)
+          fi
+          if [ "${#NEED[@]}" -gt 0 ]; then
+            git checkout FETCH_HEAD -- "${NEED[@]}"
+            echo "gate files taken from $SOURCE_BRANCH: ${NEED[*]}"
+          else
+            echo "tag tree already carries every release gate file"
+          fi
 
       # ReleaseHandler.publish_release creates the release on EVERY destination
       # resolved from the committed .ops.yaml and reports a partial publication
